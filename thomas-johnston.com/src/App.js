@@ -1,9 +1,9 @@
-import logo from './logo.svg';
 import './App.css';
+import Masterclass from './Pages/masterclass';
 
 function App() {
   return (
-    <p className="bg-black text-white text-3xl">Hello world.</p>
+    <Masterclass></Masterclass>
   );
 }
 

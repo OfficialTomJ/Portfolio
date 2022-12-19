@@ -1,3 +1,5 @@
+import IPHONE from "../Assets/masterclassiPhone.png"
+
 function MasterclassIncluded() {
   return (
     <div className="bg-zinc-800 pt-11 pb-11">
@@ -121,6 +123,7 @@ function MasterclassIncluded() {
           </ul>
         </div>
       </div>
+      <img src={IPHONE} alt="Masterclass iPhone" className="mx-auto"></img>
     </div>
   );
 }

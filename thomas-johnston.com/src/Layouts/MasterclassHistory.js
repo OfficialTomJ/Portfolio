@@ -1,4 +1,5 @@
 import React from 'react';
+import Separator from '../Components/Separator';
 import timelapse from '../Assets/timelapse.mp4';
 
 function MasterclassHistory() {
@@ -12,6 +13,7 @@ function MasterclassHistory() {
                 <br></br><br></br>
                 Having been successful over those years, <strong>I now want to package and share everything I’ve learned so that you can take advantage of this opportunity and transform your life.</strong>
             </p>
+            <Separator></Separator>
         </div>
     );
 }

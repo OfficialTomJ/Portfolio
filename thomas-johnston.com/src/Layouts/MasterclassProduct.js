@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Separator from "../Components/Separator";
 
 function MasterclassProduct() {
     let checkedStyle = "border-solid border-2 border-white pl-2 pr-2 pt-1 pb-1";
@@ -57,6 +58,7 @@ function MasterclassProduct() {
       </div>
 
       </div>
+      <Separator></Separator>
     </div>
   );
 }

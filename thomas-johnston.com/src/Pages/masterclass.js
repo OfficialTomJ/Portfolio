@@ -5,6 +5,7 @@ import MasterclassBasicInfo from "../Layouts/MasterclassBasicInfo";
 import MasterclassIncluded from "../Layouts/MasterclassIncluded";
 import MasterclassProduct from "../Layouts/MasterclassProduct";
 import MasterclassDiscord from "../Layouts/MasterclassDiscord";
+import Footer from "../Layouts/footer";
 
 function Masterclass() {
   return (
@@ -16,6 +17,7 @@ function Masterclass() {
     <MasterclassIncluded></MasterclassIncluded>
     <MasterclassProduct></MasterclassProduct>
     <MasterclassDiscord></MasterclassDiscord>
+    <Footer></Footer>
     </>
   );
 }

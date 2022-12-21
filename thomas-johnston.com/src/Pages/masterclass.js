@@ -3,6 +3,7 @@ import MasterclassInterviews from "../Layouts/MasterclassInterviews"
 import MasterclassHistory from "../Layouts/MasterclassHistory"
 import MasterclassBasicInfo from "../Layouts/MasterclassBasicInfo";
 import MasterclassIncluded from "../Layouts/MasterclassIncluded";
+import MasterclassProduct from "../Layouts/MasterclassProduct";
 
 function Masterclass() {
   return (
@@ -12,6 +13,7 @@ function Masterclass() {
     <MasterclassHistory></MasterclassHistory>
     <MasterclassBasicInfo></MasterclassBasicInfo>
     <MasterclassIncluded></MasterclassIncluded>
+    <MasterclassProduct></MasterclassProduct>
     </>
   );
 }

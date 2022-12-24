@@ -9,7 +9,7 @@ import Footer from "../Layouts/footer";
 
 function Masterclass() {
   return (
-    <>
+    <div className="bg-zinc-800">
     <MasterclassLanding></MasterclassLanding>
     <MasterclassInterviews></MasterclassInterviews>
     <MasterclassHistory></MasterclassHistory>
@@ -18,7 +18,7 @@ function Masterclass() {
     <MasterclassProduct></MasterclassProduct>
     <MasterclassDiscord></MasterclassDiscord>
     <Footer></Footer>
-    </>
+    </div>
   );
 }
 

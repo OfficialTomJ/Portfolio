@@ -1,5 +1,7 @@
 import { useState } from "react";
+
 import Separator from "../Components/Separator";
+
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 import { Carousel } from 'react-responsive-carousel';
 import carouselImg1 from '../Assets/logo.png'
@@ -28,13 +30,13 @@ function MasterclassProduct() {
 
         <Carousel showThumbs="" showStatus="" className="pt-6">
                 <div>
-                    <img src={carouselImg1} />
+                    <img src={carouselImg1} alt="carousel-1" />
                 </div>
                 <div>
-                    <img src={carouselImg2} />
+                    <img src={carouselImg2} alt="carousel-2"/>
                 </div>
                 <div>
-                    <img src={carouselImg3} />
+                    <img src={carouselImg3} alt="carousel-3"/>
                 </div>
             </Carousel>
 

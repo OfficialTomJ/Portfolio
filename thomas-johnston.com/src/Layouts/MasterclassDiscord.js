@@ -1,5 +1,4 @@
 import MasterclassBtn from "../Components/MasterclassBtn";
-import Separator from "../Components/Separator";
 import DiscordLogo from "../Assets/discord.png";
 
 function MasterclassDiscord() {
@@ -13,7 +12,7 @@ function MasterclassDiscord() {
                 <li>Chat with everyone and share your ideas with like minded traders!</li>
             </ul>
                 <img src={DiscordLogo} alt="Discord logo" className="w-12 mt-8 ml-auto mr-auto mb-4"></img>
-            <a className="w-full flex justify-center">
+            <a className="w-full flex justify-center" href="https://discord.gg/8tK967YJ6y">
                 <MasterclassBtn weight="bold" size="sm" text="Join for free"></MasterclassBtn>
             </a>
         </div>

@@ -1,4 +1,3 @@
-
 //Props take a weight, size and text per Tailwinds specs. ALso includes a link prop for direction.
 function MasterclassBtn(props) {
     return(

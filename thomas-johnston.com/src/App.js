@@ -3,7 +3,7 @@ import Masterclass from './Pages/masterclass';
 
 function App() {
   return (
-    <div className="app" id="outer-container">
+    <div className="App" id="outer-container">
       <Masterclass></Masterclass>
     </div>
   );

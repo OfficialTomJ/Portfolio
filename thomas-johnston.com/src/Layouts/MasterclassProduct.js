@@ -24,7 +24,7 @@ function MasterclassProduct() {
     }
 
   return (
-    <div className="bg-zinc-800 pb-11">
+    <div className="bg-zinc-800 pb-11" id="MasterclassProduct">
       <h2 className="text-white text-2xl ml-8 mr-8 pb-8"><strong>Take your Trading to the Next Level</strong></h2>
       <div className="bg-zinc-700 ml-8 mr-8 pl-6 pr-6 rounded-xl text-white">
 

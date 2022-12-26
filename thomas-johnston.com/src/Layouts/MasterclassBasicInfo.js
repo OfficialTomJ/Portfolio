@@ -12,7 +12,7 @@ function MasterclassBasicInfo() {
                         <li className="pb-4">Foundation program to get you started with no prior knowledge.</li>
                         <li className="pb-4">Includes an active community to engage with and discuss ideas.</li>
                     </ul>
-                    <MasterclassBtn weight="bold" size="sm" text="Sign up"></MasterclassBtn>
+                    <MasterclassBtn weight="bold" size="sm" text="Sign up" link="MasterclassProduct"></MasterclassBtn>
                     </div>
                 <img src={IMAC} alt="Masterclass IMac" className="h-full w-full object-cover object-left bg-left"></img>
             </div>

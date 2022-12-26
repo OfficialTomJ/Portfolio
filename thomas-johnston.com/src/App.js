@@ -3,7 +3,9 @@ import Masterclass from './Pages/masterclass';
 
 function App() {
   return (
-    <Masterclass></Masterclass>
+    <div className="App" id="outer-container">
+      <Masterclass></Masterclass>
+    </div>
   );
 }
 

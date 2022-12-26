@@ -4,18 +4,12 @@ import '../Styles/Sidebar.css';
 
 export default props => {
   return (
-    <Menu>
+    <Menu right>
       <a className="menu-item" href="/">
         Home
       </a>
-      <a className="menu-item" href="/salads">
-        Salads
-      </a>
-      <a className="menu-item" href="/pizzas">
-        Pizzas
-      </a>
-      <a className="menu-item" href="/desserts">
-        Desserts
+      <a className="menu-item" href="/contact">
+        Contact
       </a>
     </Menu>
   );

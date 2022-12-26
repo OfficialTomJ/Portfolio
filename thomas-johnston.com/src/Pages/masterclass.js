@@ -11,7 +11,7 @@ import Footer from "../Layouts/footer";
 function Masterclass() {
   return (
     <>
-      <nav>
+      <nav className="absolute w-full">
         <Navbar></Navbar>
       </nav>
       <main className="bg-zinc-800">

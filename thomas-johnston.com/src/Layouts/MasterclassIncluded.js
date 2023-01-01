@@ -3,7 +3,7 @@ import IPHONE from "../Assets/masterclassiPhone.png"
 function MasterclassIncluded() {
   return (
     <div className="bg-zinc-800 pt-11 pb-11">
-      <h2 className="text-white text-2xl ml-8 mr-8 pb-8">
+      <h2 className="text-white text-2xl ml-8 mr-8 pb-8 md:text-3xl">
         <strong>What's included?</strong>
       </h2>
       <div className="columns-2">

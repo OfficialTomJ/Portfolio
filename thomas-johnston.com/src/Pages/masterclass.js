@@ -15,13 +15,15 @@ function Masterclass() {
         <Navbar></Navbar>
       </nav>
       <main className="bg-zinc-800">
-        <MasterclassLanding></MasterclassLanding>
-        <MasterclassInterviews></MasterclassInterviews>
-        <MasterclassHistory></MasterclassHistory>
-        <MasterclassBasicInfo></MasterclassBasicInfo>
-        <MasterclassIncluded></MasterclassIncluded>
-        <MasterclassProduct></MasterclassProduct>
-        <MasterclassDiscord></MasterclassDiscord>
+        <div className="container flex flex-col ml-auto mr-auto">
+          <MasterclassLanding></MasterclassLanding>
+          <MasterclassInterviews></MasterclassInterviews>
+          <MasterclassHistory></MasterclassHistory>
+          <MasterclassBasicInfo></MasterclassBasicInfo>
+          <MasterclassIncluded></MasterclassIncluded>
+          <MasterclassProduct></MasterclassProduct>
+          <MasterclassDiscord></MasterclassDiscord>
+        </div>
         <Footer></Footer>
       </main>
     </>

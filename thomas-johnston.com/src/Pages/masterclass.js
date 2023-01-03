@@ -15,8 +15,8 @@ function Masterclass() {
         <Navbar></Navbar>
       </nav>
       <main className="bg-zinc-800">
+        <MasterclassLanding></MasterclassLanding>
         <div className="container flex flex-col ml-auto mr-auto">
-          <MasterclassLanding></MasterclassLanding>
           <MasterclassInterviews></MasterclassInterviews>
           <MasterclassHistory></MasterclassHistory>
           <MasterclassBasicInfo></MasterclassBasicInfo>

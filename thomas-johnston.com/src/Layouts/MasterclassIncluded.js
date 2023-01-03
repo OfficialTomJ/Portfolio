@@ -2,12 +2,13 @@ import IPHONE from "../Assets/masterclassiPhone.png"
 
 function MasterclassIncluded() {
   return (
-    <div className="bg-zinc-800 pt-11 pb-11">
+    <div className="bg-zinc-800 pt-11 pb-11 lg:max-w-4xl lg:ml-auto lg:mr-auto lg:pt-20 2xl:max-w-7xl 2xl:width-full">
       <h2 className="text-white text-2xl ml-8 mr-8 pb-8 md:text-3xl">
         <strong>What's included?</strong>
       </h2>
+      <div className="2xl:flex 2xl:gap-10 2xl:align-middle">
       <div className="columns-2">
-        <div className="ml-8">
+        <div className="ml-8 2xl:max-w-xs">
           <ul className="text-white mb-2">
             <li className="pb-8">
               <strong>Daily updates and analysis</strong> on current market
@@ -64,7 +65,7 @@ function MasterclassIncluded() {
             </li>
           </ul>
         </div>
-        <div className="mr-8">
+        <div className="mr-8 2xl:max-w-xs">
           <ul className="text-white mb-2">
             <li className="pb-8">
               <strong>Custom, profitable crypto trading strategies</strong> and
@@ -124,6 +125,7 @@ function MasterclassIncluded() {
         </div>
       </div>
       <img src={IPHONE} alt="Masterclass iPhone" className="mx-auto"></img>
+      </div>
     </div>
   );
 }

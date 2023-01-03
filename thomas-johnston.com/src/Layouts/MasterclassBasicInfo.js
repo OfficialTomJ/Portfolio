@@ -3,7 +3,7 @@ import IMAC from "../Assets/aboutIMac.png";
 
 function MasterclassBasicInfo() {
     return(
-        <div className="bg-zinc-800 pt-11 pb-11">
+        <div className="bg-zinc-800 pt-11 pb-11 lg:max-w-4xl lg:ml-auto lg:mr-auto lg:pt-20 2xl:max-w-7xl lg:pt-16">
             <h2 className="text-white text-2xl ml-8 mr-8 pb-8 md:text-center md:text-3xl"><strong>What is Masterclass Pro?</strong></h2>
                 <div className="columns-2 md:flex md:items-center md:justify-center md:gap-8">
                     <div className="ml-8">

@@ -2,7 +2,8 @@ import IPHONE from "../Assets/masterclassiPhone.png"
 
 function MasterclassIncluded() {
   return (
-    <div className="bg-zinc-800 pt-11 pb-11 lg:max-w-4xl lg:ml-auto lg:mr-auto lg:pt-20 2xl:max-w-7xl 2xl:width-full">
+    <div className="bg-zinc-800 pt-11 pb-11 lg:pb-0 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center">
+      <div className="lg:max-w-4xl 2xl:width-full 2xl:max-w-7xl">
       <h2 className="text-white text-2xl ml-8 mr-8 pb-8 md:text-3xl">
         <strong>What's included?</strong>
       </h2>
@@ -125,6 +126,7 @@ function MasterclassIncluded() {
         </div>
       </div>
       <img src={IPHONE} alt="Masterclass iPhone" className="mx-auto"></img>
+      </div>
       </div>
     </div>
   );

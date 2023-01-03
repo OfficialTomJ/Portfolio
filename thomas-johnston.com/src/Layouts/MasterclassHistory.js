@@ -4,8 +4,8 @@ import DeskImg from '../Assets/desk-charts.jpg';
 
 function MasterclassHistory() {
     return(
-        <div className="bg-zinc-800 pt-11 lg:max-w-4xl lg:ml-auto lg:mr-auto lg:pt-20 2xl:max-w-7xl" id="MasterclassHistory">
-            <div className="md:columns-2 md:flex md:items-center">
+        <div className="bg-zinc-800 pt-11 lg:pb-20 lg:pt-20 lg:flex lg:flex-col lg:items-center" id="MasterclassHistory">
+            <div className="md:columns-2 md:flex md:items-center lg:max-w-4xl 2xl:max-w-7xl">
              <div className="break-after-column">
                 <h2 className="text-white text-2xl md:text-3xl lg:text-4xl lg:leading-[3rem] md:leading-relaxed ml-8 mr-8 pb-8"><strong>Since 2015, </strong><br></br>I have been actively investing/trading crypto and mastering the skill set.</h2>
                 <img src={DeskImg} className="w-full md:pl-8 md:pr-8 md:hidden"></img>
@@ -19,7 +19,9 @@ function MasterclassHistory() {
               </div>
             </div>
             
-            <Separator></Separator>
+            <div className="lg:hidden">
+              <Separator></Separator>
+            </div>
         </div>
     );
 }

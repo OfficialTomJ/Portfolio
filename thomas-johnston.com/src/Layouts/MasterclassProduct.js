@@ -22,8 +22,9 @@ function MasterclassProduct() {
     }
 
   return (
-    <div className="bg-zinc-800 pb-11 lg:max-w-4xl lg:ml-auto lg:mr-auto" id="MasterclassProduct">
-      <h2 className="text-white text-2xl ml-8 mr-8 pb-8 sm:pb-2 sm:text-center sm:pt-16 md:text-3xl lg:pt-20"><strong>Take your Trading to the Next Level</strong></h2>
+    <div className="bg-zinc-800 lg:bg-[#1E1E1E] pb-11 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center" id="MasterclassProduct">
+      <div className="lg:max-w-4xl">
+      <h2 className="text-white text-2xl ml-8 mr-8 pb-8 sm:pb-2 sm:text-center sm:pt-16 md:text-3xl lg:pt-0"><strong>Take your Trading to the Next Level</strong></h2>
       <p className="text-white ml-8 pb-8 text-center hidden sm:block">Sign up now. Limited spots.</p>
       <div className="bg-zinc-700 ml-8 mr-8 pl-6 pr-6 sm:pl-0 sm:pr-0 rounded-xl text-white min-w-min flex justify-center sm:max-w-lg sm:ml-auto sm:mr-auto">
         <div className="sm:max-w-sm">
@@ -74,6 +75,7 @@ function MasterclassProduct() {
       </div>
         </div>
 
+      </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import DiscordLogo from "../Assets/discord.png";
 
 function MasterclassDiscord() {
     return(
-        <div className="bg-zinc-800 pb-11 pt-11 lg:max-w-6xl lg:ml-auto lg:pt-20 lg:mr-auto">
+        <div className="bg-zinc-800 pb-11 pt-11 lg:pb-20 lg:max-w-6xl lg:ml-auto lg:pt-20 lg:mr-auto">
             <h2 className="text-white text-2xl ml-8 mr-8 pb-8 text-center"><strong>A Community like No Other</strong></h2>
             
             <p className="text-white list-disc list-inside pl-8 pr-8 sm:pl-0 sm:pr-0 leading-relaxed text-center max-w-sm ml-auto mr-auto lg:max-w-lg 2xl:max-w-2xl">

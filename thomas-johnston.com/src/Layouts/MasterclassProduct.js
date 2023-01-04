@@ -2,9 +2,9 @@ import { useState } from "react";
 
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 import { Carousel } from 'react-responsive-carousel';
-import carouselImg1 from '../Assets/logo.png'
-import carouselImg2 from '../Assets/aboutIMac.png'
-import carouselImg3 from '../Assets/masterclassiPhone.png'
+import carouselImg1 from '../Assets/logoWithText.png'
+import carouselImg2 from '../Assets/iMac Pro Mockup.png'
+import carouselImg3 from '../Assets/iPhoneCharts.png'
 
 function MasterclassProduct() {
     let checkedStyle = "border-solid border-2 border-white pl-2 pr-2 pt-1 pb-1";

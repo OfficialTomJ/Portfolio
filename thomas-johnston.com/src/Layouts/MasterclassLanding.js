@@ -26,8 +26,8 @@ function MasterclassLanding() {
     }, []);
 
     return(
-        <div className="mx-auto h-screen flex bg-cover bg-left-bottom bg-no-repeat" style={{ backgroundImage: `url(${BgImg})` }}>
-        <div className="flex flex-col justify-center pl-10 pr-24 lg:pr-96 lg:pl-28">
+        <div className="mx-auto h-screen flex bg-cover bg-left-bottom bg-no-repeat xl:pl-28" style={{ backgroundImage: `url(${BgImg})` }}>
+        <div className="flex flex-col justify-center pl-10 pr-24 lg:pr-96 lg:max-w-4xl 2xl:max-w-7xl">
         <h1 className="text-white text-5xl leading-normal mb-6 max-[375px]:text-4xl">Learn how to always be one step ahead of the <strong>Crypto Markets.</strong></h1>
         <MasterclassBtn weight="bold" size="xl" text="Show me" link="MasterclassHistory"></MasterclassBtn>
     </div>

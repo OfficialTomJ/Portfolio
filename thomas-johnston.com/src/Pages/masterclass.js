@@ -7,20 +7,41 @@ import MasterclassIncluded from "../Layouts/MasterclassIncluded";
 import MasterclassProduct from "../Layouts/MasterclassProduct";
 import MasterclassDiscord from "../Layouts/MasterclassDiscord";
 import Footer from "../Layouts/footer";
+import CTAMobileBar from "../Components/CTAMobileBar";
+
+import { useInView } from "react-intersection-observer";
 
 function Masterclass() {
+
+  const [landing, inViewLanding] = useInView({
+    /* Optional options */
+    triggerOnce: false,
+    rootMargin: '0px 0px',
+  });
+  const [product, inViewProduct] = useInView({
+    /* Optional options */
+    triggerOnce: false,
+    rootMargin: '0px 0px',
+  });
+  let isInView = inViewLanding || inViewProduct;
+
   return (
     <>
       <nav className="absolute w-full">
         <Navbar></Navbar>
       </nav>
       <main className="bg-zinc-800">
-        <MasterclassLanding></MasterclassLanding>
+        <div ref={landing}>
+          <MasterclassLanding></MasterclassLanding>
+        </div>
           <MasterclassInterviews></MasterclassInterviews>
+          <CTAMobileBar inView={isInView}></CTAMobileBar>
           <MasterclassHistory></MasterclassHistory>
           <MasterclassBasicInfo></MasterclassBasicInfo>
           <MasterclassIncluded></MasterclassIncluded>
-          <MasterclassProduct></MasterclassProduct>
+          <div ref={product}>
+            <MasterclassProduct></MasterclassProduct>
+          </div>
           <MasterclassDiscord></MasterclassDiscord>
         <Footer></Footer>
       </main>

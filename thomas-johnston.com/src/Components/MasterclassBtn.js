@@ -1,4 +1,4 @@
-import { Link, animateScroll as scroll } from "react-scroll";
+import { Link } from "react-scroll";
 
 //Props take a weight, size and text per Tailwinds specs. ALso includes a link prop for direction.
 function MasterclassBtn(props) {

@@ -22,7 +22,7 @@ function MasterclassDiscord() {
             </p>
                 <img src={DiscordLogo} alt="Discord logo" className="w-12 mt-8 ml-auto mr-auto mb-4"></img>
             <div className="w-full flex justify-center">
-                <MasterclassBtn weight="bold" size="sm" text="Join for free" link="https://discord.gg/8tK967YJ6y"></MasterclassBtn>
+                <MasterclassBtn weight="normal" size="sm" text="Join for free" link="https://discord.gg/8tK967YJ6y"></MasterclassBtn>
             </div>
             </FadeIn>
         </div>

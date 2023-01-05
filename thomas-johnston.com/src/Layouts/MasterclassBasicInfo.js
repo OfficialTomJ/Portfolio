@@ -26,7 +26,7 @@ function MasterclassBasicInfo() {
                         <li className="pb-4 lg:pb-0 flex items-center">- Includes an active community to engage with and discuss ideas.</li>
                     </div>
                     <div className="flex justify-center md:justify-start lg:justify-center">
-                        <MasterclassBtn weight="bold" size="sm" text="Sign up" link="MasterclassProduct"></MasterclassBtn>
+                        <MasterclassBtn weight="normal" size="sm" text="Sign up" link="MasterclassProduct"></MasterclassBtn>
                     </div>
                     </div>
                     <div className="ml-8 mr-8 mt-6 md:ml-0 md:mr-8 md:mt-0">

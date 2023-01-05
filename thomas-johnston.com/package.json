@@ -12,6 +12,7 @@
     "react-fade-in": "^2.0.1",
     "react-intersection-observer": "^9.4.1",
     "react-responsive-carousel": "^3.2.23",
+    "react-router-dom": "^6.6.1",
     "react-scripts": "5.0.1",
     "react-scroll": "^1.8.9",
     "react-type-animation": "^2.1.2",

@@ -1,8 +1,19 @@
 import IPHONE from "../Assets/iPhoneCharts.png"
 
+import FadeIn from 'react-fade-in';
+import { useInView } from "react-intersection-observer";
+
 function MasterclassIncluded() {
+
+  const [layout, IsInView] = useInView({
+    /* Optional options */
+    triggerOnce: true,
+    rootMargin: '0px 0px',
+  });
+
   return (
-    <div className="bg-zinc-800 pt-11 pb-11 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center">
+    <div ref={layout} className="bg-zinc-800 pt-11 pb-11 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center">
+      <FadeIn visible={IsInView}>
       <div className="lg:max-w-4xl 2xl:width-full 2xl:max-w-7xl">
       <h2 className="text-white text-2xl md:text-3xl lg:text-4xl ml-8 mr-8 pb-8 md:text-3xl">
         <strong>What's included?</strong>
@@ -128,6 +139,7 @@ function MasterclassIncluded() {
       <img src={IPHONE} alt="Masterclass iPhone" className="mx-auto sm:max-h-80"></img>
       </div>
       </div>
+      </FadeIn>
     </div>
   );
 }

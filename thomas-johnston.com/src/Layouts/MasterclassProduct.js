@@ -6,6 +6,9 @@ import carouselImg1 from '../Assets/logoWithText.png'
 import carouselImg2 from '../Assets/iMac Pro Mockup.png'
 import carouselImg3 from '../Assets/iPhoneCharts.png'
 
+import FadeIn from 'react-fade-in';
+import { useInView } from "react-intersection-observer";
+
 function MasterclassProduct() {
     let checkedStyle = "border-solid border-2 border-white pl-2 pr-2 pt-1 pb-1";
     let monthlyURL = 'https://buy.stripe.com/cN2dTWahy4Ij3jaeUU';
@@ -21,8 +24,15 @@ function MasterclassProduct() {
       }
     }
 
+    const [layout, IsInView] = useInView({
+    /* Optional options */
+    triggerOnce: true,
+    rootMargin: '0px 0px',
+  });
+
   return (
-    <div className="bg-zinc-800 lg:bg-[#1E1E1E] pb-11 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center" id="MasterclassProduct">
+    <div ref={layout} className="bg-zinc-800 lg:bg-[#1E1E1E] pb-11 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center" id="MasterclassProduct">
+      <FadeIn visible={IsInView}>
       <div className="lg:max-w-4xl">
       <h2 className="text-white text-2xl md:text-3xl lg:text-4xl ml-8 mr-8 pb-8 sm:pb-2 sm:text-center sm:pt-16 md:text-3xl lg:pt-0"><strong>Take your Trading to the Next Level</strong></h2>
       <p className="text-white ml-8 pb-8 text-center hidden sm:block">Sign up now. Limited spots.</p>
@@ -77,6 +87,7 @@ function MasterclassProduct() {
 
       </div>
       </div>
+      </FadeIn>
     </div>
   );
 }

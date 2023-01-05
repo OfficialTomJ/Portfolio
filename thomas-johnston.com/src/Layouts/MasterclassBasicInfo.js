@@ -11,7 +11,6 @@ function MasterclassBasicInfo() {
     triggerOnce: true,
     rootMargin: '0px 0px',
   });
-  console.log(IsInView);
 
     return(
         <div ref={layout} className="bg-zinc-800 lg:bg-[#1E1E1E] pt-11 pb-11 lg:pt-20 lg:pb-20 lg:flex lg:flex-col lg:items-center">

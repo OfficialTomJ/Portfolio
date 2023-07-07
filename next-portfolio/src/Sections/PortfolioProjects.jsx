@@ -5,13 +5,13 @@ import OVERBOOKD from "../../public/OVERBOOKD-BG.png";
 
 export default function PortfolioProjects() {
     return (
-        <>
-        <h2>My projects</h2>
+        <section className="pt-12 pb-12">
+        <h2 className="pb-6">My projects</h2>
         <div className="grid grid-cols-2 gap-4">
             <Card image={VISION} title="VISION iOS App" subheading="Application"/>
             <Card image={BLVCK}  title="BLVCK Paris" subheading="E-Commerce"/>
             <Card image={OVERBOOKD}  title="Overbookd" subheading="Application"/>
         </div>
-        </>
+        </section>
     )
 }

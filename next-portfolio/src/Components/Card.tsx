@@ -6,7 +6,7 @@ import { FaArrowRight } from "react-icons/fa";
 export default function Card(props: { link: string | undefined; image: string | StaticImport; subheading: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | PromiseLikeOfReactNode | null | undefined; title: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | PromiseLikeOfReactNode | null | undefined; }) {
   return (
     <div className="flex items-end">
-      <a href={props.link} target="_blank" rel="noopener noreferrer">
+      <a href={props.link} rel="noopener noreferrer">
         <div className="relative group">
           <Image
             src={props.image}

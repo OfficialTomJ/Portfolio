@@ -1,5 +1,5 @@
 ---
-title: Hello, World!
+title: Blvck Paris
 date: Dec 2017 - Mar 2020
 image: /BLVCK-BG.png
 ---

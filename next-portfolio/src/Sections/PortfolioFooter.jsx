@@ -7,7 +7,7 @@ export default function PortfolioFooter() {
     <h1 className="">
       I’m most active on
       <a href="https://www.instagram.com/officialtomj/" target="_blank" rel="noopener noreferrer" className="ml-2 mr-2">
-        <FaInstagram className="h-6 w-6 inline-block" />
+        <FaInstagram className="h-6 w-6 inline-block hover:animate-spin-fast" />
       </a>
       and
       <a href="https://www.linkedin.com/in/thomas-johnston3301ab/" target="_blank" rel="noopener noreferrer" className="ml-2 mr-2">
@@ -22,5 +22,6 @@ export default function PortfolioFooter() {
     </h2>
   </div>
 </footer>
+
     )
 }

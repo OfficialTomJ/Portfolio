@@ -5,7 +5,7 @@ import FOUNDATION from "../../public/AppleFoundationLogo.png";
 
 export default function PortfolioMedia() {
     return (
-        <section className="pt-12">
+        <section className="pt-12 pb-12 mb-24">
         <h2 className="pb-6">Media</h2>
         <div className="flex gap-20">
         <Image src={APPLE} className="h-20 w-auto"/>

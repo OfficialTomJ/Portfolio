@@ -1,6 +1,5 @@
 import './globals.css'
 import { Jost } from 'next/font/google'
-import Footer from '../Sections/PortfolioFooter'
 
 const jost = Jost({ subsets: ['latin'] })
 
@@ -17,7 +16,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={jost.className}>{children}</body>
-      <Footer></Footer>
     </html>
   )
 }

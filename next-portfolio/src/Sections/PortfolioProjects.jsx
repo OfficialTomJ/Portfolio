@@ -7,7 +7,7 @@ export default function PortfolioProjects() {
     return (
         <section className="pt-12">
         <h2 className="pb-6">My projects</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card image={VISION} title="VISION iOS App" subheading="Application" link="https://google.com"/>
             <Card image={BLVCK}  title="BLVCK Paris" subheading="E-Commerce" link="https://google.com"/>
             <Card image={OVERBOOKD}  title="Overbookd" subheading="Application" link="https://google.com"/>

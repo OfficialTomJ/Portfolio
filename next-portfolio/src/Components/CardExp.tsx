@@ -1,11 +1,13 @@
+import { StaticImport } from "next/dist/shared/lib/get-img-props";
 import Image from "next/image"
+import { ReactElement, JSXElementConstructor, ReactNode, ReactPortal, PromiseLikeOfReactNode } from "react";
 
-export default function CardExp(props) {
+export default function CardExp(props: { image: string | StaticImport; logo: string | StaticImport; subheading: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | PromiseLikeOfReactNode | null | undefined; title: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | PromiseLikeOfReactNode | null | undefined; }) {
   return (
     <div className="flex items-end">
       <div className="relative">
         <div className="relative">
-          <Image src={props.image} alt="Image" className="" />
+          <Image src={props.image} alt="Card" className="" />
           <div className="absolute top-8 left-8">
             <Image src={props.logo} alt="Logo" className="h-12 w-auto" />
           </div>

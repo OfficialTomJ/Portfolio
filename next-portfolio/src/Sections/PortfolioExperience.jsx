@@ -9,7 +9,7 @@ export default function PortfolioExperience() {
     return (
         <section className="pt-12">
         <h2 className="pb-6">My experience</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card image={RECT} logo={APPLE} title="Apple Foundation" subheading="Program"/>
             <Card image={RECT} logo={PROPEX} title="Propex" subheading="Trading"/>
             <Card image={RECT} logo={BLVCK} title="BLVCK Paris" subheading="E-Commerce"/>

@@ -6,6 +6,7 @@ import '../../app/globals.css';
 import Footer from '../../Sections/PortfolioFooter';
 import { PiArrowLeftThin } from "react-icons/pi";
 import Link from "next/link";
+import Navbar from '../../Components/PortfolioNavbar';
 
 const BlogPost = ({ frontmatter, content }) => {
   const paragraphs = content.split('\n\n'); // Split content into paragraphs
@@ -57,8 +58,9 @@ const parseLinks = (text) => {
     <>
       <main className="bg-zinc-800 min-h-screen flex align-middle justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
         <div className="container max-w-5xl">
+          <Navbar/>
           <Link href="/">
-            <div className="flex items-center justify-start mt-8 cursor-pointer">
+            <div className="flex items-center justify-start mt-16 cursor-pointer">
               <PiArrowLeftThin className="text-2xl mr-2 text-5xl" />
             </div>
           </Link>

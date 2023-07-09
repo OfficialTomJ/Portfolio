@@ -2,6 +2,7 @@ import React from "react";
 import fs from "fs/promises";
 import path from "path";
 import grayMatter from "gray-matter";
+import ReactMarkdown from "react-markdown";
 import '../../app/globals.css';
 import Footer from '../../Sections/PortfolioFooter';
 import { PiArrowLeftThin } from "react-icons/pi";
@@ -9,47 +10,7 @@ import Link from "next/link";
 import Navbar from '../../Components/PortfolioNavbar';
 
 const BlogPost = ({ frontmatter, content }) => {
-  const paragraphs = content.split('\n\n'); // Split content into paragraphs
-
-  // Function to check if a string is a valid URL
-  const isURL = (str) => {
-    try {
-      new URL(str);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  };
-
-// Function to parse links in the content
-const parseLinks = (text) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const matches = text.match(urlRegex);
-
-  if (!matches) {
-    return text;
-  }
-
-  const parts = text.split(urlRegex);
-  const parsedContent = parts.map((part, index) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a
-          key={index}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-
-  return parsedContent;
-};
+  const paragraphs = content.split("\n\n");
 
   return (
     <>
@@ -61,17 +22,41 @@ const parseLinks = (text) => {
               <PiArrowLeftThin className="text-4xl mr-2 lg:text-5xl" />
             </div>
           </Link>
-          <h1 className="text-5xl mt-4 lg:mt-8 mb-2">{frontmatter.title}</h1>
-          <p className="">{frontmatter.date}</p>
+          <h1 className="text-5xl mt-4 lg:mt-8 mb-2">
+            <Link href="#">
+              {frontmatter.title}
+            </Link>
+          </h1>
+          <p className="">
+            <Link href="#">
+              {frontmatter.date}
+            </Link>
+          </p>
           <div className="mt-4 lg:mt-8 aspect-w-2 aspect-h-1">
             <img src={frontmatter.image} alt="Blog Image" className="object-cover max-h-[360px] w-full rounded-2xl" />
           </div>
           <div className="sm:max-w-[60%] leading-7 mt-4 lg:mt-8">
-            {paragraphs.map((paragraph, index) => (
-              <p key={index} className="mb-4 lg: mb-8">
-                {parseLinks(paragraph)}
-              </p>
-            ))}
+            {paragraphs.map((paragraph, index) => {
+              return (
+                <div key={index} className="mb-4 lg:mb-8">
+                  <ReactMarkdown
+                    components={{
+                      ul: ({ node, ...props }) => (
+                        <ul style={{ listStyle: "disc" }} {...props} />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li style={{ marginLeft: "1.5rem" }} {...props} />
+                      ),
+                      a: ({ node, ...props }) => (
+                        <a className="underline" target="_none" {...props} />
+                      ),
+                    }}
+                  >
+                    {paragraph}
+                  </ReactMarkdown>
+                </div>
+              );
+            })}
           </div>
         </div>
       </main>

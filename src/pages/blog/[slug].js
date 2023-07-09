@@ -33,7 +33,7 @@ const BlogPost = ({ frontmatter, content }) => {
               {frontmatter.date}
             </Link>
           </p>
-          <div className="mt-4 lg:mt-8 aspect-w-1 aspect-h-1 h-full h-[280px] lg:h-[360px] lg:max-h-[360px] overflow-hidden rounded-2xl relative">
+          <div className="mt-4 lg:mt-8 aspect-w-1 aspect-h-1 h-[280px] lg:h-[360px] lg:max-h-[360px] overflow-hidden rounded-2xl relative">
           <Image
             src={frontmatter.image}
             alt="Blog Image"

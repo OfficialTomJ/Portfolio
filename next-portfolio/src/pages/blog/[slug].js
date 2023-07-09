@@ -51,27 +51,24 @@ const parseLinks = (text) => {
   return parsedContent;
 };
 
-
-
-
   return (
     <>
       <main className="bg-zinc-800 min-h-screen flex align-middle justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
         <div className="container max-w-5xl">
           <Navbar/>
           <Link href="/">
-            <div className="flex items-center justify-start mt-16 cursor-pointer">
-              <PiArrowLeftThin className="text-2xl mr-2 text-5xl" />
+            <div className="flex items-center justify-start mt-4 lg:mt-16 cursor-pointer">
+              <PiArrowLeftThin className="text-4xl mr-2 lg:text-5xl" />
             </div>
           </Link>
-          <h1 className="text-5xl mt-8 mb-2">{frontmatter.title}</h1>
+          <h1 className="text-5xl mt-4 lg:mt-8 mb-2">{frontmatter.title}</h1>
           <p className="">{frontmatter.date}</p>
-          <div className="mt-8 aspect-w-2 aspect-h-1">
+          <div className="mt-4 lg:mt-8 aspect-w-2 aspect-h-1">
             <img src={frontmatter.image} alt="Blog Image" className="object-cover max-h-[360px] w-full rounded-2xl" />
           </div>
-          <div className="max-w-[60%] leading-7 mt-8">
+          <div className="sm:max-w-[60%] leading-7 mt-4 lg:mt-8">
             {paragraphs.map((paragraph, index) => (
-              <p key={index} className="mb-8">
+              <p key={index} className="mb-4 lg: mb-8">
                 {parseLinks(paragraph)}
               </p>
             ))}

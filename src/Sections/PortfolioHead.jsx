@@ -22,7 +22,7 @@ export default function PortfolioHead() {
           className="text-white text-5xl leading-normal max-[375px]:text-4xl"
         />
       <p className="max-w-2xl text-lg">
-        I started my career running an e-commerce brand. But have since delved into tech, building products and UIs for thousands of users and an alumni of the <strong>Apple Foundation Program.</strong>
+        I began my career by running an e-commerce brand, but I have since delved into the world of technology, where I have been involved in building products and user interfaces for thousands of users. Additionally, I am proud to be an alumni of the <strong>Apple Foundation Program.</strong>
       </p>
     </section>
   );

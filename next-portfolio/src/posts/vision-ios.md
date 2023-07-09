@@ -1,7 +1,7 @@
 ---
 title: VISION iOS App
 date: May 2023 - Jun 2023
-image: /BLVCK-BG.png
+image: /VISION-Article.png
 ---
 
 Developed as part of the Apple Foundation Program, VISION is an inspiring AI-powered image generation application designed to overcome creative "writer's block." The app enables users to capture their thoughts in sentences or bullet points, and it then summarises the most important ideas into a Showcase, providing inspiration and momentum for their creative endeavours.

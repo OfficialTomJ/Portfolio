@@ -8,6 +8,7 @@ import Footer from '../../Sections/PortfolioFooter';
 import { PiArrowLeftThin } from "react-icons/pi";
 import Link from "next/link";
 import Navbar from '../../Components/PortfolioNavbar';
+import Image from 'next/image';
 
 const BlogPost = ({ frontmatter, content }) => {
   const paragraphs = content.split("\n\n");
@@ -32,9 +33,17 @@ const BlogPost = ({ frontmatter, content }) => {
               {frontmatter.date}
             </Link>
           </p>
-          <div className="mt-4 lg:mt-8 aspect-w-1 aspect-h-1 h-full h-[280px] lg:max-h-[360px] overflow-hidden rounded-2xl">
-            <img src={frontmatter.image} alt="Blog Image" className="object-cover w-full h-full" />
-          </div>
+          <div className="mt-4 lg:mt-8 aspect-w-1 aspect-h-1 h-full h-[280px] lg:h-[360px] lg:max-h-[360px] overflow-hidden rounded-2xl relative">
+          <Image
+            src={frontmatter.image}
+            alt="Blog Image"
+            className="object-cover w-full h-full object-top"
+            layout="fill"
+            objectFit="cover"
+            quality={100}
+          />
+        </div>
+
 
           <div className="sm:max-w-[60%] leading-7 pt-4 pb-4 lg:mt-8">
             {paragraphs.map((paragraph, index) => {

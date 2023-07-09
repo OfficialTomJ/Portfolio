@@ -1,7 +1,7 @@
 ---
 title: Overbookd
 date: Jan 2017 - Dev 2017
-image: /BLVCK-BG.png
+image: /OVERBOOKD-ArticleBg.png
 ---
 
 Overbookd is a web-based team and project management application designed to streamline productivity and foster efficient task management. Conceived by Julian O'Hayon and developed by Thomas Johnston, this application boasts a sleek and user-friendly card-based layout. Each card represents a project, milestone, or goal and includes a checklist to help users track tasks and meet deadlines.

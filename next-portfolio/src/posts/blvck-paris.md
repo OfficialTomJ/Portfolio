@@ -1,7 +1,7 @@
 ---
 title: BLVCK Paris
 date: Dec 2017 - Mar 2020
-image: /BLVCK-BG.png
+image: /BLVCK-Article.png
 ---
 
 BLVCK Paris is a luxury e-commerce brand that was founded in 2017 by myself and my co-founder, Julian O'Hayon. What initially started as a black-themed Instagram page gained rapid online traction, amassing 80k followers before the launch of our first store. Our mission was to promote and inspire people to embrace the "All Black Lifestyle," a trend that involved incorporating minimalism, sophistication, and timeless elegance into their everyday lives.

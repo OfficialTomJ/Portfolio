@@ -14,7 +14,7 @@ const BlogPost = ({ frontmatter, content }) => {
 
   return (
     <>
-      <main className="bg-zinc-800 min-h-screen flex align-middle justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
+      <main className="bg-zinc-800 min-h-screen lg:flex lg:align-middle lg:justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
         <div className="container max-w-5xl">
           <Navbar/>
           <Link href="/">
@@ -36,10 +36,10 @@ const BlogPost = ({ frontmatter, content }) => {
             <img src={frontmatter.image} alt="Blog Image" className="object-cover w-full h-full" />
           </div>
 
-          <div className="sm:max-w-[60%] leading-7 mt-4 lg:mt-8">
+          <div className="sm:max-w-[60%] leading-7 pt-4 pb-4 lg:mt-8">
             {paragraphs.map((paragraph, index) => {
               return (
-                <div key={index} className="mb-4 lg:mb-8">
+                <div key={index} className="pb-4 lg:mb-8">
                   <ReactMarkdown
                     components={{
                       ul: ({ node, ...props }) => (

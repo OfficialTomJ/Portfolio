@@ -10,6 +10,7 @@ The Showcase feature involves the generation of an AI image based on the provide
 
 The app seamlessly integrates with Firebase for user authentication and storage. This functionality allows users to save their Showcases within their accounts or save the artworks directly to their local devices, facilitating easy sharing with friends and across their social networks.
 
+[View on GitHub](https://github.com/OfficialTomJ/VISION)
 
 Technologies/Resources used:
 

@@ -60,6 +60,9 @@ const BlogPost = ({ frontmatter, content }) => {
                       a: ({ node, ...props }) => (
                         <a className="underline" target="_none" {...props} />
                       ),
+                      img: ({ src, alt }) => (
+                        <Image src={src} alt={alt} width={620} height={460} />
+                      ),
                     }}
                   >
                     {paragraph}

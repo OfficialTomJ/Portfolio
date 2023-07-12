@@ -26,4 +26,4 @@ Key Features:
 - Real-time chat, file sharing, and collaboration capabilities.
 - Customizable settings to tailor the experience to individual preferences.
 
-![Overbookd Brand Showcase](/OverbookdArticle-2.jpg)
+![Overbookd Brand Showcase](/OverbookdArticle-3.jpg)

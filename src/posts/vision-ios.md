@@ -10,10 +10,15 @@ The Showcase feature involves the generation of an AI image based on the provide
 
 The app seamlessly integrates with Firebase for user authentication and storage. This functionality allows users to save their Showcases within their accounts or save the artworks directly to their local devices, facilitating easy sharing with friends and across their social networks.
 
+[Watch the Demo](https://youtube.com/shorts/VQtC1uc7Wio?feature=share)
+
+![Showcase View](/VISION-Showcase.png)
+
+![Apple Foundation Cohort 2](/Foundation-Cohort.jpg)
+
 [View on GitHub](https://github.com/OfficialTomJ/VISION)
 
 Technologies/Resources used:
-
 - Swift
 - SwiftUI
 - Human Interface Guidelines (HIG)

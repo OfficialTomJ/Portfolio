@@ -10,6 +10,8 @@ The initial product launch was an enormous success, positioning us as a luxury s
 
 [Forbes Article](https://www.forbes.com/sites/elainepofeldt/2019/08/25/how-two-young-entrepreneurs-created-a-million-dollar-streetwear-brand)
 
+![BLVCK Hoodie Showcase](/BLVCKArticle-1.jpg)
+
 Key Achievements/Responsibilities:
 
 - Generated over $1M revenue in the first year through viral Instagram and targeted Facebook ad campaigns.
@@ -21,3 +23,7 @@ Key Achievements/Responsibilities:
 - Implemented efficient supply chain management for seamless operations.
 
 [View the Instagram here](https://instagram.com/black)
+
+![BLVCK MacBook Sleeve Product](/BLVCKArticle-2.jpg)
+
+![BLVCK Product Collection](/BLVCKArticle-3.jpg)

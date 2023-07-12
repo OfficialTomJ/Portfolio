@@ -6,7 +6,11 @@ image: /OVERBOOKD-ArticleBg.png
 
 Overbookd is a web-based team and project management application designed to streamline productivity and foster efficient task management. Conceived by Julian O'Hayon and developed by Thomas Johnston, this application boasts a sleek and user-friendly card-based layout. Each card represents a project, milestone, or goal and includes a checklist to help users track tasks and meet deadlines.
 
+![Overbookd Goal UI](/OverbookdArticle-1.png)
+
 The collaborative nature of Overbookd is exemplified by its real-time features, allowing teams to work together seamlessly. Users can add their entire team to projects, check off tasks, modify priorities, adjust due dates, and engage in real-time communication and file sharing through the Chatbox feature.
+
+![Overbookd Chat UI](/OverbookdArticle-4.png)
 
 Under the hood, Firebase serves as the main service for delivering real-time functionality and user authentication.
 
@@ -21,3 +25,5 @@ Key Features:
 - Built-in calendar (Roadmap) for comprehensive scheduling.
 - Real-time chat, file sharing, and collaboration capabilities.
 - Customizable settings to tailor the experience to individual preferences.
+
+![Overbookd Brand Showcase](/OverbookdArticle-2.jpg)

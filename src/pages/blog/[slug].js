@@ -45,7 +45,7 @@ const BlogPost = ({ frontmatter, content }) => {
         </div>
 
 
-          <div className="sm:max-w-[60%] leading-7 pt-4 pb-4 lg:mt-8">
+          <div className="sm:max-w-[60%] lg:leading-7 pt-4 pb-4 lg:mt-8">
             {paragraphs.map((paragraph, index) => {
               return (
                 <div key={index} className="pb-4 lg:mb-8">
@@ -59,6 +59,9 @@ const BlogPost = ({ frontmatter, content }) => {
                       ),
                       a: ({ node, ...props }) => (
                         <a className="underline" target="_none" {...props} />
+                      ),
+                      img: ({ src, alt }) => (
+                        <Image src={src} alt={alt} width={620} height={460} />
                       ),
                     }}
                   >

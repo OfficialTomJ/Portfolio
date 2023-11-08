@@ -18,7 +18,7 @@ export default function PortfolioFooter() {
             </h1>
             <h2 className="text-3xl lg:text-4xl underline">
               <a href="mailto:tomwritescode@proton.me" target="_blank" rel="noopener noreferrer">
-                tomwritescode@proton.me
+                hi@thomas-johnston.com
               </a>
             </h2>
           </div>

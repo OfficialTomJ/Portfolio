@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Amplify, Auth } from "aws-amplify";
 import Config from "../../src/aws-exports";
 
@@ -12,6 +12,22 @@ const UserAuthModal = () => {
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [signInError, setSignInError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        await Auth.currentAuthenticatedUser();
+        // User is signed in
+        setIsAuthenticated(true);
+      } catch (error) {
+        // No current authenticated user
+        setIsAuthenticated(false);
+      }
+    }
+
+    checkAuth();
+  }, []);
 
   const handleUsernameChange = (e) => {
     setUsername(e.target.value);
@@ -45,7 +61,7 @@ const UserAuthModal = () => {
       } else {
         // Sign in logic
         await Auth.signIn(username, password);
-        console.log("User signed in successfully");
+         setIsAuthenticated(true);
       }
 
     } catch (error) {
@@ -73,6 +89,12 @@ const UserAuthModal = () => {
       // Handle verification error
       console.error("Error verifying email:", error);
     }
+  };
+
+  if (isAuthenticated) {
+    // Redirect or render a different component for authenticated users
+    window.location.href = "/profile";
+    return null;
   };
 
   return (

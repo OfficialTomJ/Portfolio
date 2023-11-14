@@ -14,6 +14,7 @@
     "@types/react-dom": "18.2.6",
     "autoprefixer": "10.4.14",
     "aws-amplify": "^5.3.12",
+    "dotenv": "^16.3.1",
     "firebase": "^9.15.0",
     "google-fonts-webpack-plugin": "^0.4.4",
     "gray-matter": "^4.0.3",

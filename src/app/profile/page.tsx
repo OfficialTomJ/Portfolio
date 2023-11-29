@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Amplify, Auth, API } from "aws-amplify";
 import Config from "../../aws-exports";
 import { User } from "../../models/index";
-import { getUser, deleteDiscord } from "../../graphql/queries";
+import { getUser, deleteDiscord, createUser } from "../../graphql/queries";
 
 Amplify.configure(Config);
 
@@ -13,8 +13,15 @@ export default function Profile() {
   const [discordInfo, setDiscordInfo] = useState(null);
 
   useEffect(() => {
-    // Fetch the current authenticated user on component mount
     fetchUserData();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const discordUserParam = urlParams.get("discordUser");
+    if (discordUserParam) {
+      const discordUser = JSON.parse(decodeURIComponent(discordUserParam));
+      linkDiscord(discordUser);
+    }
+
   }, []);
 
   const fetchUserData = async () => {
@@ -45,38 +52,35 @@ export default function Profile() {
             "/" +
             discordAvatar +
             ".jpg",
-          globalName: discordGlobalName, // Add other properties as needed
+          globalName: discordGlobalName,
         });
       } else {
         setDiscordInfo(null);
       }
     } catch (error) {
-      // Handle error fetching user or Discord info
       console.error("Error fetching user or Discord info:", error);
     }
   };
 
   const handleSignOut = async () => {
     try {
-      // Sign out the current user
       await Auth.signOut();
-      setUser(null); // Clear the user state
+      setUser(null);
       window.location.href = "/signup";
     } catch (error) {
-      // Handle error signing out
       console.error("Error signing out:", error);
     }
   };
 
   const handleDiscordLink = async () => {
     try {
-      const response = await fetch("/api/discord/authorise");
+      const response = await fetch(
+        "/api/discord/authorise"
+      );
       const data = await response.json();
 
-      // Extract the Discord authorization URL from the response
       const { discordAuthUrl } = data;
 
-      // Redirect the user to Discord's authorization URL
       window.location.href = discordAuthUrl;
 
     } catch (error) {
@@ -96,6 +100,36 @@ export default function Profile() {
       setDiscordInfo(null);
     } catch (error) {
       console.error("Error unlinking Discord account:", error);
+    }
+  };
+
+  const linkDiscord = async (discordUser) => {
+    try {
+      const currentUser = await Auth.currentAuthenticatedUser();
+
+      const newRecord = {
+        id: currentUser.attributes.sub,
+        discordID: discordUser.id,
+        discordUsername: discordUser.username,
+        discordGlobalName: discordUser.global_name,
+        discordAvatar: discordUser.avatar,
+      };
+      console.log(newRecord);
+
+      await API.graphql({
+        query: createUser,
+        variables: { input: newRecord },
+      });
+      
+      if (window.history.replaceState) {
+        const urlWithoutDiscordUser = window.location.href.split("?")[0];
+        window.history.replaceState({}, document.title, urlWithoutDiscordUser);
+      }
+
+      window.location.reload();
+
+    } catch (error) {
+      console.error("Error creating new user:", error);
     }
   };
 

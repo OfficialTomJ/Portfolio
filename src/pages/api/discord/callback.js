@@ -1,7 +1,10 @@
 // In your server-side API route for handling Discord callback (e.g., discord/callback.js)
+import { API, Auth } from 'aws-amplify';
+
+
 export default async function handler(req, res) {
   const { code } = req.query;
-
+  console.log(res);
   try {
     // Exchange the authorization code for an access token by making a request to Discord's token endpoint
     const discordTokenResponse = await fetch('https://discord.com/api/oauth2/token', {
@@ -37,8 +40,13 @@ export default async function handler(req, res) {
 
     const discordUserData = await discordUserResponse.json();
 
-    // Send the Discord user data as a response
-    res.status(200).json({ discordUser: discordUserData });
+    // Construct the redirect URL with props as query parameters
+    const redirectUrl = `/profile?discordUser=${encodeURIComponent(JSON.stringify(discordUserData))}`;
+
+    // Redirect to the client-side page
+    res.writeHead(302, { Location: redirectUrl });
+    res.end();
+
   } catch (error) {
     console.error('OAuth Callback Error:', error);
     res.status(500).end('Error processing Discord OAuth callback');

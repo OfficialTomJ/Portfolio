@@ -33,3 +33,14 @@ export const deleteDiscord = /* GraphQL */ `
     }
   }
 `;
+export const createUser = /* GraphQL */ `
+  mutation CreateUser($input: CreateUserInput!) {
+    createUser(input: $input) {
+      id
+      discordID
+      discordUsername
+      discordGlobalName
+      discordAvatar
+    }
+  }
+`;

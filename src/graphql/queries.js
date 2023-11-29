@@ -26,4 +26,10 @@ export const getUser = /* GraphQL */ `
   }
 `;
 
-// Add other queries or mutations related to the User type as needed
+export const deleteDiscord = /* GraphQL */ `
+  mutation DeleteUser($id: ID!) {
+    deleteUser(input: { id: $id }) {
+      id
+    }
+  }
+`;

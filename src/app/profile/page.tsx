@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Amplify, Auth, API } from "aws-amplify";
 import Config from "../../aws-exports";
 import { User } from "../../models/index";
-import { getUser } from "../../graphql/queries";
+import { getUser, deleteDiscord } from "../../graphql/queries";
 
 Amplify.configure(Config);
 
@@ -84,6 +84,21 @@ export default function Profile() {
     }
   };
 
+  const handleUnlinkDiscord = async () => {
+    try {
+      const currentUser = await Auth.currentAuthenticatedUser();
+
+      const deletedDiscord = await API.graphql({
+        query: deleteDiscord,
+        variables: { id: currentUser.attributes.sub },
+      });
+
+      setDiscordInfo(null);
+    } catch (error) {
+      console.error("Error unlinking Discord account:", error);
+    }
+  };
+
 
   return (
     <main className="bg-zinc-800 min-h-screen flex align-middle justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
@@ -97,6 +112,7 @@ export default function Profile() {
             <p>Discord User ID: {discordInfo.id}</p>
             <button
               className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+              onClick={handleUnlinkDiscord}
             >
               Unlink Discord Account
             </button>

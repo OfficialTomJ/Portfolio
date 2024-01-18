@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const OneCTAButton = () => {
   return (
     <>
@@ -6,9 +8,12 @@ const OneCTAButton = () => {
         Application Only.
       </p>
       <div className="flex justify-center">
-        <button className="mt-4 bg-green-500 pl-14 pr-14 pt-2 pb-2 rounded-lg">
+        <Link
+          href="/apply"
+          className="mt-4 bg-green-500 pl-14 pr-14 pt-2 pb-2 rounded-lg"
+        >
           <strong>APPLY NOW</strong>
-        </button>
+        </Link>
       </div>
     </>
   );

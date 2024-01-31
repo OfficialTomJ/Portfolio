@@ -4,6 +4,7 @@ import PortfolioProjects from '../Sections/PortfolioProjects'
 import PortfolioExperience from '../Sections/PortfolioExperience'
 import PortfolioMedia from '../Sections/PortfolioMedia'
 import PortfolioFooter from '../Sections/PortfolioFooter'
+import PortfolioMasterclassOne from '../Sections/PortfolioMasterclassOne'
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
           <PortfolioProjects />
           <PortfolioExperience />
           <PortfolioMedia />
+          <PortfolioMasterclassOne />
         </div>
       </main>
       <PortfolioFooter />

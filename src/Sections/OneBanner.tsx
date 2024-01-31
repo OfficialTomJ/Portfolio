@@ -2,7 +2,7 @@ import OneCTAButton from "../Components/OneCTAButton"
 
 export default function OneBanner() {
   return (
-    <div className="pt-12">
+    <div className="sm:pt-24 pt-12">
       <h1 className="text-3xl text-center lg:text-5xl">
         Master the Markets and Realise Your Potential with{" "}
         <strong>Masterclass One.</strong>

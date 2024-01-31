@@ -4,6 +4,7 @@ import PortfolioFooter from "@/Sections/PortfolioFooter";
 import axios from "axios";
 import Link from "next/link";
 import Confetti from "react-confetti";
+import Navbar from "../../Components/PortfolioNavbar";
 
 const Apply = () => {
 
@@ -92,12 +93,14 @@ const Apply = () => {
     <>
       <main className="bg-zinc-800 min-h-screen flex align-middle justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
         <Confetti
-      width={window.innerWidth}
-      height={window.innerHeight}
-      run={formSubmitted}
-      recycle={false}/>
-        <div className="container max-w-5xl">
-          <h1 className="text-4xl">
+          width={window.innerWidth}
+          height={window.innerHeight}
+          run={formSubmitted}
+          recycle={false}
+        />
+        <div className="container max-w-5xl pb-12">
+          <Navbar />
+          <h1 className="text-4xl sm:pt-24 pt-12">
             Thank you for your interest in <strong>Masterclass One.</strong>
           </h1>
           <p className="mt-4">

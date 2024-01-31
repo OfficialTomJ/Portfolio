@@ -2,6 +2,8 @@ import OneCTAButton from "@/Components/OneCTAButton";
 import Image from 'next/image'
 import Members1 from "../../public/Members1.jpg";
 import Members2 from "../../public/Members2.jpg";
+import profileImg from "../../public/profile.jpg";
+import tradingImg from "../../public/trading.jpg";
 
 export default function OneAbout() {
   return (
@@ -14,6 +16,21 @@ export default function OneAbout() {
         Futures Trader that helps up-and-coming, and intermediate traders reach
         consistency and trade like a professional.
       </p>
+      <div className="sm:columns-2 gap-24 mt-6 mb-6 sm:mt-12 sm:mb-12">
+        <div className="image-container">
+          <Image
+            src={profileImg}
+            alt="Profile Image"
+            className="rounded-full hidden sm:block"
+          />
+          <p className="text-center hidden sm:block">Life's unfiltered side.</p>
+        </div>
+        <div className="image-container">
+          <Image src={tradingImg} alt="Trading Image" />
+          <p className="text-center">At the charts.</p>
+        </div>
+      </div>
+
       <h2 className="text-xl mt-12">
         <strong>1-1 Mentoring. Who’s it for?</strong>
       </h2>
@@ -66,8 +83,8 @@ export default function OneAbout() {
         <strong>How much will it cost?</strong>
       </h2>
       <p>
-        Runs for a period of 3 months, or to your needs. $1,498 upfront or $550
-        / month.
+        Standard Program runs for a period of 3 months, or to your needs. $1,498
+        upfront or $550 / month.
       </p>
 
       <h2 className="text-xl mt-12">

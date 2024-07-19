@@ -17,7 +17,15 @@ const Apply = () => {
     additionalComments: "",
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    bestEmail?: string;
+    tradingExperience?: string;
+    tradingSkill?: string;
+    helpWithTrading?: string;
+    additionalComments?: string;
+  }>({});
+  
   const [formSubmitted, setFormSubmitted] = useState(false);
 
   const handleChange = (e: { target: { name: any; value: any; }; }) => {
@@ -58,7 +66,14 @@ const Apply = () => {
   };
 
   const validateForm = () => {
-    const validationErrors = {};
+    const validationErrors: {
+      fullName?: string;
+      bestEmail?: string;
+      tradingExperience?: string;
+      tradingSkill?: string;
+      helpWithTrading?: string;
+      additionalComments?: string;
+    } = {};
 
     // Check if fullName is empty
     if (!formData.fullName.trim()) {

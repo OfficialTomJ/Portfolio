@@ -16,9 +16,8 @@ export default function OneBanner() {
       <iframe
         src="https://player.vimeo.com/video/524933864?h=1ac4fd9fb4&autoplay=1&title=0&byline=0&portrait=0"
         className="w-full aspect-video mt-6"
-        frameborder="0"
         allow="autoplay; fullscreen; picture-in-picture"
-        allowfullscreen
+        allowFullScreen
       ></iframe>
       <div className="mt-6">
         <OneCTAButton />

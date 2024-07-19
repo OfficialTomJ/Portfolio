@@ -210,7 +210,7 @@ const Apply = () => {
                   className={`bg-gray-700 border border-gray-600 rounded px-3 py-2 mt-1 focus:outline-none focus:ring focus:border-blue-500 w-full resize-y ${
                     errors.helpWithTrading ? "border-red-500" : ""
                   }`}
-                  rows="6"
+                  rows={6}
                 ></textarea>
               </label>
               <label className="mb-4">
@@ -222,7 +222,7 @@ const Apply = () => {
                   className={`bg-gray-700 border border-gray-600 rounded px-3 py-2 mt-1 focus:outline-none focus:ring focus:border-blue-500 w-full resize-y ${
                     errors.additionalComments ? "border-red-500" : ""
                   }`}
-                  rows="4"
+                  rows={4}
                 ></textarea>
               </label>
               <div className="mb-4 text-red-500">

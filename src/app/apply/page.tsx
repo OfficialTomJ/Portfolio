@@ -107,12 +107,6 @@ const Apply = () => {
   return (
     <>
       <main className="bg-zinc-800 min-h-screen flex align-middle justify-center text-white pl-4 pr-4 lg:pl-0 lg:pr-0">
-        <Confetti
-          width={window.innerWidth}
-          height={window.innerHeight}
-          run={formSubmitted}
-          recycle={false}
-        />
         <div className="container max-w-5xl pb-12">
           <Navbar />
           <h1 className="text-4xl sm:pt-24 pt-12">

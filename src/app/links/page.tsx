@@ -50,7 +50,7 @@ export default function Links() {
         <div className="bg-slate-50 h-px w-full opacity-30 mb-6"></div>
         <LinkBox
           title="Personal Portfolio 👔"
-          href="https://www.thomas-johnston.com/personal"
+          href="https://www.thomas-johnston.com/portfolio"
         />
       </div>
     </main>

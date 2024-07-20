@@ -1,7 +1,12 @@
 import PropTypes from "prop-types";
 import Link from "next/link";
 
-const LinkBox = ({ title, href }) => {
+type LinkBoxProps = {
+  title: string;
+  href: string;
+};
+
+const LinkBox: React.FC<LinkBoxProps> = ({ title, href }) => {
   return (
     <Link href={href} passHref>
       <div className="w-full transition-all duration-300 hover:scale-[1.03]">

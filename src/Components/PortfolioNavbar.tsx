@@ -11,9 +11,13 @@ const PortfolioNavbar = () => {
             <Image src={Logo} alt="Logo" className="h-16 w-auto" />
           </Link>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 text-white">
           <Link href="/">Portfolio</Link>
-          <Link target="_blank" href="https://www.linkedin.com/in/thomas-johnston3301ab/">
+          <Link href="/one">Mentoring</Link>
+          <Link
+            target="_blank"
+            href="https://www.linkedin.com/in/thomas-johnston3301ab/"
+          >
             LinkedIn
           </Link>
         </div>

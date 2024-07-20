@@ -27,6 +27,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+portfolio-1705549282867-fec5995715b1.json
 
 # vercel
 .vercel

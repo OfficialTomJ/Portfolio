@@ -14,7 +14,7 @@ export default function OneAbout() {
       <p>
         I’m Thomas Johnston (or just Tom). An Ex Professional Cryptocurrency
         Futures Trader that helps up-and-coming, and intermediate traders reach
-        consistency and trade like a professional.
+        consistency to trade like a professional.
       </p>
       <div className="sm:columns-2 gap-24 mt-6 mb-6 sm:mt-12 sm:mb-12">
         <div className="image-container">
@@ -42,7 +42,9 @@ export default function OneAbout() {
         implemented over the duration of the program.
       </p>
       <br></br>
-      <p>Risk Free Guarantee 💸 - Get results, or your money back.</p>
+      <p>
+        <u>Risk Free Guarantee 💸 - Get results, or your money back.</u>
+      </p>
 
       <h2 className="text-xl mt-12">
         <strong>Do I need Trading Experience?</strong>
@@ -60,7 +62,7 @@ export default function OneAbout() {
         <strong>What’s Included?</strong>
       </h2>
       <ul className="list-disc list-inside">
-        <li>3x 1-1 Live Coaching Sessions each Month (1 hour)</li>
+        <li>1-1 Live Coaching Sessions per your schedule (1-2 hours)</li>
         <li>
           Access a Private DM Channel for Questions, Follow Up, and Resources
         </li>
@@ -83,12 +85,17 @@ export default function OneAbout() {
         <strong>How much will it cost?</strong>
       </h2>
       <p>
-        Standard Program runs for a period of 3 months, or to your needs. $1,498
-        upfront or $550 / month.
+        Masterclass One operates as a subscription and is based on your needs.
+        You can subscribe for 1 month or 12 and we work on a specific issue each
+        session with follow ups to ensure you're meeting your goals.
+        <br></br>
+        <br></br>
+        Standard price is $498 USD / month. All inclusive. 👉
+        <u>Money Back Guarantee 💸 if you don't see results.</u>
       </p>
 
       <h2 className="text-xl mt-12">
-        <strong>How do I apply?</strong>
+        <strong>How do I join?</strong>
       </h2>
       <p>
         Click the ‘Apply Now’ buttons on this Page or reach out to our team at

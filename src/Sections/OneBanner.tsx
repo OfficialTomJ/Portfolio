@@ -8,9 +8,8 @@ export default function OneBanner() {
         <strong>Masterclass One.</strong>
       </h1>
       <p className="mt-4 text-center lg:text-xl">
-        Masterclass One is a personalised 1-1 Mentoring Program that spans over
-        a 3 Month Period to teach you how to trade financial markets and achieve
-        consistency.
+        Masterclass One is an exclusive and personalised 1-1 Mentoring Program to teach you how to trade financial markets and achieve
+        consistency. 📈
       </p>
 
       <iframe

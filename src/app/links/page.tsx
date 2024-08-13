@@ -26,10 +26,14 @@ export default function Links() {
           </p>
         </div>
         <LinkBox
+          title="LAUNCHING SOON 🚀 // Masterclass One 1-1 Mentoring Program. Click to learn more"
+          href="https://masterclass-one.getresponsesite.com/"
+        />
+        <div className="bg-slate-50 h-px w-full opacity-30 mb-6"></div>
+        <LinkBox
           title="SUBSCRIBE TO THE CRYPTO CHRONICLES NEWSLETTER 📬"
           href="https://crypto-chronicles.beehiiv.com/"
         />
-        <div className="bg-slate-50 h-px w-full opacity-30 mb-6"></div>
         <LinkBox
           title="Join the Trading Discord! 📈"
           href="https://discord.gg/8tK967YJ6y"

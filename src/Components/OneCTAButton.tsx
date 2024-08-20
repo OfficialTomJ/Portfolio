@@ -15,6 +15,11 @@ const OneCTAButton = () => {
           <strong>APPLY NOW</strong>
         </Link>
       </div>
+      <Link href="mailto:hi@thomas-johnston.com">
+        <p className="text-center mt-4">
+          <u>Have questions? Click here to contact the team.</u>
+        </p>
+      </Link>
     </>
   );
 };

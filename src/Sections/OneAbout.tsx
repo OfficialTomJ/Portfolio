@@ -96,7 +96,7 @@ export default function OneAbout() {
       <p>
         Click the ‘Apply Now’ buttons on this Page or reach out to our team at:
       </p>
-      <Link href="mailto:hi@thomas-johnston.com">
+      <Link href="mailto:hi@thomas-johnston.com?subject=Masterclass One Inquiry">
         <p>
           <u>hi@thomas-johnston.com</u>
         </p>

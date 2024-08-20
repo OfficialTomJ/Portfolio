@@ -1,5 +1,6 @@
 import OneCTAButton from "@/Components/OneCTAButton";
-import Image from 'next/image'
+import Image from 'next/image';
+import Link from "next/link";
 import Members1 from "../../public/Members1.jpg";
 import Members2 from "../../public/Members2.jpg";
 import profileImg from "../../public/profile.jpg";
@@ -82,18 +83,24 @@ export default function OneAbout() {
       <h2 className="text-xl mt-12">
         <strong>How much will it cost?</strong>
       </h2>
-      <p>
-        Standard Program runs for a period of 3 months, or to your needs. $1,498
-        upfront or $550 / month.
-      </p>
+      <p>Please contact us for direct pricing.</p>
+      <Link href="mailto:hi@thomas-johnston.com">
+        <p>
+          <u>hi@thomas-johnston.com</u>
+        </p>
+      </Link>
 
       <h2 className="text-xl mt-12">
         <strong>How do I apply?</strong>
       </h2>
       <p>
-        Click the ‘Apply Now’ buttons on this Page or reach out to our team at
-        support@thomas-johnston.com.
+        Click the ‘Apply Now’ buttons on this Page or reach out to our team at:
       </p>
+      <Link href="mailto:hi@thomas-johnston.com">
+        <p>
+          <u>hi@thomas-johnston.com</u>
+        </p>
+      </Link>
       <div className="mt-12 mb-12">
         <OneCTAButton />
       </div>

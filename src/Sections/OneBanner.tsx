@@ -14,7 +14,7 @@ export default function OneBanner() {
       </p>
 
       <iframe
-        src="https://player.vimeo.com/video/524933864?h=1ac4fd9fb4&autoplay=1&title=0&byline=0&portrait=0"
+        src="https://player.vimeo.com/video/1004989800?badge=0&autoplay=1&title=0&byline=0&portrait=0"
         className="w-full aspect-video mt-6"
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen

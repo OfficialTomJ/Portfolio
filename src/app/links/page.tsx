@@ -26,8 +26,8 @@ export default function Links() {
           </p>
         </div>
         <LinkBox
-          title="LAUNCHING SOON 🚀 // Masterclass One 1-1 Mentoring Program. Click to learn more"
-          href="https://masterclass-one.getresponsesite.com/"
+          title="NOW AVAILABLE 🚀🎉 // Masterclass One 1-1 Mentoring Program!"
+          href="https://www.thomas-johnston.com/one"
         />
         <div className="bg-slate-50 h-px w-full opacity-30 mb-6"></div>
         <LinkBox

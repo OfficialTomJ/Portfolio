@@ -3,8 +3,13 @@ const nextConfig = {
     async redirects() {
     return [
       {
-        source: '/chronicles',
-        destination: 'https://crypto-chronicles.beehiiv.com/subscribe',
+        source: "/chronicles",
+        destination: "https://crypto-chronicles.beehiiv.com/subscribe",
+        permanent: true,
+      },
+      {
+        source: "/discord",
+        destination: "https://discord.gg/8tK967YJ6y",
         permanent: true,
       },
       {
@@ -12,7 +17,7 @@ const nextConfig = {
         destination: "/links",
         permanent: true,
       },
-    ]
+    ];
   },
 }
 

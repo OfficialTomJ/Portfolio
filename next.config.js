@@ -4,7 +4,12 @@ const nextConfig = {
     return [
       {
         source: "/chronicles",
-        destination: "https://crypto-chronicles.beehiiv.com/subscribe",
+        destination: "https://cryptochroniclesweekly.substack.com/",
+        permanent: true,
+      },
+      {
+        source: "/substack",
+        destination: "https://cryptochroniclesweekly.substack.com/",
         permanent: true,
       },
       {

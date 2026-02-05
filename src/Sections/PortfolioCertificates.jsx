@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import UTS from "../../public/UTSlogo.png";
+import UTS from "../../public/utslogo.png";
 
 export default function PortfolioCertificates() {
     return (

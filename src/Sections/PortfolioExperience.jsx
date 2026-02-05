@@ -11,7 +11,7 @@ export default function PortfolioExperience() {
         <h2 className="pb-6">My experience</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card image={RECT} logo={APPLE} title="Apple Foundation" subheading="Program"/>
-            <Card image={RECT} logo={PROPEX} title="Propex" subheading="Trading"/>
+            <Card image={RECT} logo={PROPEX} title="Propex Derivatives" subheading="Proprietary Trading"/>
             <Card image={RECT} logo={BLVCK} title="BLVCK Paris" subheading="E-Commerce"/>
             <Card image={RECT} logo={HYPERLAX} title="Hyperlax" subheading="Creative Agency"/>
         </div>

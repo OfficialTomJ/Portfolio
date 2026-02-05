@@ -19,7 +19,7 @@ const nextConfig = {
       },
       {
         source: "/",
-        destination: "/links",
+        destination: "/portfolio",
         permanent: true,
       },
     ];

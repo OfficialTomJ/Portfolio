@@ -13,7 +13,6 @@ const PortfolioNavbar = () => {
         </div>
         <div className="flex gap-4 text-white">
           <Link href="/">Portfolio</Link>
-          <Link href="/one">Mentoring</Link>
           <Link
             target="_blank"
             href="https://www.linkedin.com/in/thomas-johnston3301ab/"

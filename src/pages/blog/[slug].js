@@ -38,8 +38,7 @@ const BlogPost = ({ frontmatter, content }) => {
             src={frontmatter.image}
             alt="Blog Image"
             className="object-cover w-full h-full object-top"
-            layout="fill"
-            objectFit="cover"
+            fill
             quality={100}
           />
         </div>
@@ -51,7 +50,7 @@ const BlogPost = ({ frontmatter, content }) => {
                 <div key={index} className="pb-4 lg:mb-8">
                   <ReactMarkdown
                     components={{
-                      ul: ({ node, ...props }) => (
+                      ul: ({ node, ordered, ...props }) => (
                         <ul style={{ listStyle: "disc" }} {...props} />
                       ),
                       li: ({ node, ...props }) => (

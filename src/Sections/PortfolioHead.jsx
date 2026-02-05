@@ -12,7 +12,7 @@ export default function PortfolioHead() {
       <Image src={ProfilePic} className="w-28 pb-4" alt="ProfilePic" />
       <TypeAnimation
         sequence={[
-          "I'm Tom - student and developer.",
+          "I'm Tom - Graduate Software Engineer.",
           () => {
             // Additional logic if needed
           },
@@ -24,9 +24,11 @@ export default function PortfolioHead() {
         className="text-white text-5xl leading-normal max-[375px]:text-4xl"
       />
       <p className="max-w-2xl text-lg">
+        I'm currently a Software Engineer at <strong>Commonwealth Bank</strong>.
+        <br /><br />
         I began my career by running an e-commerce brand, but I have since delved into the world of technology, where I have
         been involved in building products and user interfaces for thousands of users. Additionally, I am proud to be an
-        alumni of the <strong>Apple Foundation Program.</strong>
+        alumni of the <strong>Apple Foundation Program</strong> and UTS graduate.
       </p>
       <div className="flex items-center mt-4">
         <Link href="https://github.com/OfficialTomJ" className="flex items-center text-white underline" target="_none">

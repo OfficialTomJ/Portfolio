@@ -3,6 +3,7 @@ import PortfolioHead from '../../Sections/PortfolioHead'
 import PortfolioProjects from '../../Sections/PortfolioProjects'
 import PortfolioExperience from '../../Sections/PortfolioExperience'
 import PortfolioMedia from '../../Sections/PortfolioMedia'
+import PortfolioCertificates from '../../Sections/PortfolioCertificates'
 import PortfolioFooter from '../../Sections/PortfolioFooter'
 
 export default function Portfolio() {
@@ -14,6 +15,7 @@ export default function Portfolio() {
           <PortfolioProjects />
           <PortfolioExperience />
           <PortfolioMedia />
+          <PortfolioCertificates />
         </div>
       </main>
       <PortfolioFooter />

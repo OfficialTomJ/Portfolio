@@ -14,8 +14,16 @@
 
   background-color: var(--bp-bg);
   color: var(--bp-text);
-  min-height: 100vh;
+  color-scheme: dark;
+  min-height: 100dvh;
   letter-spacing: -0.01em;
+}
+
+/* iOS Safari: keep the document background black behind the browser chrome
+   (the "liquid glass" bottom bar / overscroll) on mentor pages only. */
+html:has(.blueprint),
+body:has(.blueprint) {
+  background-color: #000;
 }
 
 .blueprint ::selection {

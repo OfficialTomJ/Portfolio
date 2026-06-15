@@ -12,6 +12,12 @@ export const metadata = {
     "Learn to trade like a professional with Thomas Johnston's free Blueprint course.",
 };
 
+// Dark browser chrome (fixes the white iOS Safari bottom-bar gradient).
+export const viewport = {
+  themeColor: "#000000",
+  colorScheme: "dark" as const,
+};
+
 export default function MentorLayout({
   children,
 }: {

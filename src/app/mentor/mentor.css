@@ -1,0 +1,92 @@
+/* OLED-dark, refined theme — scoped to the mentor app only (.blueprint).
+   The portfolio keeps globals.css untouched. */
+
+.blueprint {
+  --bp-bg: #000000;            /* true black — OLED-friendly + premium */
+  --bp-surface: #0a0a0b;       /* elevated cards */
+  --bp-surface-2: #111114;     /* deeper elevation */
+  --bp-border: rgba(255, 255, 255, 0.09);
+  --bp-border-strong: rgba(255, 255, 255, 0.16);
+  --bp-text: #fafafa;
+  --bp-text-dim: #a1a1aa;      /* zinc-400 */
+  --bp-accent: #ff6719;        /* Substack brand orange — rgb(255 103 25) */
+  --bp-accent-rgb: 255 103 25;
+
+  background-color: var(--bp-bg);
+  color: var(--bp-text);
+  min-height: 100vh;
+  letter-spacing: -0.01em;
+}
+
+.blueprint ::selection {
+  background: rgb(var(--bp-accent-rgb) / 0.3);
+}
+
+/* Elevated surface with hairline border */
+.bp-surface {
+  background-color: var(--bp-surface);
+  border: 1px solid var(--bp-border);
+}
+
+/* Subtle Netflix-style glow behind the hero */
+.bp-hero-glow {
+  background:
+    radial-gradient(60% 55% at 50% -5%, rgb(var(--bp-accent-rgb) / 0.16), transparent 70%),
+    radial-gradient(45% 35% at 85% 0%, rgb(var(--bp-accent-rgb) / 0.06), transparent 70%);
+}
+
+/* Horizontal, snap-scrolling row (episode rows) */
+.bp-row {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 0.5rem;
+}
+.bp-row::-webkit-scrollbar {
+  display: none;
+}
+.bp-card {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+
+/* Refined links inside markdown outlines */
+.bp-prose a {
+  color: var(--bp-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.bp-prose ul {
+  list-style: disc;
+  padding-left: 1.4rem;
+  margin: 0.75rem 0;
+}
+.bp-prose ol {
+  list-style: decimal;
+  padding-left: 1.4rem;
+  margin: 0.75rem 0;
+}
+.bp-prose li {
+  margin: 0.3rem 0;
+}
+.bp-prose h2,
+.bp-prose h3 {
+  font-weight: 600;
+  margin: 1.4rem 0 0.5rem;
+}
+.bp-prose h2 {
+  font-size: 1.35rem;
+}
+.bp-prose h3 {
+  font-size: 1.15rem;
+}
+.bp-prose p {
+  margin: 0.75rem 0;
+  color: var(--bp-text-dim);
+  line-height: 1.7;
+}
+.bp-prose strong {
+  color: var(--bp-text);
+}

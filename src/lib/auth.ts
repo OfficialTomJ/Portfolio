@@ -7,6 +7,13 @@ import { sendEmail } from "./email";
 // Better Auth reads BETTER_AUTH_SECRET and BETTER_AUTH_URL from env automatically.
 export const auth = betterAuth({
   database: mongodbAdapter(getDb()),
+  // Origins allowed to call the auth API (CSRF protection). Better Auth also
+  // trusts BETTER_AUTH_URL; we list all environments explicitly to be safe.
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://mentor.thomas-johnston.com",
+    "https://mentor.stage.thomas-johnston.com",
+  ],
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,

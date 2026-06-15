@@ -1,0 +1,31 @@
+name: Sync prod DB to dev
+
+# Copies blueprint_prod -> blueprint_dev daily so dev mirrors real data.
+# Requires a repo Actions secret: MONGODB_URI (the Atlas cluster connection string).
+# Live sessions / transient collections are excluded so real sessions aren't duplicated.
+
+on:
+  schedule:
+    - cron: "0 17 * * *" # daily 17:00 UTC (~03:00 AEST)
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install MongoDB Database Tools
+        run: |
+          wget -q https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.10.0.deb
+          sudo dpkg -i mongodb-database-tools-*.deb
+          mongodump --version | head -1
+
+      - name: Dump blueprint_prod
+        run: mongodump --uri="${{ secrets.MONGODB_URI }}" --db=blueprint_prod --gzip --archive=dump.gz
+
+      - name: Restore into blueprint_dev (drop first)
+        run: |
+          mongorestore --uri="${{ secrets.MONGODB_URI }}" --gzip --archive=dump.gz --drop \
+            --nsFrom='blueprint_prod.*' --nsTo='blueprint_dev.*' \
+            --nsExclude='blueprint_prod.session' \
+            --nsExclude='blueprint_prod.verification' \
+            --nsExclude='blueprint_prod.rateLimits'

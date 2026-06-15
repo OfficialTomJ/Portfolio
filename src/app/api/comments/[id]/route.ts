@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "../../../../lib/session";
 import { deleteComment, editComment } from "../../../../lib/engagement";
+import { checkRateLimit } from "../../../../lib/ratelimit";
 
 const patchSchema = z.object({ body: z.string().trim().min(1).max(2000) });
 
@@ -13,6 +14,9 @@ export async function PATCH(
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const limited = await checkRateLimit(`cedit:${session.user.id}`, 15, 60);
+  if (limited) return limited;
+
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

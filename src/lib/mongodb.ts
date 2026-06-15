@@ -17,7 +17,11 @@ function getClient(): MongoClient {
     throw new Error("Missing MONGODB_URI environment variable");
   }
   if (!global._blueprintMongoClient) {
-    global._blueprintMongoClient = new MongoClient(uri);
+    // Fail fast (clear 500) instead of hanging to a 504 if Atlas is
+    // unreachable (e.g. IP not allowlisted).
+    global._blueprintMongoClient = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 8000,
+    });
   }
   return global._blueprintMongoClient;
 }

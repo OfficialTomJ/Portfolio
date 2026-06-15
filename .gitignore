@@ -29,6 +29,12 @@ yarn-error.log*
 .env*.local
 portfolio-1705549282867-fec5995715b1.json
 
+# private course content (never commit — public repo)
+/content/
+
+# local-only dev/admin scripts (seed, db reset, etc.)
+/scripts/
+
 # vercel
 .vercel
 

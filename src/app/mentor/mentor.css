@@ -28,6 +28,40 @@
   border: 1px solid var(--bp-border);
 }
 
+/* Top navigation progress bar (pulsing, accent) */
+.bp-topbar-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 100;
+  pointer-events: none;
+}
+.bp-topbar {
+  height: 100%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--bp-accent-rgb) / 0.35),
+    var(--bp-accent)
+  );
+  box-shadow:
+    0 0 10px rgb(var(--bp-accent-rgb) / 0.7),
+    0 0 4px rgb(var(--bp-accent-rgb) / 0.5);
+  transition: width 0.2s ease-out;
+  animation: bp-topbar-pulse 1s ease-in-out infinite;
+}
+@keyframes bp-topbar-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* Subtle Netflix-style glow behind the hero */
 .bp-hero-glow {
   background:

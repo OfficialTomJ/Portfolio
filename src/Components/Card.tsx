@@ -1,9 +1,9 @@
 import { StaticImport } from "next/dist/shared/lib/get-img-props";
 import Image from "next/image"
-import { ReactElement, JSXElementConstructor, ReactNode, ReactPortal, PromiseLikeOfReactNode } from "react";
+import { ReactNode } from "react";
 import { FaArrowRight } from "react-icons/fa";
 
-export default function Card(props: { link: string | undefined; image: string | StaticImport; subheading: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | PromiseLikeOfReactNode | null | undefined; title: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | PromiseLikeOfReactNode | null | undefined; }) {
+export default function Card(props: { link: string | undefined; image: string | StaticImport; subheading: ReactNode; title: ReactNode; }) {
   return (
     <div className="flex items-end">
       <a href={props.link} rel="noopener noreferrer">

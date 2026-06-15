@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    turbopack: {
+        root: __dirname,
+    },
+    images: {
+        qualities: [75, 100],
+    },
     async redirects() {
     return [
       {

@@ -20,11 +20,11 @@ jobs:
           mongodump --version | head -1
 
       - name: Dump blueprint_prod
-        run: mongodump --uri="${{ secrets.MONGODB_URI }}" --db=blueprint_prod --gzip --archive=dump.gz
+        run: mongodump --uri="${{ secrets.GH_ACTION }}" --db=blueprint_prod --gzip --archive=dump.gz
 
       - name: Restore into blueprint_dev (drop first)
         run: |
-          mongorestore --uri="${{ secrets.MONGODB_URI }}" --gzip --archive=dump.gz --drop \
+          mongorestore --uri="${{ secrets.GH_ACTION }}" --gzip --archive=dump.gz --drop \
             --nsFrom='blueprint_prod.*' --nsTo='blueprint_dev.*' \
             --nsExclude='blueprint_prod.session' \
             --nsExclude='blueprint_prod.verification' \

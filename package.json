@@ -6,50 +6,43 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
-    "@types/node": "20.3.3",
-    "@types/react": "18.2.14",
-    "@types/react-dom": "18.2.6",
-    "@uidotdev/usehooks": "^2.4.1",
-    "autoprefixer": "10.4.14",
-    "axios": "^1.7.2",
-    "dotenv": "^16.4.5",
-    "eslint-config-next": "^14.2.5",
-    "google-fonts-webpack-plugin": "^0.4.4",
-    "googleapis": "^140.0.1",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "axios": "^1.18.0",
+    "dotenv": "^17.4.2",
+    "eslint-config-next": "^16.2.9",
+    "googleapis": "^173.0.0",
     "gray-matter": "^4.0.3",
-    "next": "^14.2.5",
-    "next": "^14.2.5",
-    "next-fonts": "^1.5.1",
-    "postcss": "8.4.24",
-    "react": "^18.3.1",
-    "react": "^18.3.1",
-    "react-burger-menu": "^3.0.9",
-    "react-confetti": "^6.1.0",
-    "react-dom": "^18.3.1",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-confetti": "^6.4.0",
+    "react-dom": "^19.2.7",
     "react-fade-in": "^2.0.1",
-    "react-icons": "^4.10.1",
-    "react-intersection-observer": "^9.5.2",
-    "react-markdown": "^8.0.7",
+    "react-icons": "^5.6.0",
+    "react-intersection-observer": "^10.0.3",
+    "react-markdown": "^10.1.0",
     "react-responsive-carousel": "^3.2.23",
-    "react-router-dom": "^6.6.1",
-    "react-scroll": "^1.8.9",
-    "react-type-animation": "^2.1.2",
-    "redux": "^4.2.0",
-    "remark": "^14.0.3",
-    "remark-html": "^15.0.2",
-    "remark-images": "^3.1.0",
-    "typescript": "5.1.6",
-    "video-react": "^0.16.0",
-    "web-vitals": "^2.1.4"
+    "react-scroll": "^1.9.3",
+    "react-type-animation": "^3.2.0"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "react-scripts": "5.0.1",
-    "tailwindcss": "3.3.2"
+    "@tailwindcss/postcss": "^4.3.1",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "postcss": "^8.5.15",
+    "react-responsive-carousel": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "react-fade-in": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }

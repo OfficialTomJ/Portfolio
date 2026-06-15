@@ -1,4 +1,3 @@
-import PropTypes from "prop-types";
 import Link from "next/link";
 
 type LinkBoxProps = {
@@ -20,11 +19,6 @@ const LinkBox: React.FC<LinkBoxProps> = ({ title, href }) => {
       </div>
     </Link>
   );
-};
-
-LinkBox.propTypes = {
-  title: PropTypes.string.isRequired,
-  href: PropTypes.string.isRequired,
 };
 
 export default LinkBox;

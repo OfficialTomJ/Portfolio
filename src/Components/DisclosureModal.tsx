@@ -69,13 +69,14 @@ export default function DisclosureModal() {
 
   // We can't decide whether to show the gate until we know the user's account
   // status: while the session is loading, or while a logged-in user's DB
-  // acceptance is still being fetched. During that window we show a neutral
-  // cover (not the modal, not the page) so the disclosure never flashes.
+  // acceptance is still being fetched. During that window we render nothing —
+  // the page is fully usable — and only raise the popup once we've decided it's
+  // actually needed. This avoids both the modal flashing for already-accepted
+  // users AND a blank page while the (sometimes slow) account check resolves.
   const deciding =
     !accepted && (isPending || (!!session?.user && !serverChecked));
 
   const open = hydrated && onDisclosurePage && !accepted && !deciding;
-  const covering = hydrated && onDisclosurePage && deciding;
 
   // Reconcile with the account for logged-in users.
   useEffect(() => {
@@ -118,15 +119,15 @@ export default function DisclosureModal() {
     };
   }, [onDisclosurePage, isPending, session?.user, accepted]);
 
-  // Lock background scroll while the gate (or its loading cover) is shown.
+  // Lock background scroll while the gate is open.
   useEffect(() => {
-    if (!open && !covering) return;
+    if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open, covering]);
+  }, [open]);
 
   // If the content fits without scrolling, treat it as already read.
   useEffect(() => {
@@ -154,13 +155,6 @@ export default function DisclosureModal() {
       }).catch(() => {});
     }
     setAccepted(true);
-  }
-
-  // Neutral full-screen cover while we determine acceptance — looks like the
-  // page is still loading, and prevents the disclosure (or page content) from
-  // flashing before the account check resolves.
-  if (covering) {
-    return <div aria-hidden className="fixed inset-0 z-[100] bg-[var(--bp-bg)]" />;
   }
 
   if (!open) return null;

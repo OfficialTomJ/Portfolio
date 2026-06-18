@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FaGoogle } from "react-icons/fa";
 import { authClient } from "../../../lib/auth-client";
 import { AuthShell, Field, Divider } from "../../../Components/AuthUI";
+import { track } from "../../../lib/track";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
@@ -27,6 +28,7 @@ export default function SignUpPage() {
       setError(error.message ?? "Something went wrong");
       setStatus("idle");
     } else {
+      track("CompleteRegistration");
       setStatus("sent");
     }
   }

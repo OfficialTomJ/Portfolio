@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Jost } from "next/font/google";
 import AuthNav from "../../Components/AuthNav";
 import TopProgress from "../../Components/TopProgress";
+import DisclosureModal from "../../Components/DisclosureModal";
 
 const jost = Jost({ subsets: ["latin"] });
 
@@ -38,6 +39,7 @@ export default function MentorLayout({
         </nav>
       </header>
       {children}
+      <DisclosureModal />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Jost } from "next/font/google";
 import AuthNav from "../../Components/AuthNav";
 import TopProgress from "../../Components/TopProgress";
+import DisclosureModal from "../../Components/DisclosureModal";
 
 const jost = Jost({ subsets: ["latin"] });
 
@@ -38,6 +39,18 @@ export default function MentorLayout({
         </nav>
       </header>
       {children}
+      <footer className="mt-16 border-t border-[var(--bp-border)]">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-sm text-[var(--bp-text-dim)] sm:flex-row sm:px-6">
+          <span>© {new Date().getFullYear()} Thomas Johnston. All rights reserved.</span>
+          <Link
+            href="/compliance"
+            className="transition-colors hover:text-[var(--bp-text)]"
+          >
+            Compliance &amp; Disclosure
+          </Link>
+        </div>
+      </footer>
+      <DisclosureModal />
     </div>
   );
 }

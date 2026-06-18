@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Confetti from "react-confetti";
 import { FaPrint, FaLink, FaCheck } from "react-icons/fa";
+import { track } from "../lib/track";
 
 const fmtDate = (d: Date) =>
   new Date(d).toLocaleDateString("en-AU", {
@@ -28,6 +29,7 @@ export default function Certificate({
   const [shareUrl, setShareUrl] = useState("");
 
   useEffect(() => {
+    track("CourseCompleted", { certificateId, season });
     const raf = requestAnimationFrame(() => {
       setShareUrl(`${window.location.origin}/verify/${certificateId}`);
       setSize({ width: window.innerWidth, height: window.innerHeight });
@@ -38,7 +40,7 @@ export default function Certificate({
       cancelAnimationFrame(raf);
       clearTimeout(t);
     };
-  }, [certificateId]);
+  }, [certificateId, season]);
 
   const copy = async () => {
     if (!shareUrl) return;

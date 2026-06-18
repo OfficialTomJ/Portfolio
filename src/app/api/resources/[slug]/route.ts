@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "../../../../lib/mongodb";
 import { getSession } from "../../../../lib/session";
+import { recordEvent } from "../../../../lib/analytics";
 
 // Serves a private course resource (e.g. the TJSS PDF) from MongoDB.
 // Requires a verified session.
@@ -22,6 +23,11 @@ export async function GET(
   if (!resource) {
     return new NextResponse("Not found", { status: 404 });
   }
+
+  await recordEvent("resource_download", {
+    userId: session.user.id,
+    props: { slug },
+  });
 
   // Binary stored via the mongodb driver -> Buffer
   const buffer: Buffer = resource.data.buffer

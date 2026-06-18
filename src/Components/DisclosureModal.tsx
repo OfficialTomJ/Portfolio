@@ -40,7 +40,7 @@ function writeLocal(a: StoredAcceptance) {
  */
 export default function DisclosureModal() {
   const pathname = usePathname();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
   // Show on the mentor landing page and all blueprint pages, but not on the
   // auth/account pages (sign-in, sign-up, verify-email, reset-password, account).
   const onDisclosurePage =
@@ -52,6 +52,9 @@ export default function DisclosureModal() {
   );
   const [reachedBottom, setReachedBottom] = useState(false);
   const [checked, setChecked] = useState(false);
+  // True once the per-account check has resolved (or was found unnecessary), so
+  // a logged-in user's DB acceptance doesn't flash the modal before it loads.
+  const [serverChecked, setServerChecked] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // The server can't read localStorage, so it always renders "not accepted".
@@ -64,11 +67,21 @@ export default function DisclosureModal() {
     () => false
   );
 
-  const open = hydrated && onDisclosurePage && !accepted;
+  // We can't decide whether to show the gate until we know the user's account
+  // status: while the session is loading, or while a logged-in user's DB
+  // acceptance is still being fetched. During that window we show a neutral
+  // cover (not the modal, not the page) so the disclosure never flashes.
+  const deciding =
+    !accepted && (isPending || (!!session?.user && !serverChecked));
+
+  const open = hydrated && onDisclosurePage && !accepted && !deciding;
+  const covering = hydrated && onDisclosurePage && deciding;
 
   // Reconcile with the account for logged-in users.
   useEffect(() => {
-    if (!onDisclosurePage || !session?.user || accepted) return;
+    // Logged out (no session.user) needs no server check — `deciding` is already
+    // false in that case, so we only fetch for a signed-in user.
+    if (!onDisclosurePage || isPending || accepted || !session?.user) return;
     let cancelled = false;
     (async () => {
       try {
@@ -96,22 +109,24 @@ export default function DisclosureModal() {
         }
       } catch {
         /* network error — fall back to localStorage-only behaviour */
+      } finally {
+        if (!cancelled) setServerChecked(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [onDisclosurePage, session?.user, accepted]);
+  }, [onDisclosurePage, isPending, session?.user, accepted]);
 
-  // Lock background scroll while the gate is open.
+  // Lock background scroll while the gate (or its loading cover) is shown.
   useEffect(() => {
-    if (!open) return;
+    if (!open && !covering) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open]);
+  }, [open, covering]);
 
   // If the content fits without scrolling, treat it as already read.
   useEffect(() => {
@@ -139,6 +154,13 @@ export default function DisclosureModal() {
       }).catch(() => {});
     }
     setAccepted(true);
+  }
+
+  // Neutral full-screen cover while we determine acceptance — looks like the
+  // page is still loading, and prevents the disclosure (or page content) from
+  // flashing before the account check resolves.
+  if (covering) {
+    return <div aria-hidden className="fixed inset-0 z-[100] bg-[var(--bp-bg)]" />;
   }
 
   if (!open) return null;

@@ -175,6 +175,15 @@ export default function DisclosureModal() {
           ))}
         </div>
 
+        <a
+          href="/compliance"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-block text-xs text-[var(--bp-accent)] underline underline-offset-2"
+        >
+          Open the full disclosure page ↗
+        </a>
+
         <label
           className={`mt-4 flex items-start gap-3 text-sm text-[var(--bp-text)] ${
             reachedBottom ? "cursor-pointer" : "cursor-not-allowed opacity-50"

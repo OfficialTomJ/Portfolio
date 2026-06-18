@@ -3,6 +3,7 @@ import { getSession } from "../../../lib/session";
 import { getUserProgress } from "../../../lib/progress";
 import EpisodeCard from "../../../Components/EpisodeCard";
 import AccessGate from "../../../Components/AccessGate";
+import ProgressOverview from "../../../Components/ProgressOverview";
 
 // GATED show page. Content is only queried for verified, signed-in users.
 export default async function BlueprintShow() {
@@ -33,6 +34,11 @@ export default async function BlueprintShow() {
     continueList = next ? [next] : [];
   }
 
+  // Season-level completion (video episodes only; resources are bonus).
+  const total = videos.length;
+  const completed = videos.filter((v) => progress[v.slug]?.completed).length;
+  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
   return (
     <main className="pb-24">
       {/* Show hero */}
@@ -49,6 +55,14 @@ export default async function BlueprintShow() {
             A step-by-step framework for consistent trading — psychology, risk,
             technicals and the TJSS Method.
           </p>
+          <div className="mt-8">
+            <ProgressOverview
+              total={total}
+              completed={completed}
+              percent={percent}
+              isComplete={total > 0 && completed === total}
+            />
+          </div>
         </div>
       </section>
 

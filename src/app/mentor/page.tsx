@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { FaPlay, FaLock, FaCheck } from "react-icons/fa";
+import { FaPlay, FaLock, FaCheck, FaChartLine } from "react-icons/fa";
 import { getSession } from "../../lib/session";
+import { isDashboardNew } from "../../lib/whats-new";
 
 // Marketing-only curriculum teaser (module names, not gated video content).
 const CURRICULUM = [
@@ -23,7 +24,7 @@ const CURRICULUM = [
   {
     name: "The TJSS Method",
     count: 4,
-    blurb: "The full spot-swing system: entries, risk and exits.",
+    blurb: "How the spot-swing method is constructed, and its limits.",
   },
   { name: "Final", count: 1, blurb: "Where to go from here." },
 ];
@@ -46,10 +47,13 @@ export default async function MentorLanding() {
           <h1 className="text-5xl sm:text-7xl font-semibold max-w-3xl leading-[1.02]">
             The Blueprint<span className="text-[var(--bp-accent)]">.</span>
           </h1>
+          {/* No outcome claims. "a proven system that builds consistency"
+              promises a result; describing what the course covers does not. */}
           <p className="mt-5 text-lg sm:text-xl text-[var(--bp-text-dim)] max-w-2xl">
-            Learn to trade like a professional — a proven system that simplifies
-            markets and builds consistency. Watch the videos, follow the
-            outlines, and track your progress.
+            A free, structured introduction to how crypto markets work and how I
+            approach them, the concepts, the charting, and the method, explained
+            end to end. Watch the videos, follow the outlines, and track your
+            progress.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -120,6 +124,43 @@ export default async function MentorLanding() {
               <p className="text-sm text-[var(--bp-text-dim)] mt-1">{m.blurb}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Members' dashboard.
+          This page is PUBLIC and ungated, so the copy carries the compliance
+          constraint the dashboard itself was rebuilt around: describe a research
+          tool, never an edge. No returns, no performance claims, nothing that
+          reads as a signal or a recommendation. */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16">
+        <div className="bp-surface rounded-xl p-6 sm:p-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[var(--bp-accent)]/15 text-[var(--bp-accent)]">
+            <FaChartLine className="text-xl" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {isDashboardNew() && (
+                <span className="rounded-full bg-[var(--bp-accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
+                  New
+                </span>
+              )}
+              <h3 className="text-xl font-semibold">
+                Members&apos; dashboard, included free
+              </h3>
+            </div>
+            <p className="mt-2 text-[var(--bp-text-dim)]">
+              A dashboard that applies the method&apos;s rules to live Bitcoin price
+              and the Crypto Fear &amp; Greed Index and shows what those rules did,
+              alongside a historical simulation you can run yourself. Research and
+              data, not signals, and not advice.
+            </p>
+          </div>
+          <Link
+            href={signedIn ? "/dashboard" : "/sign-up"}
+            className="shrink-0 rounded-md bg-white px-5 py-2.5 text-center font-medium text-black transition-colors hover:bg-zinc-200 sm:ml-auto"
+          >
+            {signedIn ? "Open dashboard" : "Sign up free"}
+          </Link>
         </div>
       </section>
 

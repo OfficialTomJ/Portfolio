@@ -78,7 +78,7 @@ export async function getOrIssueCertificate(
     await col.insertOne(doc);
     return doc;
   } catch {
-    // Lost a race against a concurrent issue — return the winner.
+    // Lost a race against a concurrent issue, return the winner.
     const won = await col.findOne(
       { userId, season: SEASON },
       { projection: { _id: 0 } }

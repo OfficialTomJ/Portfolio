@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PiArrowLeftThin } from "react-icons/pi";
-import { getSession } from "../../../../lib/session";
+import { getMemberSession } from "../../../../lib/session";
 import {
   getCompletionStatus,
   getOrIssueCertificate,
@@ -10,12 +10,12 @@ import Certificate from "../../../../Components/Certificate";
 
 // GATED. Issues/displays the Season 1 completion certificate.
 export default async function CertificatePage() {
-  const session = await getSession();
-  if (!session?.user?.emailVerified) return <AccessGate />;
+  const session = await getMemberSession();
+  if (!session) return <AccessGate />;
 
   const status = await getCompletionStatus(session.user.id);
 
-  // Not finished yet — show a locked state, not the sign-up gate.
+  // Not finished yet, show a locked state, not the sign-up gate.
   if (!status.isComplete) {
     const remaining = status.total - status.completed;
     return (
@@ -23,7 +23,7 @@ export default async function CertificatePage() {
         <p className="text-[var(--bp-accent)] uppercase tracking-widest text-sm mb-3">
           Certificate locked
         </p>
-        <h1 className="text-3xl font-semibold">Keep going — you&apos;re almost there</h1>
+        <h1 className="text-3xl font-semibold">Keep going, you&apos;re almost there</h1>
         <p className="mt-4 text-[var(--bp-text-dim)]">
           {status.total === 0
             ? "The course isn't available yet. Check back soon."

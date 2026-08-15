@@ -59,7 +59,7 @@ export default function DisclosureModal() {
 
   // The server can't read localStorage, so it always renders "not accepted".
   // `hydrated` is false during SSR and the first client render, then true after
-  // hydration — so the first client render matches the server's (no mismatch),
+  // hydration, so the first client render matches the server's (no mismatch),
   // and we only consult the localStorage-derived state once on the client.
   const hydrated = useSyncExternalStore(
     () => () => {},
@@ -69,8 +69,8 @@ export default function DisclosureModal() {
 
   // We can't decide whether to show the gate until we know the user's account
   // status: while the session is loading, or while a logged-in user's DB
-  // acceptance is still being fetched. During that window we render nothing —
-  // the page is fully usable — and only raise the popup once we've decided it's
+  // acceptance is still being fetched. During that window we render nothing,
+  // the page is fully usable, and only raise the popup once we've decided it's
   // actually needed. This avoids both the modal flashing for already-accepted
   // users AND a blank page while the (sometimes slow) account check resolves.
   const deciding =
@@ -80,7 +80,7 @@ export default function DisclosureModal() {
 
   // Reconcile with the account for logged-in users.
   useEffect(() => {
-    // Logged out (no session.user) needs no server check — `deciding` is already
+    // Logged out (no session.user) needs no server check, `deciding` is already
     // false in that case, so we only fetch for a signed-in user.
     if (!onDisclosurePage || isPending || accepted || !session?.user) return;
     let cancelled = false;
@@ -97,7 +97,7 @@ export default function DisclosureModal() {
           });
           setAccepted(true);
         } else {
-          // Server has nothing valid, but this device already accepted — backfill.
+          // Server has nothing valid, but this device already accepted, backfill.
           const local = readLocal();
           if (isAcceptanceValid(local)) {
             fetch("/api/disclosure", {
@@ -109,7 +109,7 @@ export default function DisclosureModal() {
           }
         }
       } catch {
-        /* network error — fall back to localStorage-only behaviour */
+        /* network error, fall back to localStorage-only behaviour */
       } finally {
         if (!cancelled) setServerChecked(true);
       }

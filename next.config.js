@@ -27,9 +27,16 @@ const nextConfig = {
         destination: "https://discord.gg/8tK967YJ6y",
         permanent: true,
       },
+      // Retired commercial pages (paid masterclass + 1-1 mentoring). These are
+      // no longer offered; the pages, their Stripe checkout links and the
+      // application form have been removed. Redirected rather than left to 404
+      // because they are still linked from older social posts and bios.
+      { source: "/masterclass", destination: "/portfolio", permanent: true },
+      { source: "/one", destination: "/portfolio", permanent: true },
+      { source: "/apply", destination: "/portfolio", permanent: true },
     ];
 
-    // Apex/www only — do NOT redirect the mentor subdomain's root.
+    // Apex/www only, do NOT redirect the mentor subdomain's root.
     // In local dev with DEV_AS_MENTOR=1, plain localhost serves the mentor app,
     // so skip this redirect entirely.
     if (process.env.DEV_AS_MENTOR !== "1") {

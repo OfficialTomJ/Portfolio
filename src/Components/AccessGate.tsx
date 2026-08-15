@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FaPlay } from "react-icons/fa";
 
 // Centered "sign up to access" prompt shown to signed-out visitors on gated
-// pages. Renders only non-sensitive marketing copy — no course content.
+// pages. Renders only non-sensitive marketing copy, no course content.
 export default function AccessGate() {
   return (
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
@@ -16,7 +16,7 @@ export default function AccessGate() {
           Sign up free to unlock the full course
         </h1>
         <p className="text-[var(--bp-text-dim)] mt-4 max-w-md">
-          13 episodes on trading psychology, technicals and the TJSS Method —
+          13 episodes on trading psychology, technicals and the TJSS Method,
           completely free. Create an account to start watching and track your
           progress.
         </p>

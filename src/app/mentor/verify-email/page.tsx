@@ -20,7 +20,7 @@ export default function VerifyEmailPage() {
     <AuthShell title="Verify your email">
       <p className="text-[var(--bp-text-dim)] mb-5">
         Please confirm your email address to access the course. Check your inbox
-        for the verification link — or resend it below.
+        for the verification link, or resend it below.
       </p>
       {status === "sent" ? (
         <p className="text-sm text-[var(--bp-accent)]">

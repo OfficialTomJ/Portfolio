@@ -26,8 +26,8 @@ export default function Links() {
           </p>
         </div>
         <LinkBox
-          title="NOW AVAILABLE 🚀🎉 // Masterclass One 1-1 Mentoring Program!"
-          href="https://www.thomas-johnston.com/one"
+          title="THE BLUEPRINT, FREE CRYPTO TRADING COURSE 🎓"
+          href="https://mentor.thomas-johnston.com/"
         />
         <div className="bg-slate-50 h-px w-full opacity-30 mb-6"></div>
         <LinkBox

@@ -31,7 +31,7 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail({
         to: user.email,
-        subject: "Verify your email — The Blueprint",
+        subject: "Verify your email, The Blueprint",
         html: `<p>Welcome to The Blueprint.</p><p>Confirm your email to start watching:</p><p><a href="${url}">Verify email</a></p>`,
       });
     },
@@ -51,7 +51,7 @@ export const auth = betterAuth({
       }) => {
         await sendEmail({
           to: user.email,
-          subject: "Approve your email change — The Blueprint",
+          subject: "Approve your email change, The Blueprint",
           html: `<p>Confirm changing your account email to <strong>${newEmail}</strong>:</p><p><a href="${url}">Approve change</a></p>`,
         });
       },

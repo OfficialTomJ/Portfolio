@@ -1,14 +1,19 @@
 import { getSections } from "../../../lib/blueprint";
-import { getSession } from "../../../lib/session";
+import { getMemberSession } from "../../../lib/session";
 import { getUserProgress } from "../../../lib/progress";
 import EpisodeCard from "../../../Components/EpisodeCard";
 import AccessGate from "../../../Components/AccessGate";
 import ProgressOverview from "../../../Components/ProgressOverview";
+import DashboardCard from "../../../Components/DashboardCard";
+
+/** Section name the dashboard card is appended to. Matches the seeded course
+ *  structure in scripts/seed-blueprint.ts. */
+const TJSS_SECTION = "The TJSS Method";
 
 // GATED show page. Content is only queried for verified, signed-in users.
 export default async function BlueprintShow() {
-  const session = await getSession();
-  if (!session?.user?.emailVerified) return <AccessGate />;
+  const session = await getMemberSession();
+  if (!session) return <AccessGate />;
 
   const [sections, progress] = await Promise.all([
     getSections(),
@@ -52,16 +57,22 @@ export default async function BlueprintShow() {
             The Blueprint<span className="text-[var(--bp-accent)]">.</span>
           </h1>
           <p className="mt-4 text-[var(--bp-text-dim)] max-w-2xl">
-            A step-by-step framework for consistent trading — psychology, risk,
+            A step-by-step framework for consistent trading, psychology, risk,
             technicals and the TJSS Method.
           </p>
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col gap-4">
             <ProgressOverview
               total={total}
               completed={completed}
               percent={percent}
               isComplete={total > 0 && completed === total}
             />
+            {/* Announcement slot: returning members land here, and the dashboard
+                is otherwise only reachable from a nav link. max-w matches
+                ProgressOverview above so the two align. */}
+            <div className="max-w-2xl">
+              <DashboardCard variant="hero" />
+            </div>
           </div>
         </div>
       </section>
@@ -92,6 +103,10 @@ export default async function BlueprintShow() {
               {section.episodes.map((ep) => (
                 <EpisodeCard key={ep.slug} episode={ep} progress={progress[ep.slug]} />
               ))}
+              {/* Appended in JSX rather than injected into the Mongo-backed
+                  section data: it is a tool, not an episode. Placed here
+                  because this is the moment the method has just been taught. */}
+              {section.name === TJSS_SECTION && <DashboardCard variant="row" />}
             </div>
           </section>
         ))}

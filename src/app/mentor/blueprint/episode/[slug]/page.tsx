@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
 import { PiArrowLeftThin } from "react-icons/pi";
 import { getEpisode, getNextEpisode } from "../../../../../lib/blueprint";
-import { getSession } from "../../../../../lib/session";
+import { getMemberSession } from "../../../../../lib/session";
 import { getUserProgress } from "../../../../../lib/progress";
 import { getEpisodeLikeState } from "../../../../../lib/engagement";
 import MarkdownOutline from "../../../../../Components/MarkdownOutline";
@@ -11,6 +11,10 @@ import EpisodePlayer from "../../../../../Components/EpisodePlayer";
 import LikeButton from "../../../../../Components/LikeButton";
 import Comments from "../../../../../Components/Comments";
 import AccessGate from "../../../../../Components/AccessGate";
+import DashboardCard from "../../../../../Components/DashboardCard";
+
+/** Episode 10, "The TJSS Method", the lesson the dashboard belongs to. */
+const DASHBOARD_LESSON_SLUG = "lesson-10";
 
 // GATED episode page. Content is only queried for verified, signed-in users.
 export default async function EpisodePage({
@@ -18,8 +22,8 @@ export default async function EpisodePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const session = await getSession();
-  if (!session?.user?.emailVerified) return <AccessGate />;
+  const session = await getMemberSession();
+  if (!session) return <AccessGate />;
 
   const { slug } = await params;
   const episode = await getEpisode(slug);
@@ -67,6 +71,20 @@ export default async function EpisodePage({
       {episode.outlineMarkdown && (
         <div className="mt-6">
           <MarkdownOutline markdown={episode.outlineMarkdown} />
+        </div>
+      )}
+
+      {/* The lesson that teaches the method links to the tool that runs it.
+          Deliberately rendered here rather than written into this episode's
+          outlineMarkdown in Mongo: episodes are re-seeded from the Notion export
+          by scripts/seed-blueprint.ts with replaceOne(), so a hand-edited link
+          in the database would be silently wiped on the next `npm run seed`. */}
+      {episode.slug === DASHBOARD_LESSON_SLUG && (
+        <div className="mt-8">
+          <DashboardCard
+            variant="hero"
+            note="See these rules running on live Bitcoin price and the Fear & Greed Index, and simulate them over history."
+          />
         </div>
       )}
 

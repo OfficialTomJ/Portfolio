@@ -9,7 +9,7 @@ import MentorAnalytics from "../../Components/MentorAnalytics";
 const jost = Jost({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "The Blueprint — Free Crypto Trading Course",
+  title: "The Blueprint, Free Crypto Trading Course",
   description:
     "Learn to trade like a professional with Thomas Johnston's free Blueprint course.",
 };
@@ -44,12 +44,20 @@ export default function MentorLayout({
       <footer className="mt-16 border-t border-[var(--bp-border)]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-sm text-[var(--bp-text-dim)] sm:flex-row sm:px-6">
           <span>© {new Date().getFullYear()} Thomas Johnston. All rights reserved.</span>
-          <Link
-            href="/compliance"
-            className="transition-colors hover:text-[var(--bp-text)]"
-          >
-            Compliance &amp; Disclosure
-          </Link>
+          <span className="flex items-center gap-3">
+            <Link
+              href="/compliance"
+              className="transition-colors hover:text-[var(--bp-text)]"
+            >
+              Compliance &amp; Disclosure
+            </Link>
+            <Link
+              href="/privacy"
+              className="transition-colors hover:text-[var(--bp-text)]"
+            >
+              Privacy
+            </Link>
+          </span>
         </div>
       </footer>
       <DisclosureModal />

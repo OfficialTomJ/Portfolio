@@ -136,7 +136,7 @@ async function ensureIndex() {
   indexed = true;
 }
 
-/** Fire-and-forget event write. Never throws — tracking must not break a request. */
+/** Fire-and-forget event write. Never throws, tracking must not break a request. */
 export async function recordEvent(
   type: string,
   data: { userId?: string; props?: Record<string, unknown> } = {}

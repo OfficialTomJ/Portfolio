@@ -1,4 +1,4 @@
-// Shared "not financial advice" disclosure config — imported by both the client
+// Shared "not financial advice" disclosure config, imported by both the client
 // modal and the server API, so the wording, validity window and "is this
 // acceptance still valid" rule live in exactly one place.
 //
@@ -7,16 +7,22 @@
 // DISCLOSURE_VERSION whenever the wording changes so prior acknowledgments are
 // re-prompted.
 
-/** Bump when the disclosure wording changes to force everyone to re-acknowledge. */
-export const DISCLOSURE_VERSION = 1;
+/**
+ * Bump when the disclosure wording changes to force everyone to re-acknowledge.
+ *
+ * v2 (2026-08-15): added the research-tools / simulated-performance section for
+ * the TJSS dashboard. Every prior acceptance predates that content, so it is
+ * re-prompted rather than carried over.
+ */
+export const DISCLOSURE_VERSION = 2;
 
-/** ISO date the disclosure copy was last revised — shown on the compliance page. */
-export const DISCLOSURE_UPDATED = "2026-06-18";
+/** ISO date the disclosure copy was last revised, shown on the compliance page. */
+export const DISCLOSURE_UPDATED = "2026-08-15";
 
 /** Acceptance is re-prompted once it is older than this many days. */
 export const DISCLOSURE_VALIDITY_DAYS = 365;
 
-export const DISCLOSURE_TITLE = "Important — please read before continuing";
+export const DISCLOSURE_TITLE = "Important: please read before continuing";
 
 export interface DisclosureSection {
   /** Optional short heading shown above the body for readability. */
@@ -52,20 +58,20 @@ export const DISCLOSURE_SECTIONS: DisclosureSection[] = [
 
 /**
  * Expanded disclosure shown on the standalone /compliance page. This is the
- * fuller, permanent reference version — the popup (DISCLOSURE_SECTIONS) stays
+ * fuller, permanent reference version, the popup (DISCLOSURE_SECTIONS) stays
  * short and scannable. Final wording is a draft pending CBA compliance review.
  */
 export const COMPLIANCE_PAGE_SECTIONS: DisclosureSection[] = [
   {
     heading: "Educational and informational purposes only",
-    body: "All content in The Blueprint — including videos, written material, charts, examples and any accompanying resources — is provided solely for general education and information. Nothing on this site constitutes financial, investment, trading, tax, accounting or legal advice, nor does it constitute a recommendation, endorsement, offer or solicitation to buy, sell or hold any cryptocurrency, security or other financial product.",
+    body: "All content in The Blueprint, including videos, written material, charts, examples and any accompanying resources, is provided solely for general education and information. Nothing on this site constitutes financial, investment, trading, tax, accounting or legal advice, nor does it constitute a recommendation, endorsement, offer or solicitation to buy, sell or hold any cryptocurrency, security or other financial product.",
   },
   {
     heading: "General information, not personal advice",
     body: "Any information provided is general in nature and does not take into account your personal objectives, financial situation or particular needs. Before acting on any information, you should consider its appropriateness having regard to your own circumstances and obtain independent, licensed financial, tax and legal advice.",
   },
   {
-    heading: "Personal views — not my employer's",
+    heading: "Personal views, not my employer's",
     body: "All opinions expressed are my own personal views, held in a personal capacity. They do not represent, and are not endorsed, authorised or sponsored by, my employer or any organisation I am affiliated with, and nothing here is published in the course of, or on behalf of, that employment.",
   },
   {
@@ -79,6 +85,10 @@ export const COMPLIANCE_PAGE_SECTIONS: DisclosureSection[] = [
   {
     heading: "No performance guarantees",
     body: "Past performance, and any hypothetical or simulated performance, is not a reliable indicator of future results. Any examples, figures or outcomes shown are illustrative only and are not a guarantee of, or projection for, any particular result.",
+  },
+  {
+    heading: "Research tools, simulated results and rule states",
+    body: "The members' dashboard publishes research: it applies a documented, fixed set of rules to public Bitcoin price data and the Crypto Fear & Greed Index, and reports what those rules did. The \"rule state\" and \"model exposure\" figures describe the behaviour of that model. They are not recommendations, signals or instructions, they are not tailored to you, and they should not be read as suggesting that you buy, sell or hold anything. Backtest and simulation results are hypothetical: they are produced with the benefit of hindsight, on a ruleset developed by reference to the same historical data, and no member achieved them. Simulated results routinely overstate what is achievable in practice. Where the underlying research contradicts the headline figures, including out-of-sample underperformance against a simple dollar-cost-averaging comparison, that is stated alongside the results, and you should read it before drawing any conclusion.",
   },
   {
     heading: "Conflicts of interest",
@@ -103,6 +113,53 @@ export const COMPLIANCE_PAGE_SECTIONS: DisclosureSection[] = [
   {
     heading: "Contact",
     body: "If you have any questions about this disclosure, you can get in touch at hi@thomas-johnston.com.",
+  },
+];
+
+/**
+ * Privacy policy for the /privacy page. Reflects what the app actually stores,
+ * keep it in step with the Mongo collections (`user`, `account`, `session`,
+ * `progress`, `disclosures`, `certificates`, `events`) rather than writing to a
+ * template. Also a draft pending review.
+ */
+export const PRIVACY_UPDATED = "2026-08-15";
+
+export const PRIVACY_SECTIONS: DisclosureSection[] = [
+  {
+    heading: "Who this covers",
+    body: "This policy covers thomas-johnston.com and mentor.thomas-johnston.com, operated by Thomas Johnston as an individual. If you have any question about your information, contact hi@thomas-johnston.com.",
+  },
+  {
+    heading: "What is collected",
+    body: "If you create an account: your name, email address, whether that email has been verified, and your profile image if you sign in with Google. If you sign in with Google, an access token is stored so the session works. Once signed in: which episodes you have watched and your progress through them, your acknowledgement of the compliance disclosure and when you gave it, any certificate issued to you, and a record of resource downloads. Sessions record an IP address and browser user-agent. Nothing you enter into the dashboard's simulation inputs, capital, contributions, dates, is stored; those are used to compute a result and discarded.",
+  },
+  {
+    heading: "Why it is collected",
+    body: "To sign you in and keep you signed in, to track and resume your course progress, to issue and verify certificates, to keep a record that the compliance disclosure was acknowledged, and to understand in aggregate which content is used.",
+  },
+  {
+    heading: "Analytics",
+    body: "The mentor site uses Google Analytics and the Meta Pixel, which set cookies and share usage data with those providers under their own privacy policies. These record how pages are used; they are not used to make decisions about you individually.",
+  },
+  {
+    heading: "Where it is stored, and who can see it",
+    body: "Data is held in MongoDB Atlas and the site is hosted on Vercel; both may process data outside Australia. Access is limited to the site operator. Information is not sold, and is not shared with third parties except the service providers named in this policy or where required by law.",
+  },
+  {
+    heading: "What is public",
+    body: "A certificate verification link is deliberately public: anyone holding the link can see the name on the certificate, the season completed and the date of completion. Nothing else about your account is publicly accessible. If you would rather your certificate link not exist, ask and it will be removed.",
+  },
+  {
+    heading: "How long it is kept",
+    body: "Account and progress data is kept while your account exists. Disclosure acknowledgements are kept as a compliance record. You can ask for your account and associated data to be deleted at any time.",
+  },
+  {
+    heading: "Your rights",
+    body: "You can request access to the personal information held about you, ask for it to be corrected, or ask for it to be deleted, by emailing hi@thomas-johnston.com. If you are unhappy with how a request is handled, you can complain to the Office of the Australian Information Commissioner (oaic.gov.au).",
+  },
+  {
+    heading: "Changes to this policy",
+    body: "This policy may be updated from time to time. The “Last updated” date above reflects the version currently in effect.",
   },
 ];
 

@@ -34,7 +34,7 @@ export default async function VerifyCertificate({
             <p className="text-[var(--bp-text-dim)] mt-4 max-w-md">
               completed{" "}
               <span className="text-[var(--bp-text)]">
-                The Blueprint — Season {cert.season}
+                The Blueprint, Season {cert.season}
               </span>{" "}
               on {fmtDate(cert.issuedAt)}.
             </p>

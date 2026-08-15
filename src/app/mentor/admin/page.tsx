@@ -10,7 +10,7 @@ import {
   type DayCount,
 } from "../../../lib/analytics";
 
-export const metadata = { title: "Admin — The Blueprint" };
+export const metadata = { title: "Admin, The Blueprint" };
 
 // Private creator dashboard. Invisible (404) to anyone not in ADMIN_EMAILS.
 export default async function AdminDashboard() {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
+import { isDashboardNew } from "../lib/whats-new";
 
 export default function AuthNav() {
   const router = useRouter();
@@ -43,6 +44,20 @@ export default function AuthNav() {
         className="hidden sm:block text-[var(--bp-text-dim)] hover:text-white transition-colors"
       >
         My course
+      </Link>
+      {/* Visible on mobile too. This was the only route to the dashboard and it
+          did not exist below sm. The dot expires with isDashboardNew(). */}
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-1.5 text-[var(--bp-text-dim)] hover:text-white transition-colors"
+      >
+        Dashboard
+        {isDashboardNew() && (
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--bp-accent)]"
+            aria-label="New"
+          />
+        )}
       </Link>
       <Link
         href="/account"

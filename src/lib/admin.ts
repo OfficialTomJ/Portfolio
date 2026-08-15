@@ -1,6 +1,6 @@
 import "server-only";
 
-// Minimal admin gate for the creator dashboard. No DB role model — for a solo
+// Minimal admin gate for the creator dashboard. No DB role model, for a solo
 // creator, an allowlist of emails in ADMIN_EMAILS (comma-separated) is enough.
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")

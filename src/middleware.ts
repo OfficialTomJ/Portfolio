@@ -24,7 +24,7 @@ export function middleware(req: NextRequest) {
   const { pathname } = url;
 
   if (isMentorHost(host) || DEV_AS_MENTOR) {
-    // API routes live at /api/* for both hosts — don't prefix them.
+    // API routes live at /api/* for both hosts, don't prefix them.
     if (pathname.startsWith("/api") || pathname.startsWith("/mentor")) {
       return NextResponse.next();
     }

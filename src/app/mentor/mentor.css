@@ -1,15 +1,15 @@
-/* OLED-dark, refined theme — scoped to the mentor app only (.blueprint).
+/* OLED-dark, refined theme, scoped to the mentor app only (.blueprint).
    The portfolio keeps globals.css untouched. */
 
 .blueprint {
-  --bp-bg: #000000;            /* true black — OLED-friendly + premium */
+  --bp-bg: #000000;            /* true black, OLED-friendly + premium */
   --bp-surface: #0a0a0b;       /* elevated cards */
   --bp-surface-2: #111114;     /* deeper elevation */
   --bp-border: rgba(255, 255, 255, 0.09);
   --bp-border-strong: rgba(255, 255, 255, 0.16);
   --bp-text: #fafafa;
   --bp-text-dim: #a1a1aa;      /* zinc-400 */
-  --bp-accent: #ff6719;        /* Substack brand orange — rgb(255 103 25) */
+  --bp-accent: #ff6719;        /* Substack brand orange, rgb(255 103 25) */
   --bp-accent-rgb: 255 103 25;
 
   background-color: var(--bp-bg);

@@ -10,6 +10,24 @@ export interface EquityCurvePoint {
   equity: number;
 }
 
+export interface RiskOptions {
+  /**
+   * Deposits into the account, by bar time. Subtracted from the bar they land
+   * on before returns are measured: without this every contribution reads as a
+   * one-bar investment gain, inflating Sharpe, Sortino and volatility and
+   * distorting the worst day, all of which get worse the larger the deposit is
+   * relative to the balance.
+   */
+  cashflows?: { time: number; amount: number }[];
+  /**
+   * Annualised return to build the Martin ratio from. Pass the money-weighted
+   * figure (IRR) whenever there are contributions; deriving it from the curve
+   * would divide an equity built from every deposit by the opening balance
+   * alone. Only used as a fallback when omitted.
+   */
+  cagrPct?: number;
+}
+
 export interface RiskMetrics {
   /** Annualised mean/sd of daily returns. Risk-free assumed 0. */
   sharpe: number;
@@ -38,7 +56,10 @@ const TRADING_DAYS = 365; // crypto trades every day
  * peak, so they are internally consistent, the drawdown that produces the
  * ulcer index is the same one that produces time-underwater.
  */
-export function computeRiskMetrics(equity: EquityCurvePoint[]): RiskMetrics {
+export function computeRiskMetrics(
+  equity: EquityCurvePoint[],
+  options: RiskOptions = {}
+): RiskMetrics {
   const empty: RiskMetrics = {
     sharpe: 0, sortino: 0, ulcerIndex: 0, martinRatio: 0,
     timeUnderwaterPct: 0, longestDrawdownDays: 0, recoveryDays: null,
@@ -46,10 +67,19 @@ export function computeRiskMetrics(equity: EquityCurvePoint[]): RiskMetrics {
   };
   if (equity.length < 3) return empty;
 
+  // Deposits are not performance. Cash that arrives on bar i is already inside
+  // equity[i], so it comes back out before the bar's return is taken. The
+  // opening lump lands on bar 0, which no return is measured against.
+  const depositOn = new Map<number, number>();
+  for (const f of options.cashflows ?? []) {
+    depositOn.set(f.time, (depositOn.get(f.time) ?? 0) + f.amount);
+  }
+
   const returns: number[] = [];
   for (let i = 1; i < equity.length; i++) {
     const prev = equity[i - 1].equity;
-    if (prev > 0) returns.push(equity[i].equity / prev - 1);
+    const deposit = depositOn.get(equity[i].time) ?? 0;
+    if (prev > 0) returns.push((equity[i].equity - deposit) / prev - 1);
   }
   if (!returns.length) return empty;
 
@@ -106,9 +136,13 @@ export function computeRiskMetrics(equity: EquityCurvePoint[]): RiskMetrics {
   }
 
   const ulcer = Math.sqrt(sumSqDd / equity.length) * 100;
+  // Fallback only, and correct only when the opening balance is the whole of
+  // the money invested. Callers that take contributions pass `cagrPct` in.
   const years = (equity[equity.length - 1].time - equity[0].time) / (365.25 * 86400);
   const growth = equity[0].equity > 0 ? equity[equity.length - 1].equity / equity[0].equity : 0;
-  const cagr = years > 0 && growth > 0 ? (Math.pow(growth, 1 / years) - 1) * 100 : 0;
+  const cagr =
+    options.cagrPct ??
+    (years > 0 && growth > 0 ? (Math.pow(growth, 1 / years) - 1) * 100 : 0);
 
   return {
     sharpe: annSd > 0 ? annMean / annSd : 0,

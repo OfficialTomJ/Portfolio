@@ -59,7 +59,8 @@ src/app/api/tjss/
 ## Data sources (both free, no API key)
 
 - **Fear & Greed:** `https://api.alternative.me/fng/?limit=0` (history to 2018-02-01),
-  cached in `tjss_fng`, refreshed every 6h.
+  cached in `tjss_fng`, refreshed hourly (same TTL as price, so a new
+  UTC day never has a candle with no sentiment beside it).
 - **BTC price:** Binance daily klines (mirror `data-api.binance.vision` as fallback),
   cached in `tjss_price`, topped up hourly.
 

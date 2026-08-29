@@ -16,6 +16,13 @@ interface CacheDoc {
   _id: string;
   candles: Candle[];
   fetchedAt: Date;
+  /** Whether the pre-Binance (pre-2017) CoinMetrics history is actually in
+   * `candles`. A transient backfill failure used to be swallowed and the
+   * Binance-only series cached anyway; every later refresh then took the
+   * top-up branch, so the missing years were never retried and long warm-up
+   * indicators ran short forever. Absent on docs written before this flag
+   * existed, which is treated as "not backfilled" so they self-heal. */
+  backfilled?: boolean;
 }
 
 type Kline = [
@@ -132,8 +139,21 @@ export async function getDailyCandles(
     cached && Date.now() - new Date(cached.fetchedAt).getTime() < REFRESH_MS;
   if (fresh && cached) return cached.candles;
 
+  /** Never throws: a missing backfill degrades the series, it must not fail
+   *  the request. Returns null so the caller can leave `backfilled` false and
+   *  try again on the next refresh. */
+  const tryBackfill = async (): Promise<Candle[] | null> => {
+    try {
+      return await fetchBackfill();
+    } catch (err) {
+      console.warn("[tjss/price] backfill unavailable, continuing without pre-2017 history", err);
+      return null;
+    }
+  };
+
   try {
     let candles: Candle[];
+    let backfilled: boolean;
     if (cached && cached.candles.length > 0) {
       // Top up from a few days before the last cached bar.
       const last = cached.candles[cached.candles.length - 1].time;
@@ -143,23 +163,29 @@ export async function getDailyCandles(
         (last - 5 * DAY) * 1000
       );
       candles = mergeCandles(cached.candles, recent);
+      backfilled = cached.backfilled === true;
+      // A refresh is also the retry: if an earlier cold start lost the
+      // pre-2017 history, fetch it now rather than carrying the gap forever.
+      if (!backfilled) {
+        const backfill = await tryBackfill();
+        if (backfill) {
+          // Binance (real OHLCV) wins wherever it exists.
+          candles = mergeCandles(backfill, candles);
+          backfilled = true;
+        }
+      }
     } else {
       // Cold start: Binance BTCUSDT begins 2017-08-17; backfill the years
       // before it so the weekly/monthly 50 EMAs are warm by the F&G era.
       const start = Date.UTC(2017, 7, 17);
       const binance = await fetchAll(symbol, "1d", start);
-      let backfill: Candle[] = [];
-      try {
-        backfill = await fetchBackfill();
-      } catch (err) {
-        console.warn("[tjss/price] backfill unavailable, continuing with Binance only", err);
-      }
-      // Binance (real OHLCV) wins wherever it exists.
-      candles = mergeCandles(backfill, binance);
+      const backfill = await tryBackfill();
+      candles = mergeCandles(backfill ?? [], binance);
+      backfilled = backfill !== null;
     }
     await col.updateOne(
       { _id: id },
-      { $set: { candles, fetchedAt: new Date() } },
+      { $set: { candles, fetchedAt: new Date(), backfilled } },
       { upsert: true }
     );
     return candles;

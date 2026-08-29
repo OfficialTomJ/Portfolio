@@ -34,14 +34,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const preset = await getPreset(input.preset);
-    const config = toBacktestConfig(preset, input);
 
     let bars = await getAlignedBars();
     const from = toUnixDay(input.fromDate);
     const to = toUnixDay(input.toDate);
-    if (from != null) bars = bars.filter((b) => b.time >= from);
     if (to != null) bars = bars.filter((b) => b.time <= to);
-    if (bars.length < 30) {
+
+    // `fromDate` is NOT applied by slicing the bars away. The indicators need
+    // history before the first traded bar to warm up: the 50-month EMA wants
+    // years of it, and starting the array at the requested date left deepValue
+    // dark and weeklyBull false for roughly a year, forcing a bear regime and
+    // silently reporting numbers that were simply wrong. runBacktest.startTime
+    // keeps those bars for warm-up only, out of the trades, the equity curve
+    // and the benchmark.
+    const config = toBacktestConfig(preset, input);
+    if (from != null) config.startTime = from;
+
+    const tradableBars = from == null ? bars.length : bars.filter((b) => b.time >= from).length;
+    if (tradableBars < 30) {
       return NextResponse.json(
         { error: "Not enough data in the selected range" },
         { status: 400 }
@@ -49,11 +59,16 @@ export async function POST(req: NextRequest) {
     }
 
     const result = runBacktest(bars, config);
+    // Both curves receive the same deposits, so both have them stripped before
+    // returns are measured, and both are annualised money-weighted when
+    // contributions are on. Otherwise each deposit reads as a one-bar gain.
     const risk = computeRiskMetrics(
-      result.equity.map((p) => ({ time: p.time, equity: p.equity }))
+      result.equity.map((p) => ({ time: p.time, equity: p.equity })),
+      { cashflows: result.cashflows, cagrPct: result.stats.cagrPct }
     );
     const buyHoldRisk = computeRiskMetrics(
-      result.equity.map((p) => ({ time: p.time, equity: p.buyHold }))
+      result.equity.map((p) => ({ time: p.time, equity: p.buyHold })),
+      { cashflows: result.cashflows, cagrPct: result.stats.buyHoldCagrPct }
     );
 
     return NextResponse.json({ ...result, risk, buyHoldRisk, presetId: preset.id });

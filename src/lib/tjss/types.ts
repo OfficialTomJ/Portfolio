@@ -177,6 +177,12 @@ export interface Trade {
   reason: string;
 }
 
+/** Cash paid into the account: the opening lump, then each contribution. */
+export interface Cashflow {
+  time: number;
+  amount: number;
+}
+
 export interface EquityPoint {
   time: number;
   equity: number;
@@ -199,6 +205,9 @@ export interface BacktestStats {
   maxDrawdownPct: number;
   buyHoldMaxDrawdownPct: number;
   cagrPct: number;
+  /** The benchmark annualised the same way as `cagrPct`: money-weighted when
+   * contributions are on, since buy & hold receives the same cashflows. */
+  buyHoldCagrPct: number;
   mar: number; // CAGR / |maxDrawdown|, return per unit of risk
   numTrades: number;
   /** Total fees + slippage paid, in currency. */
@@ -213,6 +222,9 @@ export interface BacktestStats {
 export interface BacktestResult {
   trades: Trade[];
   equity: EquityPoint[];
+  /** Deposits, in order. Both the strategy and the benchmark curve receive
+   * these, so both must have them subtracted before returns are measured. */
+  cashflows: Cashflow[];
   stats: BacktestStats;
 }
 

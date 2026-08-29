@@ -5,7 +5,7 @@
 // Produces an equity curve vs buy-and-hold, a tagged trade log, and stats
 // including MAR (CAGR / |max drawdown|).
 
-import { Bar, BacktestConfig, BacktestResult, EquityPoint, Trade } from "./types";
+import { Bar, BacktestConfig, BacktestResult, Cashflow, EquityPoint, Trade } from "./types";
 import { computeSeries } from "./rules";
 
 const DAY = 86400;
@@ -15,12 +15,12 @@ const toDate = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
  * Money-weighted annual return (IRR) from dated cashflows, by bisection.
  * Needed because CAGR silently lies once capital is added over time.
  */
-function irr(flows: { t: number; amount: number }[], finalValue: number, endT: number): number {
+function irr(flows: Cashflow[], finalValue: number, endT: number): number {
   if (!flows.length || finalValue <= 0) return 0;
   const npv = (rate: number) => {
     let v = -finalValue;
     for (const f of flows) {
-      const years = (endT - f.t) / (365.25 * DAY);
+      const years = (endT - f.time) / (365.25 * DAY);
       v += f.amount * Math.pow(1 + rate, years);
     }
     return v;
@@ -71,11 +71,12 @@ export function runBacktest(bars: Bar[], config: BacktestConfig): BacktestResult
   const nextOpen = config.fillNextOpen ?? false;
   let totalCosts = 0;
 
-  /** A signal on bar i executes on bar i+1's open when fillNextOpen is set,
-   * a close-derived signal cannot be filled at that same close. Falls back to
-   * the signal bar's close on the final bar. */
+  /** The bar a signal on bar i actually fills at: bar i+1's open when
+   * fillNextOpen is set, since a close-derived signal cannot be filled at that
+   * same close. Falls back to the signal bar's close on the final bar. */
+  const fillBase = (i: number) => (nextOpen && i + 1 < n ? bars[i + 1].open : s.close[i]);
   const fillPrice = (i: number, side: "buy" | "sell") => {
-    const raw = nextOpen && i + 1 < n ? bars[i + 1].open : s.close[i];
+    const raw = fillBase(i);
     return side === "buy" ? raw * (1 + slip) : raw * (1 - slip);
   };
 
@@ -90,8 +91,11 @@ export function runBacktest(bars: Bar[], config: BacktestConfig): BacktestResult
     const price = fillPrice(i, "buy");
     if (spend <= 0 || price <= 0) return;
     const got = (spend / price) * (1 - fee);
-    // Cost = the gap between a frictionless fill and what was actually received.
-    totalCosts += spend - got * s.close[i];
+    // Cost = the gap between a frictionless fill and what was actually
+    // received, valued at the bar the trade FILLED on. Valuing it at the signal
+    // bar's close instead booked the overnight gap to the next open as an
+    // execution cost, which could make totalCosts negative on a favourable gap.
+    totalCosts += spend - got * fillBase(i);
     btc += got;
     cash -= spend;
     trades.push({ time: s.time[i], side: "buy", kind, price, usd: spend, btc: got, reason });
@@ -101,16 +105,18 @@ export function runBacktest(bars: Bar[], config: BacktestConfig): BacktestResult
     const amt = Math.min(btc, sellBtc);
     if (amt <= 0 || price <= 0) return;
     const proceeds = amt * price * (1 - fee);
-    totalCosts += amt * s.close[i] - proceeds;
+    totalCosts += amt * fillBase(i) - proceeds;
     btc -= amt;
     cash += proceeds;
     trades.push({ time: s.time[i], side: "sell", kind, price, usd: proceeds, btc: amt, reason });
   };
 
-  // Cashflows for IRR: the opening lump plus every contribution.
-  const flows: { t: number; amount: number }[] = [];
+  // Cashflows for IRR: the opening lump plus every contribution. Returned in
+  // the result too, because anything measuring returns off the equity curve has
+  // to subtract them or every deposit reads as a one-bar investment gain.
+  const flows: Cashflow[] = [];
   let totalInvested = config.initialCapital;
-  if (startIdx < n) flows.push({ t: s.time[startIdx], amount: config.initialCapital });
+  if (startIdx < n) flows.push({ time: s.time[startIdx], amount: config.initialCapital });
   const contrib = config.contributionAmount ?? 0;
   const contribEvery = Math.max(1, config.contributionCadenceDays ?? 30);
 
@@ -123,7 +129,7 @@ export function runBacktest(bars: Bar[], config: BacktestConfig): BacktestResult
     if (contrib > 0 && i > startIdx && (i - startIdx) % contribEvery === 0) {
       cash += contrib;
       totalInvested += contrib;
-      flows.push({ t: s.time[i], amount: contrib });
+      flows.push({ time: s.time[i], amount: contrib });
       // Benchmark gets the same cash on the same bar, at the same fill and fee.
       const bhPrice = fillPrice(i, "buy");
       if (bhPrice > 0) bhBtc += (contrib / bhPrice) * (1 - fee);
@@ -173,16 +179,20 @@ export function runBacktest(bars: Bar[], config: BacktestConfig): BacktestResult
   // inflation. With no contributions the two are identical to 14 decimal places,
   // so this changes nothing for the default case.
   const contributing = (config.contributionAmount ?? 0) > 0;
-  const cagr = contributing
-    ? irrPct
-    : years > 0 && config.initialCapital > 0
-      ? (Math.pow(finalEquity / config.initialCapital, 1 / years) - 1) * 100
+  const annualised = (final: number) =>
+    years > 0 && config.initialCapital > 0
+      ? (Math.pow(final / config.initialCapital, 1 / years) - 1) * 100
       : 0;
+  const cagr = contributing ? irrPct : annualised(finalEquity);
+  // The benchmark receives the identical cashflows, so it has to be annualised
+  // the identical way or the two Martin ratios are not comparable.
+  const bhCagr = contributing ? irr(flows, bhFinal, endT) : annualised(bhFinal);
   const tradedBars = Math.max(1, n - startIdx);
 
   return {
     trades,
     equity,
+    cashflows: flows,
     stats: {
       initialCapital: config.initialCapital,
       totalInvested,
@@ -200,6 +210,7 @@ export function runBacktest(bars: Bar[], config: BacktestConfig): BacktestResult
       maxDrawdownPct: maxDd,
       buyHoldMaxDrawdownPct: maxDrawdown(equity.map((e) => e.buyHold)) * 100,
       cagrPct: cagr,
+      buyHoldCagrPct: bhCagr,
       mar: maxDd !== 0 ? cagr / Math.abs(maxDd) : 0,
       numTrades: trades.length,
       totalCosts,

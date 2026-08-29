@@ -26,6 +26,8 @@ import {
 import { ema, divergences, Series } from "./indicators";
 import { aggregate, projectOntoDaily } from "./timeframe";
 
+const DAY = 86400;
+
 export interface EngineSeries {
   n: number;
   time: number[];
@@ -161,7 +163,12 @@ export function computeSeries(bars: Bar[], config: TjssConfig): EngineSeries {
     if (f != null) {
       fearMult[i] = fearMultiplier(f, config.fearWeightMax, config.dcaFearCap);
       greedMult[i] = greedMultiplier(f, config.trimGreedFloor, config.greedWeightMax);
-      isDcaDay[i] = i % config.dcaCadenceDays === 0 && f <= config.dcaFearCap;
+      // Anchored to the unix epoch, not to the array. Indexing by `i` made the
+      // schedule's phase depend on where the loaded history happened to start,
+      // so the same date could be a DCA day in one run and not the next as the
+      // cached series grew backwards.
+      isDcaDay[i] =
+        Math.floor(time[i] / DAY) % config.dcaCadenceDays === 0 && f <= config.dcaFearCap;
 
       if (i > 0 && close[i - 1] > 0) {
         const dayRet = close[i] / close[i - 1] - 1;

@@ -30,21 +30,48 @@ interface Props {
   evidence: EvidenceData | null;
 }
 
+// Numeric inputs are held as the RAW STRING the member typed, not as numbers.
+// Coercing on every keystroke turned a cleared field into 0 and a half-typed
+// one ("1e", "-") into NaN, which serialised to null and came back from zod as
+// an opaque "Invalid request". The string is validated below and coerced once,
+// on submit.
 interface BtParams {
-  initialCapital: number;
-  contributionAmount: number;
-  contributionCadenceDays: number;
+  initialCapital: string;
+  contributionAmount: string;
+  contributionCadenceDays: string;
   fromDate: string;
   toDate: string;
 }
 
 const DEFAULT_PARAMS: BtParams = {
-  initialCapital: 10000,
-  contributionAmount: 0,
-  contributionCadenceDays: 30,
+  initialCapital: "10000",
+  contributionAmount: "0",
+  contributionCadenceDays: "30",
   fromDate: "",
   toDate: "",
 };
+
+// The same ranges the inputs advertise, and a subset of backtestRequestSchema's,
+// so an out-of-range value is caught at the field that caused it rather than as
+// a whole-request rejection.
+const BOUNDS = {
+  initialCapital: { min: 100, max: 10_000_000, integer: false },
+  contributionAmount: { min: 0, max: 1_000_000, integer: false },
+  contributionCadenceDays: { min: 1, max: 365, integer: true },
+} as const;
+
+type NumericKey = keyof typeof BOUNDS;
+
+/** The typed string as a usable number, or null if it is not one yet. */
+function parseField(key: NumericKey, raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  const { min, max, integer } = BOUNDS[key];
+  if (!Number.isFinite(n) || n < min || n > max) return null;
+  if (integer && !Number.isInteger(n)) return null;
+  return n;
+}
 
 interface BacktestResponse extends BacktestResult {
   risk: RiskMetrics;
@@ -153,18 +180,35 @@ const fmtPct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
 const fmtDate = (t: number) => new Date(t * 1000).toLocaleDateString(undefined, { year: "2-digit", month: "short", day: "numeric" });
 const fmtDays = (d: number | null) => (d == null ? "not yet" : `${d}d`);
 
-function Field({ label, value, min, max, step, onChange, suffix }: {
-  label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; suffix?: string;
+function Field({ label, value, min, max, step, onChange, suffix, invalid }: {
+  label: string; value: string; min: number; max: number; step?: number; onChange: (v: string) => void; suffix?: string; invalid?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-1 text-xs">
       <span className="text-[var(--bp-text-dim)]">{label}{suffix ? ` (${suffix})` : ""}</span>
       <input type="number" value={value} min={min} max={max} step={step ?? 1}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="rounded-md bg-black/40 border border-[var(--bp-border)] px-2 py-1.5 text-sm focus:border-[var(--bp-accent)] focus:outline-none" />
+        aria-invalid={invalid || undefined}
+        onChange={(e) => onChange(e.target.value)}
+        className={`rounded-md bg-black/40 border px-2 py-1.5 text-sm focus:outline-none ${
+          invalid
+            ? "border-red-500/70 focus:border-red-500"
+            : "border-[var(--bp-border)] focus:border-[var(--bp-accent)]"
+        }`} />
+      {invalid && (
+        <span className="text-[10px] text-red-400">
+          Enter a {BOUNDS_HINT[label] ?? "valid number"}
+        </span>
+      )}
     </label>
   );
 }
+
+// Keyed by the visible label so the message names the field's own range.
+const BOUNDS_HINT: Record<string, string> = {
+  "Starting capital": "number from 100 to 10,000,000",
+  "Regular contribution": "number from 0 to 1,000,000",
+  "Contribute every": "whole number of days from 1 to 365",
+};
 
 export default function BacktestPanel({
   config, presets, modes, onConfigChange, modeLabel, evidence,
@@ -175,18 +219,26 @@ export default function BacktestPanel({
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<BtParams>) => setParams((p) => ({ ...p, ...patch }));
 
+  const values = {
+    initialCapital: parseField("initialCapital", params.initialCapital),
+    contributionAmount: parseField("contributionAmount", params.contributionAmount),
+    contributionCadenceDays: parseField("contributionCadenceDays", params.contributionCadenceDays),
+  };
+  const hasInvalidField = Object.values(values).some((v) => v == null);
+
   async function run() {
+    if (hasInvalidField) return;
     setLoading(true);
     setError(null);
     try {
       const body: Record<string, unknown> = {
         preset: config.presetId,
         mode: config.mode,
-        initialCapital: params.initialCapital,
+        initialCapital: values.initialCapital,
       };
-      if (params.contributionAmount > 0) {
-        body.contributionAmount = params.contributionAmount;
-        body.contributionCadenceDays = params.contributionCadenceDays;
+      if ((values.contributionAmount ?? 0) > 0) {
+        body.contributionAmount = values.contributionAmount;
+        body.contributionCadenceDays = values.contributionCadenceDays;
       }
       if (params.fromDate) body.fromDate = params.fromDate;
       if (params.toDate) body.toDate = params.toDate;
@@ -209,7 +261,7 @@ export default function BacktestPanel({
   const stats = result?.stats;
   const risk = result?.risk;
   const bhRisk = result?.buyHoldRisk;
-  const contributing = params.contributionAmount > 0;
+  const contributing = (values.contributionAmount ?? 0) > 0;
 
   return (
     <div className="bp-surface rounded-xl p-5 flex flex-col gap-5">
@@ -230,7 +282,8 @@ export default function BacktestPanel({
         <h3 className="text-sm font-semibold uppercase tracking-widest text-[var(--bp-text-dim)]">
           Historical simulation · <span className="text-[var(--bp-accent)]">{modeLabel}</span>
         </h3>
-        <button onClick={run} disabled={loading}
+        <button onClick={run} disabled={loading || hasInvalidField}
+          title={hasInvalidField ? "Check the highlighted fields" : undefined}
           className="rounded-md bg-[var(--bp-accent)] text-black font-semibold px-4 py-1.5 text-sm hover:brightness-110 transition disabled:opacity-60">
           {loading ? "Running…" : "Run simulation"}
         </button>
@@ -240,9 +293,9 @@ export default function BacktestPanel({
           only existed to push the dates onto their own row at sm, and cost a
           whole cell of a two-column phone grid. */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <Field label="Starting capital" suffix="$" value={params.initialCapital} min={100} max={10_000_000} onChange={(v) => set({ initialCapital: v })} />
-        <Field label="Regular contribution" suffix="$, 0 = none" value={params.contributionAmount} min={0} max={1_000_000} onChange={(v) => set({ contributionAmount: v })} />
-        <Field label="Contribute every" suffix="days" value={params.contributionCadenceDays} min={1} max={365} onChange={(v) => set({ contributionCadenceDays: v })} />
+        <Field label="Starting capital" suffix="$" value={params.initialCapital} min={BOUNDS.initialCapital.min} max={BOUNDS.initialCapital.max} invalid={values.initialCapital == null} onChange={(v) => set({ initialCapital: v })} />
+        <Field label="Regular contribution" suffix="$, 0 = none" value={params.contributionAmount} min={BOUNDS.contributionAmount.min} max={BOUNDS.contributionAmount.max} invalid={values.contributionAmount == null} onChange={(v) => set({ contributionAmount: v })} />
+        <Field label="Contribute every" suffix="days" value={params.contributionCadenceDays} min={BOUNDS.contributionCadenceDays.min} max={BOUNDS.contributionCadenceDays.max} invalid={values.contributionCadenceDays == null} onChange={(v) => set({ contributionCadenceDays: v })} />
         <label className="flex flex-col gap-1 text-xs">
           <span className="text-[var(--bp-text-dim)]">From (optional)</span>
           <input type="date" value={params.fromDate} onChange={(e) => set({ fromDate: e.target.value })}

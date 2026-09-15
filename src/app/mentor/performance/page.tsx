@@ -8,7 +8,10 @@ export const metadata = {
 };
 
 export default async function PerformancePage() {
-  if (!(await getMemberSession())) return <AccessGate />;
+  // Mock-data branch previews are intentionally reviewable without an account.
+  // Production always uses the normal verified-member gate.
+  const isPreview = process.env.VERCEL_ENV === "preview";
+  if (!isPreview && !(await getMemberSession())) return <AccessGate />;
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-24">

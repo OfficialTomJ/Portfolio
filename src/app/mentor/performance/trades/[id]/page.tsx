@@ -56,7 +56,8 @@ function Detail({ label, value, tone }: { label: string; value: string; tone?: "
 }
 
 export default async function TradePage({ params }: Props) {
-  if (!(await getMemberSession())) return <AccessGate />;
+  const isPreview = process.env.VERCEL_ENV === "preview";
+  if (!isPreview && !(await getMemberSession())) return <AccessGate />;
   const trade = getMockTrade((await params).id);
   if (!trade) notFound();
   const candles = createMockCandles(trade);

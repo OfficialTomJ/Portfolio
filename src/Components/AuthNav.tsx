@@ -51,13 +51,21 @@ export default function AuthNav() {
         href="/dashboard"
         className="flex items-center gap-1.5 text-[var(--bp-text-dim)] hover:text-white transition-colors"
       >
-        Dashboard
+        <span className="sm:hidden">TJSS</span>
+        <span className="hidden sm:inline">Dashboard</span>
         {isDashboardNew() && (
           <span
             className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--bp-accent)]"
             aria-label="New"
           />
         )}
+      </Link>
+      <Link
+        href="/performance"
+        className="text-[var(--bp-text-dim)] hover:text-white transition-colors"
+      >
+        <span className="sm:hidden">Journal</span>
+        <span className="hidden sm:inline">Performance</span>
       </Link>
       <Link
         href="/account"

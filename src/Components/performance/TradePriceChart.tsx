@@ -1,0 +1,92 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import {
+  CandlestickSeries,
+  ColorType,
+  CrosshairMode,
+  LineStyle,
+  createChart,
+  createSeriesMarkers,
+  type IChartApi,
+  type SeriesMarker,
+  type Time,
+} from "lightweight-charts";
+import type { PerformanceTrade, TradeCandle } from "@/lib/performance/types";
+
+function nearestTime(candles: TradeCandle[], target: number): number {
+  return candles.reduce((best, item) => Math.abs(item.time - target) < Math.abs(best - target) ? item.time : best, candles[0]?.time ?? target);
+}
+
+export default function TradePriceChart({ trade, candles }: { trade: PerformanceTrade; candles: TradeCandle[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || !candles.length) return;
+
+    const precision = trade.entryPrice < 100 ? 3 : trade.entryPrice < 1000 ? 2 : trade.entryPrice < 10_000 ? 1 : 0;
+    const chart = createChart(element, {
+      autoSize: true,
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: "#71717a",
+        fontFamily: "inherit",
+        attributionLogo: false,
+      },
+      grid: {
+        vertLines: { color: "rgba(255,255,255,0.035)" },
+        horzLines: { color: "rgba(255,255,255,0.045)" },
+      },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.12 } },
+      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
+      localization: { priceFormatter: (value: number) => value.toLocaleString('en-AU', { minimumFractionDigits: precision, maximumFractionDigits: precision }) },
+    });
+    chartRef.current = chart;
+
+    const series = chart.addSeries(CandlestickSeries, {
+      upColor: "#4f8cff",
+      downColor: "#52525b",
+      wickUpColor: "#6ea0ff",
+      wickDownColor: "#71717a",
+      borderVisible: false,
+      priceLineVisible: false,
+    });
+    series.setData(candles.map((item) => ({ ...item, time: item.time as Time })));
+
+    const entryTime = nearestTime(candles, Math.floor(Date.parse(trade.openedAt) / 1000));
+    const exitTime = nearestTime(candles, Math.floor(Date.parse(trade.closedAt) / 1000));
+    const markers: SeriesMarker<Time>[] = [
+      {
+        time: entryTime as Time,
+        position: trade.direction === "Long" ? "belowBar" : "aboveBar",
+        color: "#60a5fa",
+        shape: trade.direction === "Long" ? "arrowUp" : "arrowDown",
+        text: "Entry",
+      },
+      {
+        time: exitTime as Time,
+        position: trade.direction === "Long" ? "aboveBar" : "belowBar",
+        color: "#fafafa",
+        shape: "circle",
+        text: "Exit",
+      },
+    ];
+    markers.sort((a, b) => Number(a.time) - Number(b.time));
+    createSeriesMarkers(series, markers);
+
+    series.createPriceLine({ price: trade.entryPrice, color: "rgba(96,165,250,0.65)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Entry" });
+    series.createPriceLine({ price: trade.exitPrice, color: "rgba(250,250,250,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Exit" });
+    series.createPriceLine({ price: trade.initialStop, color: "rgba(161,161,170,0.4)", lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title: "Initial stop" });
+    chart.timeScale().fitContent();
+
+    return () => {
+      chart.remove();
+      chartRef.current = null;
+    };
+  }, [trade, candles]);
+
+  return <div ref={ref} className="h-[360px] w-full sm:h-[500px]" />;
+}

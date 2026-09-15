@@ -10,8 +10,6 @@ import { signedR } from "@/lib/performance/metrics";
 
 type Props = { params: Promise<{ id: string }> };
 
-export const preferredRegion = "syd1";
-
 export async function generateMetadata({ params }: Props) {
   const item = getMockTrade((await params).id);
   if (!item) return { title: "Trade not found, The Blueprint" };
@@ -76,7 +74,7 @@ export default async function TradePage({ params }: Props) {
           <div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Mock trade</span>
-              <span className="text-zinc-600">Closed · real market data</span>
+              <span className="text-zinc-600">Closed · Binance market data</span>
             </div>
             <h1 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-white sm:text-5xl">
               {trade.symbol.replace("USDT", " / USDT")}

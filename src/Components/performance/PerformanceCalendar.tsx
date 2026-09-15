@@ -99,12 +99,12 @@ export default function PerformanceCalendar({
               key={cell.key}
               title={cell.total ? `${cell.key}: ${signedR(value)} across ${cell.total.count} trade${cell.total.count === 1 ? '' : 's'}` : cell.key}
               className={`aspect-square min-w-0 rounded-md border p-1.5 sm:rounded-lg sm:p-2 ${cell.current ? "border-white/[0.07]" : "border-transparent opacity-25"}`}
-              style={cell.total ? { backgroundColor: value >= 0 ? `rgba(59,130,246,${intensity})` : `rgba(113,113,122,${intensity})`, borderColor: value >= 0 ? 'rgba(96,165,250,0.2)' : 'rgba(161,161,170,0.16)' } : { backgroundColor: 'rgba(255,255,255,0.015)' }}
+              style={cell.total ? { backgroundColor: value >= 0 ? `rgba(255,103,25,${intensity})` : `rgba(113,113,122,${intensity})`, borderColor: value >= 0 ? 'rgba(255,103,25,0.24)' : 'rgba(161,161,170,0.16)' } : { backgroundColor: 'rgba(255,255,255,0.015)' }}
             >
               <div className="flex h-full flex-col justify-between overflow-hidden">
                 <span className="text-[9px] text-zinc-600 sm:text-[11px]">{cell.date.getUTCDate()}</span>
                 {cell.total && (
-                  <span className={`truncate text-[9px] font-semibold tabular-nums sm:text-xs ${value >= 0 ? 'text-blue-300' : 'text-zinc-300'}`}>
+                  <span className={`truncate text-[9px] font-semibold tabular-nums sm:text-xs ${value >= 0 ? 'text-[#ff8b52]' : 'text-zinc-300'}`}>
                     {signedR(value, 1)}
                   </span>
                 )}

@@ -4,7 +4,8 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import AccessGate from "@/Components/AccessGate";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
 import { getMemberSession } from "@/lib/session";
-import { createMockCandles, getMockTrade } from "@/lib/performance/mock";
+import { getMockTrade } from "@/lib/performance/mock";
+import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
 
 type Props = { params: Promise<{ id: string }> };
@@ -46,11 +47,11 @@ function duration(openedAt: string, closedAt: string): string {
   return days ? `${days}d ${remaining}h` : `${Math.round(hours)}h`;
 }
 
-function Detail({ label, value, tone }: { label: string; value: string; tone?: "blue" }) {
+function Detail({ label, value, tone }: { label: string; value: string; tone?: "orange" }) {
   return (
     <div className="border-r border-white/[0.07] px-4 py-4 last:border-0 sm:px-5">
       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">{label}</p>
-      <p className={`mt-2 text-lg font-medium tabular-nums ${tone === "blue" ? "text-blue-400" : "text-zinc-200"}`}>{value}</p>
+      <p className={`mt-2 text-lg font-medium tabular-nums ${tone === "orange" ? "text-[var(--bp-accent)]" : "text-zinc-200"}`}>{value}</p>
     </div>
   );
 }
@@ -60,7 +61,7 @@ export default async function TradePage({ params }: Props) {
   if (!isPreview && !(await getMemberSession())) return <AccessGate />;
   const trade = getMockTrade((await params).id);
   if (!trade) notFound();
-  const candles = createMockCandles(trade);
+  const candles = await getHistoricalCandles(trade);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-24">
@@ -72,8 +73,8 @@ export default async function TradePage({ params }: Props) {
         <header className="mt-7 flex flex-col gap-5 border-b border-white/[0.08] pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full border border-blue-400/20 bg-blue-400/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-blue-300">Mock trade</span>
-              <span className="text-zinc-600">Closed · retrospective only</span>
+              <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Mock trade</span>
+              <span className="text-zinc-600">Closed · real Bybit market data</span>
             </div>
             <h1 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-white sm:text-5xl">
               {trade.symbol.replace("USDT", " / USDT")}
@@ -84,7 +85,7 @@ export default async function TradePage({ params }: Props) {
           </div>
           <div className="sm:text-right">
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-600">Net result</p>
-            <p className={`mt-1 text-4xl font-medium tracking-tight ${trade.resultR >= 0 ? "text-blue-400" : "text-zinc-200"}`}>
+            <p className={`mt-1 text-4xl font-medium tracking-tight ${trade.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-200"}`}>
               {signedR(trade.resultR)}
             </p>
           </div>
@@ -99,12 +100,18 @@ export default async function TradePage({ params }: Props) {
             <p className="text-xs text-zinc-600">Public asset prices · no position sizing</p>
           </div>
           <div className="p-2 sm:p-4">
-            <TradePriceChart trade={trade} candles={candles} />
+            {candles.length ? (
+              <TradePriceChart trade={trade} candles={candles} />
+            ) : (
+              <div className="grid h-[360px] place-items-center text-sm text-zinc-600 sm:h-[500px]">
+                Market chart unavailable
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 border-t border-white/[0.08] sm:grid-cols-4">
             <Detail label="Entry" value={price(trade.entryPrice)} />
             <Detail label="Exit" value={price(trade.exitPrice)} />
-            <Detail label="Max favourable" value={signedR(trade.mfeR)} tone="blue" />
+            <Detail label="Max favourable" value={signedR(trade.mfeR)} tone="orange" />
             <Detail label="Max adverse" value={signedR(trade.maeR)} />
           </div>
         </section>

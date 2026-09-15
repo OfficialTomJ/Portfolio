@@ -47,14 +47,14 @@ export default function PerformanceEquityChart({ points }: { points: EquityPoint
     chartRef.current = chart;
 
     const series = chart.addSeries(AreaSeries, {
-      lineColor: "#4f8cff",
-      topColor: "rgba(79,140,255,0.30)",
-      bottomColor: "rgba(79,140,255,0.015)",
+      lineColor: "#ff6719",
+      topColor: "rgba(255,103,25,0.28)",
+      bottomColor: "rgba(255,103,25,0.012)",
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
       crosshairMarkerBorderColor: "#05070b",
-      crosshairMarkerBackgroundColor: "#8ab4ff",
+      crosshairMarkerBackgroundColor: "#ff8b52",
     });
     series.setData(points.map((point) => ({ time: point.time as Time, value: point.value })));
     series.createPriceLine({

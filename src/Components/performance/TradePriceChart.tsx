@@ -47,9 +47,9 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
     chartRef.current = chart;
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#4f8cff",
+      upColor: "#ff6719",
       downColor: "#52525b",
-      wickUpColor: "#6ea0ff",
+      wickUpColor: "#ff8b52",
       wickDownColor: "#71717a",
       borderVisible: false,
       priceLineVisible: false,
@@ -62,7 +62,7 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
       {
         time: entryTime as Time,
         position: trade.direction === "Long" ? "belowBar" : "aboveBar",
-        color: "#60a5fa",
+        color: "#ff6719",
         shape: trade.direction === "Long" ? "arrowUp" : "arrowDown",
         text: "Entry",
       },
@@ -77,7 +77,7 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
     markers.sort((a, b) => Number(a.time) - Number(b.time));
     createSeriesMarkers(series, markers);
 
-    series.createPriceLine({ price: trade.entryPrice, color: "rgba(96,165,250,0.65)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Entry" });
+    series.createPriceLine({ price: trade.entryPrice, color: "rgba(255,103,25,0.7)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Entry" });
     series.createPriceLine({ price: trade.exitPrice, color: "rgba(250,250,250,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Exit" });
     series.createPriceLine({ price: trade.initialStop, color: "rgba(161,161,170,0.4)", lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title: "Initial stop" });
     chart.timeScale().fitContent();

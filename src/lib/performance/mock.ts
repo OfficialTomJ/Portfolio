@@ -14,7 +14,7 @@ type MarketSnapshot = readonly [
 ];
 
 /**
- * Hypothetical trade selections placed on real Bybit hourly market data.
+ * Hypothetical trade selections placed on real hourly market data.
  * Prices are the observed candle closes at the mock entry and exit. The stop
  * sits beyond the observed adverse excursion, with a 1.5 ATR floor.
  */

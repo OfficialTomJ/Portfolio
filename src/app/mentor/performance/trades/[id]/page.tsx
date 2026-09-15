@@ -10,6 +10,10 @@ import { signedR } from "@/lib/performance/metrics";
 
 type Props = { params: Promise<{ id: string }> };
 
+// Bybit blocks US-origin API traffic. Keep the chart renderer close to the
+// project's Australian audience so the public candle request remains usable.
+export const preferredRegion = "syd1";
+
 export async function generateMetadata({ params }: Props) {
   const item = getMockTrade((await params).id);
   if (!item) return { title: "Trade not found, The Blueprint" };

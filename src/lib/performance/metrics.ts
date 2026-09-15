@@ -39,6 +39,7 @@ export function getAvailableYears(dataset: PerformanceDataset): number[] {
 function periodStart(range: PerformanceRange, asOf: Date, year: number): Date {
   if (range === "30D") return new Date(asOf.getTime() - 29 * DAY);
   if (range === "90D") return new Date(asOf.getTime() - 89 * DAY);
+  if (range === "6M") return new Date(asOf.getTime() - 182 * DAY);
   const targetYear = range === "YEAR" ? year : sydneyYear(asOf);
   return new Date(`${targetYear}-01-01T00:00:00+11:00`);
 }

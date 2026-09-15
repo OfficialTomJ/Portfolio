@@ -1,5 +1,5 @@
 export type TradeDirection = "Long" | "Short";
-export type PerformanceRange = "30D" | "90D" | "YTD" | "YEAR";
+export type PerformanceRange = "30D" | "90D" | "6M" | "YTD" | "YEAR";
 
 export interface PerformanceTrade {
   id: string;

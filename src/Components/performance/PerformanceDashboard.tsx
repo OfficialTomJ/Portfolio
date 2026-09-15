@@ -5,13 +5,14 @@ import { useState } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
 import { buildPerformanceView, getAvailableYears, signedR } from "@/lib/performance/metrics";
 import { performanceDatasets } from "@/lib/performance/mock";
-import type { PerformanceDataset, PerformanceRange } from "@/lib/performance/types";
+import type { PerformanceRange } from "@/lib/performance/types";
 import PerformanceCalendar from "./PerformanceCalendar";
 import PerformanceEquityChart from "./PerformanceEquityChart";
 
 const RANGES: { value: PerformanceRange; label: string }[] = [
   { value: "30D", label: "30 days" },
   { value: "90D", label: "90 days" },
+  { value: "6M", label: "6 months" },
   { value: "YTD", label: "YTD" },
   { value: "YEAR", label: "Yearly" },
 ];
@@ -47,9 +48,8 @@ function Stat({ label, value, featured }: { label: string; value: string; featur
 }
 
 export default function PerformanceDashboard() {
-  const [datasetId, setDatasetId] = useState<PerformanceDataset["id"]>("new");
   const [range, setRange] = useState<PerformanceRange>("30D");
-  const dataset = performanceDatasets[datasetId];
+  const dataset = performanceDatasets.mature;
   const years = getAvailableYears(dataset);
   const [selectedYear, setSelectedYear] = useState(years[0] ?? 2026);
   const year = years.includes(selectedYear) ? selectedYear : years[0] ?? 2026;
@@ -59,24 +59,6 @@ export default function PerformanceDashboard() {
   return (
     <div className="space-y-6 sm:space-y-8">
       <section className="overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d]">
-        <div className="flex flex-col gap-4 border-b border-white/[0.08] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Preview dataset</p>
-          </div>
-          <div className="flex w-full rounded-lg border border-white/[0.09] bg-black p-1 sm:w-auto">
-            {Object.values(performanceDatasets).map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setDatasetId(item.id)}
-                className={`flex-1 whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium transition-colors sm:flex-none ${datasetId === item.id ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="flex gap-1 overflow-x-auto border-b border-white/[0.08] p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {RANGES.map((item) => (
             <button
@@ -127,7 +109,7 @@ export default function PerformanceDashboard() {
       </section>
 
       <PerformanceCalendar
-        key={`${dataset.id}-${range}-${year}`}
+        key={`${range}-${year}`}
         trades={view.trades}
         asOf={dataset.asOf}
       />

@@ -14,6 +14,9 @@ import {
 } from "lightweight-charts";
 import type { PerformanceTrade, TradeCandle } from "@/lib/performance/types";
 
+const GREEN = "#22c55e";
+const RED = "#ef4444";
+
 function nearestTime(candles: TradeCandle[], target: number): number {
   return candles.reduce((best, item) => Math.abs(item.time - target) < Math.abs(best - target) ? item.time : best, candles[0]?.time ?? target);
 }
@@ -31,26 +34,26 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
       autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#71717a",
+        textColor: "#a1a1aa",
         fontFamily: "inherit",
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.035)" },
-        horzLines: { color: "rgba(255,255,255,0.045)" },
+        vertLines: { color: "rgba(255,255,255,0.04)" },
+        horzLines: { color: "rgba(255,255,255,0.04)" },
       },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.12 } },
-      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
+      rightPriceScale: { borderColor: "rgba(255,255,255,0.09)", scaleMargins: { top: 0.12, bottom: 0.12 } },
+      timeScale: { borderColor: "rgba(255,255,255,0.09)", rightOffset: 4, timeVisible: true, secondsVisible: false },
       localization: { priceFormatter: (value: number) => value.toLocaleString('en-AU', { minimumFractionDigits: precision, maximumFractionDigits: precision }) },
     });
     chartRef.current = chart;
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#ff6719",
-      downColor: "#52525b",
-      wickUpColor: "#ff8b52",
-      wickDownColor: "#71717a",
+      upColor: GREEN,
+      downColor: RED,
+      wickUpColor: GREEN,
+      wickDownColor: RED,
       borderVisible: false,
       priceLineVisible: false,
     });

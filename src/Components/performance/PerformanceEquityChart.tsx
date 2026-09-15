@@ -24,21 +24,21 @@ export default function PerformanceEquityChart({ points }: { points: EquityPoint
       autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#71717a",
+        textColor: "#a1a1aa",
         fontFamily: "inherit",
         attributionLogo: false,
       },
       grid: {
-        vertLines: { visible: false },
-        horzLines: { color: "rgba(255,255,255,0.055)" },
+        vertLines: { color: "rgba(255,255,255,0.04)" },
+        horzLines: { color: "rgba(255,255,255,0.04)" },
       },
       crosshair: { mode: CrosshairMode.Normal },
       rightPriceScale: {
-        borderVisible: false,
+        borderColor: "rgba(255,255,255,0.09)",
         scaleMargins: { top: 0.16, bottom: 0.12 },
       },
       timeScale: {
-        borderVisible: false,
+        borderColor: "rgba(255,255,255,0.09)",
         rightOffset: 2,
         timeVisible: false,
       },

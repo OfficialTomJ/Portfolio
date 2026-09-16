@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
-import JournalUpdatesPrompt from "@/Components/performance/JournalUpdatesPrompt";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
 import { getPerformanceTrade, parsePerformanceSource } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
@@ -136,9 +135,7 @@ export default async function TradePage({ params, searchParams }: Props) {
             </p>
           </div>
         </section>
-
       </div>
-      <JournalUpdatesPrompt />
     </main>
   );
 }

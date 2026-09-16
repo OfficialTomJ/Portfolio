@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
-import AccessGate from "@/Components/AccessGate";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
-import { getMemberSession } from "@/lib/session";
 import { getMockTrade } from "@/lib/performance/mock";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
@@ -57,8 +55,6 @@ function Detail({ label, value, tone }: { label: string; value: string; tone?: "
 }
 
 export default async function TradePage({ params }: Props) {
-  const isPreview = process.env.VERCEL_ENV === "preview";
-  if (!isPreview && !(await getMemberSession())) return <AccessGate />;
   const trade = getMockTrade((await params).id);
   if (!trade) notFound();
   const candles = await getHistoricalCandles(trade);
@@ -73,8 +69,8 @@ export default async function TradePage({ params }: Props) {
         <header className="mt-7 flex flex-col gap-5 border-b border-white/[0.08] pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Mock trade</span>
-              <span className="text-zinc-600">Closed · Binance market data</span>
+              <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Preview data</span>
+              <span className="text-zinc-600">Closed · Simulated prop trading</span>
             </div>
             <h1 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-white sm:text-5xl">
               {trade.symbol.replace("USDT", " / USDT")}
@@ -108,11 +104,9 @@ export default async function TradePage({ params }: Props) {
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 border-t border-white/[0.08] sm:grid-cols-4">
+          <div className="grid grid-cols-2 border-t border-white/[0.08]">
             <Detail label="Entry" value={price(trade.entryPrice)} />
             <Detail label="Exit" value={price(trade.exitPrice)} />
-            <Detail label="Max favourable" value={signedR(trade.mfeR)} tone="orange" />
-            <Detail label="Max adverse" value={signedR(trade.maeR)} />
           </div>
         </section>
 
@@ -128,8 +122,23 @@ export default async function TradePage({ params }: Props) {
           <div className="rounded-2xl border border-white/[0.09] bg-[#07090d] p-5 sm:p-6">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Risk methodology</p>
             <p className="mt-4 text-sm leading-6 text-zinc-400">
-              Performance is expressed in R, where 1R represents the predefined risk allocated to the completed trade. Asset prices are public market data; quantity, account value and monetary P&amp;L are never displayed.
+              Performance is expressed in R, where 1R represents the predefined risk allocated to the completed trade. Initial risk is used only for this calculation and is not published. Quantity, account value and monetary P&amp;L are never displayed.
             </p>
+          </div>
+        </section>
+
+        <section className="mt-6 flex flex-col gap-4 rounded-2xl border border-[#ff6719]/20 bg-[#ff6719]/[0.045] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <p className="font-medium text-zinc-100">Get new journal entries</p>
+            <p className="mt-1 text-sm text-zinc-500">Follow completed trade and performance updates.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/substack" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--bp-accent)] px-4 text-sm font-semibold text-black transition-all hover:brightness-110">
+              Subscribe on Substack
+            </Link>
+            <a href="https://discord.gg/8tK967YJ6y" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/[0.12] px-4 text-sm font-medium text-zinc-200 transition-colors hover:border-white/[0.22] hover:text-white">
+              Join the Discord
+            </a>
           </div>
         </section>
       </div>

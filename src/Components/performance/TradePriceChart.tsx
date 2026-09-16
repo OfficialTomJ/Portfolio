@@ -17,6 +17,16 @@ import type { PerformanceTrade, TradeCandle } from "@/lib/performance/types";
 const GREEN = "#22c55e";
 const RED = "#ef4444";
 
+const markerTime = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "Australia/Sydney",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZoneName: "short",
+});
+
 function nearestTime(candles: TradeCandle[], target: number): number {
   return candles.reduce((best, item) => Math.abs(item.time - target) < Math.abs(best - target) ? item.time : best, candles[0]?.time ?? target);
 }
@@ -82,7 +92,6 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
 
     series.createPriceLine({ price: trade.entryPrice, color: "rgba(255,103,25,0.7)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Entry" });
     series.createPriceLine({ price: trade.exitPrice, color: "rgba(250,250,250,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Exit" });
-    series.createPriceLine({ price: trade.initialStop, color: "rgba(161,161,170,0.4)", lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title: "Initial stop" });
     chart.timeScale().fitContent();
 
     return () => {
@@ -91,5 +100,19 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
     };
   }, [trade, candles]);
 
-  return <div ref={ref} className="h-[360px] w-full sm:h-[500px]" />;
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 px-1 pb-3 sm:px-0">
+        <span className="inline-flex items-center gap-2 rounded-md border border-[#ff6719]/20 bg-[#ff6719]/[0.06] px-2.5 py-1.5 text-[11px] text-[#ff9a67]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#ff6719]" />
+          Entry {markerTime.format(new Date(trade.openedAt))}
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-md border border-white/[0.09] bg-white/[0.025] px-2.5 py-1.5 text-[11px] text-zinc-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-100" />
+          Exit {markerTime.format(new Date(trade.closedAt))}
+        </span>
+      </div>
+      <div ref={ref} className="h-[360px] w-full sm:h-[500px]" />
+    </div>
+  );
 }

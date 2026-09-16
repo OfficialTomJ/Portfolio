@@ -34,7 +34,7 @@ export default function JournalUpdatesPrompt() {
           >
             <span className="min-w-0">
               <span className="block text-[10px] font-semibold uppercase tracking-[0.17em] text-[#ff8b52]">Journal updates</span>
-              <span className="mt-1 block truncate text-sm text-zinc-300">Follow new closed trades and performance updates.</span>
+              <span className="mt-1 block break-words text-sm leading-5 text-zinc-300">Follow new closed trades and performance updates.</span>
             </span>
             <FaArrowRightLong className="shrink-0 text-xs text-[#ff8b52] transition-transform group-hover:translate-x-1" />
           </button>

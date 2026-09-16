@@ -49,7 +49,7 @@ function Stat({ label, value, featured }: { label: string; value: string; featur
       <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500 sm:text-[11px]">
         {label}
       </p>
-      <p className={`mt-2 truncate text-2xl font-medium tracking-tight sm:text-3xl ${featured ? "text-[var(--bp-accent)]" : "text-zinc-100"}`}>
+      <p className={`mt-2 break-words text-2xl font-medium leading-tight tracking-tight sm:text-3xl ${featured ? "text-[var(--bp-accent)]" : "text-zinc-100"}`}>
         {value}
       </p>
     </div>
@@ -114,7 +114,7 @@ export default function PerformanceDashboard() {
             </label>
           )}
           {range === "CUSTOM" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid w-full grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:w-auto">
               <label>
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">From</span>
                 <input
@@ -123,7 +123,7 @@ export default function PerformanceDashboard() {
                   value={customStart}
                   max={customEnd}
                   onInput={(event) => { setCustomStart(event.currentTarget.value); setSelectedDate(null); }}
-                  className="h-10 min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
+                  className="h-10 w-full min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
                 />
               </label>
               <label>
@@ -135,7 +135,7 @@ export default function PerformanceDashboard() {
                   min={customStart}
                   max={asOfKey}
                   onInput={(event) => { setCustomEnd(event.currentTarget.value); setSelectedDate(null); }}
-                  className="h-10 min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
+                  className="h-10 w-full min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
                 />
               </label>
             </div>
@@ -208,12 +208,12 @@ export default function PerformanceDashboard() {
                   className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
+                    <p className="break-words font-medium leading-5 text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
                     <p className="mt-1 text-xs text-zinc-500">
                       {item.direction} · {dateFormatter.format(new Date(item.closedAt))}
                     </p>
                   </div>
-                  <span className={`text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
+                  <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
                     {signedR(item.resultR)}
                   </span>
                   <FaArrowRightLong className="hidden text-xs text-zinc-700 transition-transform group-hover:translate-x-1 group-hover:text-zinc-300" />

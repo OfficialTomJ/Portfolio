@@ -50,7 +50,7 @@ function Detail({ label, value, tone }: { label: string; value: string; tone?: "
   return (
     <div className="border-r border-white/[0.07] px-4 py-4 last:border-0 sm:px-5">
       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">{label}</p>
-      <p className={`mt-2 text-lg font-medium tabular-nums ${tone === "orange" ? "text-[var(--bp-accent)]" : "text-zinc-200"}`}>{value}</p>
+      <p className={`mt-2 break-words text-lg font-medium leading-tight tabular-nums ${tone === "orange" ? "text-[var(--bp-accent)]" : "text-zinc-200"}`}>{value}</p>
     </div>
   );
 }
@@ -73,10 +73,10 @@ export default async function TradePage({ params }: Props) {
               <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Preview data</span>
               <span className="text-zinc-600">Closed · Simulated prop trading</span>
             </div>
-            <h1 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-white sm:text-5xl">
+            <h1 className="mt-4 break-words text-4xl font-medium leading-tight tracking-[-0.04em] text-white sm:text-5xl">
               {trade.symbol.replace("USDT", " / USDT")}
             </h1>
-            <p className="mt-3 text-sm text-zinc-400">
+            <p className="mt-3 break-words text-sm leading-6 text-zinc-400">
               {trade.direction} · {duration(trade.openedAt, trade.closedAt)} · Closed {fullDate.format(new Date(trade.closedAt))}
             </p>
           </div>
@@ -115,8 +115,8 @@ export default async function TradePage({ params }: Props) {
           <div className="rounded-2xl border border-white/[0.09] bg-[#07090d] p-5 sm:p-6">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Position timeline</p>
             <dl className="mt-5 space-y-4 text-sm">
-              <div className="flex items-start justify-between gap-4"><dt className="text-zinc-600">Opened</dt><dd className="text-right text-zinc-300">{fullDate.format(new Date(trade.openedAt))}</dd></div>
-              <div className="flex items-start justify-between gap-4"><dt className="text-zinc-600">Closed</dt><dd className="text-right text-zinc-300">{fullDate.format(new Date(trade.closedAt))}</dd></div>
+              <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-zinc-600">Opened</dt><dd className="min-w-0 break-words text-right text-zinc-300">{fullDate.format(new Date(trade.openedAt))}</dd></div>
+              <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-zinc-600">Closed</dt><dd className="min-w-0 break-words text-right text-zinc-300">{fullDate.format(new Date(trade.closedAt))}</dd></div>
               <div className="flex items-start justify-between gap-4"><dt className="text-zinc-600">Duration</dt><dd className="text-zinc-300">{duration(trade.openedAt, trade.closedAt)}</dd></div>
             </dl>
           </div>

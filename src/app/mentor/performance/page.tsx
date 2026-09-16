@@ -17,15 +17,15 @@ export default function PerformancePage() {
               <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ff8b52]">
                 Preview data
               </span>
-              <h1 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+              <h1 className="mt-4 break-words text-3xl font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl">
                 Performance Journal
               </h1>
-              <p className="mt-3 text-base leading-7 text-zinc-300 sm:text-lg sm:leading-8">
+              <p className="mt-3 break-words text-base leading-7 text-zinc-300 sm:text-lg sm:leading-8">
                 A public record of my private leverage and prop-trading strategies.
               </p>
             </div>
             <div className="lg:pb-0.5">
-              <p className="max-w-xl text-sm leading-6 text-zinc-400">
+              <p className="max-w-xl break-words text-sm leading-6 text-zinc-400">
                 Completed trades are published in R after they close. No active positions, signals, strategy rules, position sizing or dollar returns are shown.
               </p>
             </div>
@@ -39,7 +39,7 @@ export default function PerformancePage() {
             ].map(([label, value]) => (
               <div key={label} className="bg-black/80 px-4 py-3.5 sm:px-5">
                 <p className="text-[10px] font-medium uppercase tracking-[0.17em] text-zinc-600">{label}</p>
-                <p className="mt-1.5 text-sm text-zinc-300">{value}</p>
+                <p className="mt-1.5 break-words text-sm leading-5 text-zinc-300">{value}</p>
               </div>
             ))}
           </div>

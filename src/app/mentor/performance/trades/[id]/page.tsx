@@ -71,13 +71,16 @@ export default async function TradePage({ params }: Props) {
           <div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Preview data</span>
+              <span className={`rounded-full border px-3 py-1 font-semibold uppercase tracking-[0.14em] ${trade.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
+                {trade.direction} {trade.direction === "Long" ? "↑" : "↓"}
+              </span>
               <span className="text-zinc-600">Closed · Simulated prop trading</span>
             </div>
             <h1 className="mt-4 break-words text-4xl font-medium leading-tight tracking-[-0.04em] text-white sm:text-5xl">
               {trade.symbol.replace("USDT", " / USDT")}
             </h1>
             <p className="mt-3 break-words text-sm leading-6 text-zinc-400">
-              {trade.direction} · {duration(trade.openedAt, trade.closedAt)} · Closed {fullDate.format(new Date(trade.closedAt))}
+              {trade.direction} position · {duration(trade.openedAt, trade.closedAt)} · Closed {fullDate.format(new Date(trade.closedAt))}
             </p>
           </div>
           <div className="sm:text-right">
@@ -92,7 +95,7 @@ export default async function TradePage({ params }: Props) {
           <div className="flex flex-col gap-2 border-b border-white/[0.08] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Price action</p>
-              <h2 className="mt-1 text-lg font-medium">Entry to exit</h2>
+              <h2 className="mt-1 text-lg font-medium">{trade.direction} entry to exit</h2>
             </div>
             <p className="text-xs text-zinc-600">Public asset prices · no position sizing</p>
           </div>
@@ -115,6 +118,7 @@ export default async function TradePage({ params }: Props) {
           <div className="rounded-2xl border border-white/[0.09] bg-[#07090d] p-5 sm:p-6">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Position timeline</p>
             <dl className="mt-5 space-y-4 text-sm">
+              <div className="flex items-start justify-between gap-4"><dt className="text-zinc-600">Direction</dt><dd className={`font-semibold uppercase tracking-[0.12em] ${trade.direction === "Long" ? "text-[#22c55e]" : "text-[#ef4444]"}`}>{trade.direction} {trade.direction === "Long" ? "↑" : "↓"}</dd></div>
               <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-zinc-600">Opened</dt><dd className="min-w-0 break-words text-right text-zinc-300">{fullDate.format(new Date(trade.openedAt))}</dd></div>
               <div className="flex items-start justify-between gap-4"><dt className="shrink-0 text-zinc-600">Closed</dt><dd className="min-w-0 break-words text-right text-zinc-300">{fullDate.format(new Date(trade.closedAt))}</dd></div>
               <div className="flex items-start justify-between gap-4"><dt className="text-zinc-600">Duration</dt><dd className="text-zinc-300">{duration(trade.openedAt, trade.closedAt)}</dd></div>

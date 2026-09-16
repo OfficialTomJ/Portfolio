@@ -180,8 +180,8 @@ export default function PerformanceDashboard() {
           onSelectDate={setSelectedDate}
         />
 
-        <section className="flex overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d] md:max-h-[650px] md:min-h-[520px] md:flex-col">
-          <div className="flex items-end justify-between gap-4 border-b border-white/[0.08] px-4 py-5 sm:px-6">
+        <section className="flex flex-col overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d] md:max-h-[650px] md:min-h-[520px]">
+          <div className="flex flex-col items-start gap-2 border-b border-white/[0.08] px-4 py-5 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:px-6">
             <div>
               <h2 className="text-lg font-medium">Closed trades</h2>
               {selectedDateLabel && <p className="mt-1 text-xs text-[#ff8b52]">Closed on {selectedDateLabel}</p>}
@@ -209,9 +209,12 @@ export default function PerformanceDashboard() {
                 >
                   <div className="min-w-0">
                     <p className="break-words font-medium leading-5 text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {item.direction} · {dateFormatter.format(new Date(item.closedAt))}
-                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] ${item.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
+                        {item.direction.toUpperCase()} {item.direction === "Long" ? "↑" : "↓"}
+                      </span>
+                      <span className="text-xs text-zinc-500">{dateFormatter.format(new Date(item.closedAt))}</span>
+                    </div>
                   </div>
                   <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
                     {signedR(item.resultR)}

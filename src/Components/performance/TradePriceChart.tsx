@@ -34,6 +34,7 @@ function nearestTime(candles: TradeCandle[], target: number): number {
 export default function TradePriceChart({ trade, candles }: { trade: PerformanceTrade; candles: TradeCandle[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const directionColor = trade.direction === "Long" ? GREEN : RED;
 
   useEffect(() => {
     const element = ref.current;
@@ -75,22 +76,22 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
       {
         time: entryTime as Time,
         position: trade.direction === "Long" ? "belowBar" : "aboveBar",
-        color: "#ff6719",
+        color: directionColor,
         shape: trade.direction === "Long" ? "arrowUp" : "arrowDown",
-        text: "Entry",
+        text: `${trade.direction.toUpperCase()} ENTRY`,
       },
       {
         time: exitTime as Time,
         position: trade.direction === "Long" ? "aboveBar" : "belowBar",
         color: "#fafafa",
         shape: "circle",
-        text: "Exit",
+        text: "EXIT",
       },
     ];
     markers.sort((a, b) => Number(a.time) - Number(b.time));
     createSeriesMarkers(series, markers);
 
-    series.createPriceLine({ price: trade.entryPrice, color: "rgba(255,103,25,0.7)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Entry" });
+    series.createPriceLine({ price: trade.entryPrice, color: directionColor, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: `${trade.direction} entry` });
     series.createPriceLine({ price: trade.exitPrice, color: "rgba(250,250,250,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "Exit" });
     chart.timeScale().fitContent();
 
@@ -98,14 +99,17 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
       chart.remove();
       chartRef.current = null;
     };
-  }, [trade, candles]);
+  }, [trade, candles, directionColor]);
 
   return (
     <div>
       <div className="flex flex-wrap gap-2 px-1 pb-3 sm:px-0">
-        <span className="inline-flex items-center gap-2 rounded-md border border-[#ff6719]/20 bg-[#ff6719]/[0.06] px-2.5 py-1.5 text-[11px] text-[#ff9a67]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#ff6719]" />
-          Entry {markerTime.format(new Date(trade.openedAt))}
+        <span
+          className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px]"
+          style={{ borderColor: `${directionColor}59`, backgroundColor: `${directionColor}1a`, color: directionColor }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: directionColor }} />
+          {trade.direction.toUpperCase()} {trade.direction === "Long" ? "↑" : "↓"} ENTRY {markerTime.format(new Date(trade.openedAt))}
         </span>
         <span className="inline-flex items-center gap-2 rounded-md border border-white/[0.09] bg-white/[0.025] px-2.5 py-1.5 text-[11px] text-zinc-300">
           <span className="h-1.5 w-1.5 rounded-full bg-zinc-100" />

@@ -89,7 +89,7 @@ export default function PerformanceCalendar({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="mt-5 grid grid-cols-7 gap-1 sm:gap-1.5 xl:gap-2">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <div key={day} className="pb-1 text-center text-[9px] font-medium uppercase tracking-wider text-zinc-600 sm:text-[10px]">
             {day.slice(0, 1)}<span className="hidden sm:inline">{day.slice(1)}</span>
@@ -106,13 +106,13 @@ export default function PerformanceCalendar({
               aria-pressed={selectedDate === cell.key}
               onClick={() => onSelectDate(selectedDate === cell.key ? null : cell.key)}
               title={cell.total ? `${cell.key}: ${signedR(value)} across ${cell.total.count} trade${cell.total.count === 1 ? '' : 's'}` : cell.key}
-              className={`aspect-square min-w-0 rounded-md border p-1.5 text-left transition sm:rounded-lg sm:p-2 ${cell.current ? "border-white/[0.07] hover:border-white/20" : "border-transparent opacity-25"} ${selectedDate === cell.key ? "ring-2 ring-[#ff6719] ring-offset-2 ring-offset-[#07090d]" : ""}`}
+              className={`aspect-square min-w-0 rounded-md border p-1 text-left transition sm:rounded-lg sm:p-1.5 xl:p-2 ${cell.current ? "border-white/[0.07] hover:border-white/20" : "border-transparent opacity-25"} ${selectedDate === cell.key ? "ring-2 ring-[#ff6719] ring-offset-2 ring-offset-[#07090d]" : ""}`}
               style={cell.total ? { backgroundColor: value >= 0 ? `rgba(255,103,25,${intensity})` : `rgba(113,113,122,${intensity})`, borderColor: value >= 0 ? 'rgba(255,103,25,0.24)' : 'rgba(161,161,170,0.16)' } : { backgroundColor: 'rgba(255,255,255,0.015)' }}
             >
-              <div className="flex h-full flex-col justify-between overflow-hidden">
-                <span className="text-[9px] text-zinc-600 sm:text-[11px]">{cell.date.getUTCDate()}</span>
+              <div className="flex h-full min-w-0 flex-col justify-between">
+                <span className="text-[8px] leading-none text-zinc-600 min-[360px]:text-[9px] sm:text-[10px] xl:text-[11px]">{cell.date.getUTCDate()}</span>
                 {cell.total && (
-                  <span className={`truncate text-[9px] font-semibold tabular-nums sm:text-xs ${value >= 0 ? 'text-[#ff8b52]' : 'text-zinc-300'}`}>
+                  <span className={`whitespace-nowrap text-[8px] font-semibold leading-none tabular-nums min-[360px]:text-[9px] sm:text-[10px] xl:text-xs ${value >= 0 ? 'text-[#ff8b52]' : 'text-zinc-300'}`}>
                     {signedR(value, 1)}
                   </span>
                 )}
@@ -121,10 +121,9 @@ export default function PerformanceCalendar({
           );
         })}
       </div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-600">
-        <span>Select a day to filter the trades below.</span>
-        <span>Blank days had no closed trades.</span>
-      </div>
+      <p className="mt-4 text-[11px] leading-relaxed text-zinc-600">
+        Select a day to filter the trades below. Blank days had no closed trades.
+      </p>
     </section>
   );
 }

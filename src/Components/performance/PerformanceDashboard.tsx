@@ -122,7 +122,7 @@ export default function PerformanceDashboard() {
                   aria-label="Start date"
                   value={customStart}
                   max={customEnd}
-                  onChange={(event) => { setCustomStart(event.target.value); setSelectedDate(null); }}
+                  onInput={(event) => { setCustomStart(event.currentTarget.value); setSelectedDate(null); }}
                   className="h-10 min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
                 />
               </label>
@@ -134,7 +134,7 @@ export default function PerformanceDashboard() {
                   value={customEnd}
                   min={customStart}
                   max={asOfKey}
-                  onChange={(event) => { setCustomEnd(event.target.value); setSelectedDate(null); }}
+                  onInput={(event) => { setCustomEnd(event.currentTarget.value); setSelectedDate(null); }}
                   className="h-10 min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
                 />
               </label>

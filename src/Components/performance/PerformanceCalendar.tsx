@@ -112,8 +112,8 @@ export default function PerformanceCalendar({
               <div className="flex h-full min-w-0 flex-col justify-between">
                 <span className="text-xs leading-none text-zinc-500 sm:text-[11px] xl:text-xs">{cell.date.getUTCDate()}</span>
                 {cell.total && (
-                  <span className={`whitespace-nowrap text-[13px] font-semibold leading-none tabular-nums sm:text-[11px] xl:text-xs ${value >= 0 ? 'text-[#ff8b52]' : 'text-zinc-300'}`}>
-                    {signedR(value, 1).slice(0, -1)}<span className="hidden sm:inline">R</span>
+                  <span className={`whitespace-nowrap text-xs font-semibold leading-none tracking-[-0.04em] tabular-nums sm:text-[11px] xl:text-xs ${value >= 0 ? 'text-[#ff8b52]' : 'text-zinc-300'}`}>
+                    {signedR(value).slice(0, -1)}
                   </span>
                 )}
               </div>

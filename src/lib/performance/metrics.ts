@@ -10,8 +10,9 @@ import type {
 const DAY = 86_400_000;
 
 export function signedR(value: number, digits = 2): string {
-  if (Math.abs(value) < 0.005) return "0R";
-  return `${value > 0 ? "+" : ""}${value.toFixed(digits).replace(/\.00$/, "")}R`;
+  const zeroThreshold = 0.5 * 10 ** -digits;
+  const roundedValue = Math.abs(value) < zeroThreshold ? 0 : value;
+  return `${roundedValue > 0 ? "+" : ""}${roundedValue.toFixed(digits)}R`;
 }
 
 export function sydneyDateKey(value: string | Date): string {

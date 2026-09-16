@@ -1,4 +1,5 @@
 export type TradeDirection = "Long" | "Short";
+export type PerformanceDataSource = "mock" | "live";
 export type PerformanceRange = "30D" | "60D" | "90D" | "6M" | "YTD" | "YEAR" | "CUSTOM";
 
 export interface PerformanceTrade {
@@ -10,13 +11,10 @@ export interface PerformanceTrade {
   resultR: number;
   entryPrice: number;
   exitPrice: number;
-  initialStop: number;
-  mfeR: number;
-  maeR: number;
 }
 
 export interface PerformanceDataset {
-  id: "new" | "mature";
+  id: string;
   label: string;
   description: string;
   inceptionAt: string;

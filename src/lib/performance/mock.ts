@@ -24,7 +24,7 @@ function trade(
   direction: TradeDirection,
   openedAt: string,
   durationHours: number,
-  [entryPrice, exitPrice, initialStop, resultR, mfeR, maeR]: MarketSnapshot
+  [entryPrice, exitPrice, , resultR]: MarketSnapshot
 ): PerformanceTrade {
   return {
     id,
@@ -34,10 +34,7 @@ function trade(
     closedAt: new Date(Date.parse(openedAt) + durationHours * 3_600_000).toISOString(),
     entryPrice,
     exitPrice,
-    initialStop,
     resultR,
-    mfeR,
-    maeR,
   };
 }
 

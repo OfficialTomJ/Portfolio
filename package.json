@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "seed": "tsx scripts/seed-blueprint.ts",
     "db:reset-users": "tsx scripts/db-reset-users.ts",
+    "performance:sync": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-sync.ts",
+    "performance:test": "tsx --test src/lib/performance/normalize.test.ts",
     "tjss:check": "tsx scripts/tjss-check.ts",
     "tjss:seed": "tsx scripts/seed-tjss.ts"
   },

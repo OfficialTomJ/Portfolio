@@ -9,12 +9,12 @@ export const metadata = {
 };
 
 const updatedFormatter = new Intl.DateTimeFormat("en-AU", {
-  timeZone: "Australia/Sydney",
+  timeZone: "Etc/UTC",
   day: "numeric",
   month: "short",
   hour: "numeric",
   minute: "2-digit",
-  timeZoneName: "short",
+  hourCycle: "h23",
 });
 
 type Props = { searchParams: Promise<{ source?: string }> };
@@ -71,7 +71,7 @@ export default async function PerformancePage({ searchParams }: Props) {
             {[
               ["Account", "Simulated prop trading"],
               ["Publication", "Closed trades only"],
-              ["Schedule", source === "live" ? `Last synced ${updatedFormatter.format(new Date(dataset.asOf))}` : "Mock history"],
+              ["Schedule", source === "live" ? `Last synced ${updatedFormatter.format(new Date(dataset.asOf))} GMT` : "Mock history"],
             ].map(([label, value]) => (
               <div key={label} className="bg-black/80 px-4 py-3.5 sm:px-5">
                 <p className="text-[10px] font-medium uppercase tracking-[0.17em] text-zinc-600">{label}</p>

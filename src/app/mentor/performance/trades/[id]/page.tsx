@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
+import JournalUpdatesPrompt from "@/Components/performance/JournalUpdatesPrompt";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
 import { getMockTrade } from "@/lib/performance/mock";
 import { getHistoricalCandles } from "@/lib/performance/market";
@@ -127,21 +128,8 @@ export default async function TradePage({ params }: Props) {
           </div>
         </section>
 
-        <section className="mt-6 flex flex-col gap-4 rounded-2xl border border-[#ff6719]/20 bg-[#ff6719]/[0.045] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div>
-            <p className="font-medium text-zinc-100">Get new journal entries</p>
-            <p className="mt-1 text-sm text-zinc-500">Follow completed trade and performance updates.</p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link href="/substack" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--bp-accent)] px-4 text-sm font-semibold text-black transition-all hover:brightness-110">
-              Subscribe on Substack
-            </Link>
-            <a href="https://discord.gg/8tK967YJ6y" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/[0.12] px-4 text-sm font-medium text-zinc-200 transition-colors hover:border-white/[0.22] hover:text-white">
-              Join the Discord
-            </a>
-          </div>
-        </section>
       </div>
+      <JournalUpdatesPrompt />
     </main>
   );
 }

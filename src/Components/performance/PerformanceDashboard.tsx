@@ -171,56 +171,58 @@ export default function PerformanceDashboard() {
         <PerformanceEquityChart points={view.equity} />
       </section>
 
-      <PerformanceCalendar
-        key={`${range}-${year}-${customRange.start}-${customRange.end}`}
-        trades={view.trades}
-        asOf={dataset.asOf}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-      />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,.92fr)]">
+        <PerformanceCalendar
+          key={`${range}-${year}-${customRange.start}-${customRange.end}`}
+          trades={view.trades}
+          asOf={dataset.asOf}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
 
-      <section className="overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d]">
-        <div className="flex items-end justify-between gap-4 border-b border-white/[0.08] px-4 py-5 sm:px-6">
-          <div>
-            <h2 className="text-lg font-medium">Closed trades</h2>
-            {selectedDateLabel && <p className="mt-1 text-xs text-[#ff8b52]">Closed on {selectedDateLabel}</p>}
+        <section className="flex overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d] lg:max-h-[650px] lg:min-h-[520px] lg:flex-col">
+          <div className="flex items-end justify-between gap-4 border-b border-white/[0.08] px-4 py-5 sm:px-6">
+            <div>
+              <h2 className="text-lg font-medium">Closed trades</h2>
+              {selectedDateLabel && <p className="mt-1 text-xs text-[#ff8b52]">Closed on {selectedDateLabel}</p>}
+            </div>
+            {selectedDate ? (
+              <button type="button" onClick={() => setSelectedDate(null)} className="text-xs text-zinc-400 transition-colors hover:text-white">Clear day</button>
+            ) : (
+              <p className="text-xs text-zinc-500">Newest first</p>
+            )}
           </div>
-          {selectedDate ? (
-            <button type="button" onClick={() => setSelectedDate(null)} className="text-xs text-zinc-400 transition-colors hover:text-white">Clear day</button>
+          {visibleTrades.length === 0 ? (
+            <div className="grid flex-1 place-items-center px-5 py-16 text-center">
+              <div>
+                <p className="text-zinc-300">No closed trades {selectedDateLabel ? `on ${selectedDateLabel}` : "in this period"}.</p>
+                <p className="mt-2 text-sm text-zinc-600">Choose another date or period.</p>
+              </div>
+            </div>
           ) : (
-            <p className="text-xs text-zinc-500">Newest first</p>
+            <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+              {visibleTrades.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/performance/trades/${item.id}`}
+                  className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6 lg:grid-cols-[1fr_auto]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {item.direction} · {dateFormatter.format(new Date(item.closedAt))}
+                    </p>
+                  </div>
+                  <span className={`text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
+                    {signedR(item.resultR)}
+                  </span>
+                  <FaArrowRightLong className="hidden text-xs text-zinc-700 transition-transform group-hover:translate-x-1 group-hover:text-zinc-300" />
+                </Link>
+              ))}
+            </div>
           )}
-        </div>
-        {visibleTrades.length === 0 ? (
-          <div className="px-5 py-16 text-center">
-            <p className="text-zinc-300">No closed trades {selectedDateLabel ? `on ${selectedDateLabel}` : "in this period"}.</p>
-            <p className="mt-2 text-sm text-zinc-600">Choose another date or period.</p>
-          </div>
-        ) : (
-          <div>
-            {visibleTrades.map((item) => (
-              <Link
-                key={item.id}
-                href={`/performance/trades/${item.id}`}
-                className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:grid-cols-[1.2fr_.7fr_.8fr_.55fr_auto] sm:px-6"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
-                  <p className="mt-1 text-xs text-zinc-500 sm:hidden">
-                    {item.direction} · {dateFormatter.format(new Date(item.closedAt))}
-                  </p>
-                </div>
-                <span className="hidden text-sm text-zinc-400 sm:block">{item.direction}</span>
-                <span className="hidden text-sm text-zinc-500 sm:block">{dateFormatter.format(new Date(item.closedAt))}</span>
-                <span className={`text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
-                  {signedR(item.resultR)}
-                </span>
-                <FaArrowRightLong className="hidden text-xs text-zinc-700 transition-transform group-hover:translate-x-1 group-hover:text-zinc-300 sm:block" />
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

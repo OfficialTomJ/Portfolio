@@ -81,10 +81,15 @@ export function calculateStats(trades: PerformanceTrade[]): PerformanceStats {
 function equitySeries(trades: PerformanceTrade[], start: Date): EquityPoint[] {
   const ordered = [...trades].sort((a, b) => Date.parse(a.closedAt) - Date.parse(b.closedAt));
   let running = 0;
-  const points: EquityPoint[] = [{ time: Math.floor(start.getTime() / 1000), value: 0 }];
+  const firstClose = ordered[0] ? Date.parse(ordered[0].closedAt) : start.getTime() + 1000;
+  let previousTime = Math.floor(Math.min(start.getTime(), firstClose - 1000) / 1000);
+  const points: EquityPoint[] = [{ time: previousTime, value: 0 }];
   for (const item of ordered) {
     running += item.resultR;
-    points.push({ time: Math.floor(Date.parse(item.closedAt) / 1000), value: running });
+    const closedTime = Math.floor(Date.parse(item.closedAt) / 1000);
+    const time = Math.max(closedTime, previousTime + 1);
+    points.push({ time, value: running });
+    previousTime = time;
   }
   return points;
 }

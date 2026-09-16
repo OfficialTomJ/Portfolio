@@ -3,21 +3,30 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
-import { buildPerformanceView, getAvailableYears, signedR } from "@/lib/performance/metrics";
+import { buildPerformanceView, getAvailableYears, signedR, sydneyDateKey } from "@/lib/performance/metrics";
 import { performanceDatasets } from "@/lib/performance/mock";
 import type { PerformanceRange } from "@/lib/performance/types";
 import PerformanceCalendar from "./PerformanceCalendar";
 import PerformanceEquityChart from "./PerformanceEquityChart";
 
 const RANGES: { value: PerformanceRange; label: string }[] = [
-  { value: "30D", label: "30 days" },
-  { value: "90D", label: "90 days" },
+  { value: "30D", label: "Last 30 days" },
+  { value: "60D", label: "Last 60 days" },
+  { value: "90D", label: "Last 90 days" },
   { value: "6M", label: "6 months" },
-  { value: "YTD", label: "YTD" },
-  { value: "YEAR", label: "Yearly" },
+  { value: "YTD", label: "Year to date" },
+  { value: "YEAR", label: "Calendar year" },
+  { value: "CUSTOM", label: "Custom dates" },
 ];
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "Australia/Sydney",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+const shortDateFormatter = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney",
   day: "numeric",
   month: "short",
@@ -50,36 +59,90 @@ function Stat({ label, value, featured }: { label: string; value: string; featur
 export default function PerformanceDashboard() {
   const [range, setRange] = useState<PerformanceRange>("30D");
   const dataset = performanceDatasets.mature;
+  const asOfKey = dataset.asOf.slice(0, 10);
   const years = getAvailableYears(dataset);
   const [selectedYear, setSelectedYear] = useState(years[0] ?? 2026);
+  const [customStart, setCustomStart] = useState("2026-08-18");
+  const [customEnd, setCustomEnd] = useState(asOfKey);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const year = years.includes(selectedYear) ? selectedYear : years[0] ?? 2026;
-  const view = buildPerformanceView(dataset, range, year);
+  const customStartKey = customStart || dataset.inceptionAt.slice(0, 10);
+  const customEndKey = customEnd || asOfKey;
+  const customRange = customStartKey <= customEndKey
+    ? { start: customStartKey, end: customEndKey }
+    : { start: customEndKey, end: customStartKey };
+  const view = buildPerformanceView(dataset, range, year, customRange);
   const { stats } = view;
+  const visibleTrades = selectedDate
+    ? view.trades.filter((item) => sydneyDateKey(item.closedAt) === selectedDate)
+    : view.trades;
+  const selectedDateLabel = selectedDate
+    ? shortDateFormatter.format(new Date(`${selectedDate}T12:00:00Z`))
+    : null;
+
+  const selectRange = (nextRange: PerformanceRange) => {
+    setRange(nextRange);
+    setSelectedDate(null);
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <section className="overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d]">
-        <div className="flex gap-1 overflow-x-auto border-b border-white/[0.08] p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {RANGES.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setRange(item.value)}
-              className={`min-w-fit rounded-lg px-4 py-2.5 text-sm transition-colors ${range === item.value ? "bg-[#ff6719]/15 text-[#ff8b52] ring-1 ring-inset ring-[#ff6719]/25" : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"}`}
-            >
-              {item.label}
-            </button>
-          ))}
-          {range === "YEAR" && (
+        <div className="flex flex-col gap-3 border-b border-white/[0.08] p-4 sm:flex-row sm:items-end sm:p-5">
+          <label className="min-w-0 sm:w-52">
+            <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Period</span>
             <select
-              aria-label="Calendar year"
-              value={year}
-              onChange={(event) => setSelectedYear(Number(event.target.value))}
-              className="ml-auto rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-300 outline-none focus:border-[#ff6719]/50"
+              aria-label="Performance period"
+              value={range}
+              onChange={(event) => selectRange(event.target.value as PerformanceRange)}
+              className="h-10 w-full rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none focus:border-[#ff6719]/50"
             >
-              {years.map((item) => <option key={item}>{item}</option>)}
+              {RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
+          </label>
+          {range === "YEAR" && (
+            <label className="sm:w-32">
+              <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Year</span>
+              <select
+                aria-label="Calendar year"
+                value={year}
+                onChange={(event) => { setSelectedYear(Number(event.target.value)); setSelectedDate(null); }}
+                className="h-10 w-full rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none focus:border-[#ff6719]/50"
+              >
+                {years.map((item) => <option key={item}>{item}</option>)}
+              </select>
+            </label>
           )}
+          {range === "CUSTOM" && (
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">From</span>
+                <input
+                  type="date"
+                  aria-label="Start date"
+                  value={customStart}
+                  max={customEnd}
+                  onChange={(event) => { setCustomStart(event.target.value); setSelectedDate(null); }}
+                  className="h-10 min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
+                />
+              </label>
+              <label>
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">To</span>
+                <input
+                  type="date"
+                  aria-label="End date"
+                  value={customEnd}
+                  min={customStart}
+                  max={asOfKey}
+                  onChange={(event) => { setCustomEnd(event.target.value); setSelectedDate(null); }}
+                  className="h-10 min-w-0 rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none [color-scheme:dark] focus:border-[#ff6719]/50"
+                />
+              </label>
+            </div>
+          )}
+          <p className="text-xs text-zinc-500 sm:ml-auto sm:pb-3">
+            {shortDateFormatter.format(view.startsAt)} to {shortDateFormatter.format(view.endsAt)}
+          </p>
         </div>
 
         {view.isPartial && (
@@ -109,26 +172,33 @@ export default function PerformanceDashboard() {
       </section>
 
       <PerformanceCalendar
-        key={`${range}-${year}`}
+        key={`${range}-${year}-${customRange.start}-${customRange.end}`}
         trades={view.trades}
         asOf={dataset.asOf}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
       />
 
       <section className="overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d]">
         <div className="flex items-end justify-between gap-4 border-b border-white/[0.08] px-4 py-5 sm:px-6">
           <div>
             <h2 className="text-lg font-medium">Closed trades</h2>
+            {selectedDateLabel && <p className="mt-1 text-xs text-[#ff8b52]">Closed on {selectedDateLabel}</p>}
           </div>
-          <p className="text-xs text-zinc-500">Newest first</p>
+          {selectedDate ? (
+            <button type="button" onClick={() => setSelectedDate(null)} className="text-xs text-zinc-400 transition-colors hover:text-white">Clear day</button>
+          ) : (
+            <p className="text-xs text-zinc-500">Newest first</p>
+          )}
         </div>
-        {view.trades.length === 0 ? (
+        {visibleTrades.length === 0 ? (
           <div className="px-5 py-16 text-center">
-            <p className="text-zinc-300">No closed trades in this period.</p>
-            <p className="mt-2 text-sm text-zinc-600">Results will appear here once a position is fully closed.</p>
+            <p className="text-zinc-300">No closed trades {selectedDateLabel ? `on ${selectedDateLabel}` : "in this period"}.</p>
+            <p className="mt-2 text-sm text-zinc-600">Choose another date or period.</p>
           </div>
         ) : (
           <div>
-            {view.trades.map((item) => (
+            {visibleTrades.map((item) => (
               <Link
                 key={item.id}
                 href={`/performance/trades/${item.id}`}

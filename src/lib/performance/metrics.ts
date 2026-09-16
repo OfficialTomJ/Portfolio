@@ -38,6 +38,7 @@ export function getAvailableYears(dataset: PerformanceDataset): number[] {
 
 function periodStart(range: PerformanceRange, asOf: Date, year: number): Date {
   if (range === "30D") return new Date(asOf.getTime() - 29 * DAY);
+  if (range === "60D") return new Date(asOf.getTime() - 59 * DAY);
   if (range === "90D") return new Date(asOf.getTime() - 89 * DAY);
   if (range === "6M") return new Date(asOf.getTime() - 182 * DAY);
   const targetYear = range === "YEAR" ? year : sydneyYear(asOf);
@@ -91,13 +92,25 @@ function equitySeries(trades: PerformanceTrade[], start: Date): EquityPoint[] {
 export function buildPerformanceView(
   dataset: PerformanceDataset,
   range: PerformanceRange,
-  year: number
+  year: number,
+  customRange?: { start: string; end: string }
 ): PerformanceView {
   const asOf = new Date(dataset.asOf);
-  const startsAt = periodStart(range, asOf, year);
-  const endsAt = periodEnd(range, asOf, year);
+  const customStart = customRange?.start ?? sydneyDateKey(asOf);
+  const customEnd = customRange?.end ?? sydneyDateKey(asOf);
+  const hasCustomRange = range === "CUSTOM";
+  const startsAt = hasCustomRange
+    ? new Date(`${customStart}T12:00:00Z`)
+    : periodStart(range, asOf, year);
+  const endsAt = hasCustomRange
+    ? new Date(`${customEnd}T12:00:00Z`)
+    : periodEnd(range, asOf, year);
   const trades = dataset.trades
     .filter((item) => {
+      if (hasCustomRange) {
+        const key = sydneyDateKey(item.closedAt);
+        return key >= customStart && key <= customEnd;
+      }
       const closed = Date.parse(item.closedAt);
       return closed >= startsAt.getTime() && closed <= endsAt.getTime();
     })
@@ -109,6 +122,8 @@ export function buildPerformanceView(
     equity: equitySeries(trades, startsAt),
     startsAt,
     endsAt,
-    isPartial: Date.parse(dataset.inceptionAt) > startsAt.getTime(),
+    isPartial: hasCustomRange
+      ? sydneyDateKey(dataset.inceptionAt) > customStart
+      : Date.parse(dataset.inceptionAt) > startsAt.getTime(),
   };
 }

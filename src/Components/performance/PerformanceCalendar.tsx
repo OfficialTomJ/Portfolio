@@ -19,9 +19,13 @@ function monthFromTrades(trades: PerformanceTrade[], fallback: string): Date {
 export default function PerformanceCalendar({
   trades,
   asOf,
+  selectedDate,
+  onSelectDate,
 }: {
   trades: PerformanceTrade[];
   asOf: string;
+  selectedDate: string | null;
+  onSelectDate: (date: string | null) => void;
 }) {
   const latest = useMemo(() => monthFromTrades(trades, asOf), [trades, asOf]);
   const [month, setMonth] = useState(latest);
@@ -95,10 +99,14 @@ export default function PerformanceCalendar({
           const value = cell.total?.result ?? 0;
           const intensity = Math.min(0.24, 0.065 + Math.abs(value) * 0.055);
           return (
-            <div
+            <button
               key={cell.key}
+              type="button"
+              aria-label={`${cell.key}${cell.total ? `, ${signedR(value)} across ${cell.total.count} trade${cell.total.count === 1 ? '' : 's'}` : ', no closed trades'}`}
+              aria-pressed={selectedDate === cell.key}
+              onClick={() => onSelectDate(selectedDate === cell.key ? null : cell.key)}
               title={cell.total ? `${cell.key}: ${signedR(value)} across ${cell.total.count} trade${cell.total.count === 1 ? '' : 's'}` : cell.key}
-              className={`aspect-square min-w-0 rounded-md border p-1.5 sm:rounded-lg sm:p-2 ${cell.current ? "border-white/[0.07]" : "border-transparent opacity-25"}`}
+              className={`aspect-square min-w-0 rounded-md border p-1.5 text-left transition sm:rounded-lg sm:p-2 ${cell.current ? "border-white/[0.07] hover:border-white/20" : "border-transparent opacity-25"} ${selectedDate === cell.key ? "ring-2 ring-[#ff6719] ring-offset-2 ring-offset-[#07090d]" : ""}`}
               style={cell.total ? { backgroundColor: value >= 0 ? `rgba(255,103,25,${intensity})` : `rgba(113,113,122,${intensity})`, borderColor: value >= 0 ? 'rgba(255,103,25,0.24)' : 'rgba(161,161,170,0.16)' } : { backgroundColor: 'rgba(255,255,255,0.015)' }}
             >
               <div className="flex h-full flex-col justify-between overflow-hidden">
@@ -109,12 +117,12 @@ export default function PerformanceCalendar({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-600">
-        <span>Results grouped by close date in Sydney time.</span>
+        <span>Select a day to filter the trades below.</span>
         <span>Blank days had no closed trades.</span>
       </div>
     </section>

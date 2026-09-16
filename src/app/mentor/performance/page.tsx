@@ -4,7 +4,7 @@ import PerformanceDashboard from "@/Components/performance/PerformanceDashboard"
 
 export const metadata = {
   title: "Performance Journal, The Blueprint",
-  description: "A retrospective journal of closed trades and risk-normalised performance.",
+  description: "A transparent journal of closed prop trades and risk-normalised performance.",
 };
 
 export default async function PerformancePage() {
@@ -29,7 +29,7 @@ export default async function PerformancePage() {
               <p className="mt-2 text-sm text-zinc-400">Closed trades measured in R.</p>
             </div>
             <p className="max-w-md text-xs leading-5 text-zinc-500 lg:text-right">
-              Retrospective only. No live positions, sizing, account balances or monetary returns.
+              I created this journal to share my actual prop trading returns in R. It records closed trades only, never active positions. Past results do not guarantee future returns.
             </p>
           </div>
         </div>

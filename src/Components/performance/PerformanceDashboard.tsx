@@ -171,7 +171,7 @@ export default function PerformanceDashboard() {
         <PerformanceEquityChart points={view.equity} />
       </section>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,.92fr)]">
+      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
         <PerformanceCalendar
           key={`${range}-${year}-${customRange.start}-${customRange.end}`}
           trades={view.trades}
@@ -180,7 +180,7 @@ export default function PerformanceDashboard() {
           onSelectDate={setSelectedDate}
         />
 
-        <section className="flex overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d] lg:max-h-[650px] lg:min-h-[520px] lg:flex-col">
+        <section className="flex overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d] md:max-h-[650px] md:min-h-[520px] md:flex-col">
           <div className="flex items-end justify-between gap-4 border-b border-white/[0.08] px-4 py-5 sm:px-6">
             <div>
               <h2 className="text-lg font-medium">Closed trades</h2>
@@ -200,12 +200,12 @@ export default function PerformanceDashboard() {
               </div>
             </div>
           ) : (
-            <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+            <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
               {visibleTrades.map((item) => (
                 <Link
                   key={item.id}
                   href={`/performance/trades/${item.id}`}
-                  className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6 lg:grid-cols-[1fr_auto]"
+                  className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>

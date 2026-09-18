@@ -96,9 +96,17 @@ export interface BybitClosedPnl {
 }
 
 export interface BybitApiKeyInfo {
+  userID: number;
+  parentUid?: number;
   readOnly: number;
   deadlineDay?: number;
   expiredAt?: string;
+}
+
+export interface BybitAccountIdentity {
+  environment: BybitEnvironment;
+  serverTime: number;
+  apiKey: BybitApiKeyInfo;
 }
 
 export interface BybitSnapshot {
@@ -186,10 +194,27 @@ async function bybitList<T>(
   throw new Error(`Bybit ${path} exceeded the pagination safety limit`);
 }
 
-export async function fetchBybitSnapshot(): Promise<BybitSnapshot> {
+export async function fetchBybitAccountIdentity(): Promise<BybitAccountIdentity> {
   const { environment } = getConfig();
+  const response = await bybitGet<BybitApiKeyInfo>("/v5/user/query-api");
+
+  if (response.result.readOnly !== 1) {
+    throw new Error("Bybit API key must be read-only");
+  }
+  if (!response.result.userID) {
+    throw new Error("Bybit account identity was not returned");
+  }
+
+  return {
+    environment,
+    serverTime: response.time,
+    apiKey: response.result,
+  };
+}
+
+export async function fetchBybitSnapshot(): Promise<BybitSnapshot> {
   const [apiKeyResponse, positions, executions, orders, closedPnl] = await Promise.all([
-    bybitGet<BybitApiKeyInfo>("/v5/user/query-api"),
+    fetchBybitAccountIdentity(),
     bybitList<BybitPosition>("/v5/position/list", {
       category: "linear",
       settleCoin: "USDT",
@@ -209,14 +234,10 @@ export async function fetchBybitSnapshot(): Promise<BybitSnapshot> {
     }),
   ]);
 
-  if (apiKeyResponse.result.readOnly !== 1) {
-    throw new Error("Bybit API key must be read-only");
-  }
-
   return {
-    environment,
-    serverTime: apiKeyResponse.time,
-    apiKey: apiKeyResponse.result,
+    environment: apiKeyResponse.environment,
+    serverTime: apiKeyResponse.serverTime,
+    apiKey: apiKeyResponse.apiKey,
     positions: positions.filter((item) => Number(item.size) > 0 && item.side),
     executions,
     orders,

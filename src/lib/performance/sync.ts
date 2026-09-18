@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "crypto";
 import type { Collection } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import {
+  fetchBybitAccountIdentity,
   fetchBybitSnapshot,
   type BybitClosedPnl,
   type BybitExecution,
@@ -11,6 +12,10 @@ import {
   type BybitPosition,
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
+import {
+  lockPerformanceRisk,
+  type PerformanceRiskVersion,
+} from "./risk";
 import type { PerformanceTrade, TradeDirection } from "./types";
 
 export const PERFORMANCE_COLLECTIONS = {
@@ -18,6 +23,7 @@ export const PERFORMANCE_COLLECTIONS = {
   executions: "performance_private_executions",
   orders: "performance_private_orders",
   positionCycles: "performance_private_position_cycles",
+  riskVersions: "performance_private_risk_versions",
   publishedTrades: "performance_published_trades",
   syncRuns: "performance_private_sync_runs",
   syncState: "performance_private_sync_state",
@@ -28,6 +34,7 @@ type CycleStatus = "open" | "awaiting_close" | "unresolved" | "published";
 interface PositionCycleDocument {
   _id: string;
   environment: string;
+  sourceAccountId?: string;
   symbol: string;
   direction: TradeDirection;
   positionIdx: number;
@@ -39,6 +46,9 @@ interface PositionCycleDocument {
   leverage: number | null;
   initialStopPrice?: number;
   stopCapturedAt?: Date;
+  riskVersionId?: string;
+  riskAmount?: number;
+  riskCurrency?: "USDT";
   status: CycleStatus;
   resolutionIssue?: string;
   closedAt?: Date;
@@ -48,6 +58,7 @@ interface PositionCycleDocument {
 interface PrivateExecutionDocument extends BybitExecution {
   _id: string;
   environment: string;
+  sourceAccountId: string;
   firstSeenAt: Date;
   lastSeenAt: Date;
 }
@@ -55,6 +66,7 @@ interface PrivateExecutionDocument extends BybitExecution {
 interface PrivateOrderDocument extends BybitOrder {
   _id: string;
   environment: string;
+  sourceAccountId: string;
   firstSeenAt: Date;
   lastSeenAt: Date;
 }
@@ -62,9 +74,22 @@ interface PrivateOrderDocument extends BybitOrder {
 interface PrivateClosedPnlDocument extends BybitClosedPnl {
   _id: string;
   environment: string;
+  sourceAccountId: string;
   cycleId?: string;
   firstSeenAt: Date;
   lastSeenAt: Date;
+}
+
+interface RiskVersionDocument {
+  _id: string;
+  sourceAccountId: string;
+  environment: string;
+  version: number;
+  riskAmount: number;
+  currency: "USDT";
+  effectiveFrom: Date;
+  createdAt: Date;
+  reason: string;
 }
 
 export interface PublishedPerformanceTrade extends PerformanceTrade {
@@ -77,6 +102,7 @@ export interface PublishedPerformanceTrade extends PerformanceTrade {
 interface SyncRunDocument {
   _id: string;
   environment: string;
+  sourceAccountId?: string;
   startedAt: Date;
   completedAt?: Date;
   status: "running" | "succeeded" | "failed";
@@ -119,8 +145,24 @@ function closedPositionDirection(side: BybitClosedPnl["side"]): TradeDirection {
   return side === "Sell" ? "Long" : "Short";
 }
 
-function cycleId(environment: string, position: BybitPosition, openedAt: Date): string {
+function accountScopeId(environment: string, userId: string | number): string {
+  return `account-${createHash("sha256")
+    .update(`${environment}:${userId}`)
+    .digest("hex")
+    .slice(0, 20)}`;
+}
+
+function legacyCycleId(environment: string, position: BybitPosition, openedAt: Date): string {
   return [environment, "linear", position.symbol, position.positionIdx, openedAt.getTime()].join(":");
+}
+
+function cycleId(
+  environment: string,
+  sourceAccountId: string,
+  position: BybitPosition,
+  openedAt: Date
+): string {
+  return [sourceAccountId, environment, "linear", position.symbol, position.positionIdx, openedAt.getTime()].join(":");
 }
 
 function publicTradeId(sourceCycleId: string): string {
@@ -131,13 +173,31 @@ function privateId(environment: string, externalId: string): string {
   return `${environment}:${externalId}`;
 }
 
+function riskDocumentToVersion(document: RiskVersionDocument): PerformanceRiskVersion {
+  return {
+    id: document._id,
+    sourceAccountId: document.sourceAccountId,
+    environment: document.environment,
+    version: document.version,
+    riskAmount: document.riskAmount,
+    currency: document.currency,
+    effectiveFrom: document.effectiveFrom,
+  };
+}
+
 async function ensureIndexes() {
   const db = getDb();
   await Promise.all([
     db.collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles)
-      .createIndex({ environment: 1, status: 1, openedAt: -1 }),
+      .createIndex({ sourceAccountId: 1, environment: 1, status: 1, openedAt: -1 }),
     db.collection<PrivateClosedPnlDocument>(PERFORMANCE_COLLECTIONS.closedPnl)
-      .createIndex({ environment: 1, cycleId: 1, updatedTime: 1 }),
+      .createIndex({ sourceAccountId: 1, environment: 1, cycleId: 1, updatedTime: 1 }),
+    db.collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions)
+      .createIndex({ sourceAccountId: 1, effectiveFrom: -1 }),
+    db.collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions)
+      .createIndex({ sourceAccountId: 1, version: 1 }, { unique: true }),
+    db.collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions)
+      .createIndex({ sourceAccountId: 1, effectiveFrom: 1 }, { unique: true }),
     db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
       .createIndex({ closedAt: -1 }),
     db.collection<SyncRunDocument>(PERFORMANCE_COLLECTIONS.syncRuns)
@@ -145,9 +205,99 @@ async function ensureIndexes() {
   ]);
 }
 
+async function loadRiskVersions(
+  collection: Collection<RiskVersionDocument>,
+  environment: string,
+  sourceAccountId: string
+): Promise<PerformanceRiskVersion[]> {
+  const documents = await collection
+    .find({ environment, sourceAccountId })
+    .sort({ effectiveFrom: -1, version: -1 })
+    .toArray();
+  return documents.map(riskDocumentToVersion);
+}
+
+export async function setPerformanceRiskVersion(input: {
+  riskAmount: number;
+  effectiveFrom: Date;
+  reason: string;
+}): Promise<PerformanceRiskVersion> {
+  if (!Number.isFinite(input.riskAmount) || input.riskAmount <= 0) {
+    throw new Error("Risk amount must be greater than zero");
+  }
+  if (Number.isNaN(input.effectiveFrom.getTime())) {
+    throw new Error("Risk effective date is invalid");
+  }
+
+  await ensureIndexes();
+  const identity = await fetchBybitAccountIdentity();
+  const sourceAccountId = accountScopeId(identity.environment, identity.apiKey.userID);
+  const collection = getDb().collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions);
+  const existing = await collection.findOne({
+    sourceAccountId,
+    effectiveFrom: input.effectiveFrom,
+  });
+
+  if (existing) {
+    if (existing.riskAmount !== input.riskAmount) {
+      throw new Error("A different risk amount already exists for this effective date");
+    }
+    return riskDocumentToVersion(existing);
+  }
+
+  const latest = await collection.findOne(
+    { sourceAccountId },
+    { sort: { version: -1 } }
+  );
+  const version = (latest?.version ?? 0) + 1;
+  const id = `${sourceAccountId}:v${version}`;
+  const document: RiskVersionDocument = {
+    _id: id,
+    sourceAccountId,
+    environment: identity.environment,
+    version,
+    riskAmount: input.riskAmount,
+    currency: "USDT",
+    effectiveFrom: input.effectiveFrom,
+    createdAt: new Date(identity.serverTime || Date.now()),
+    reason: input.reason.trim().slice(0, 200) || "Risk configuration update",
+  };
+  await collection.insertOne(document);
+  return riskDocumentToVersion(document);
+}
+
+async function backfillCycleRiskLocks(
+  collection: Collection<PositionCycleDocument>,
+  environment: string,
+  sourceAccountId: string,
+  riskVersions: PerformanceRiskVersion[]
+) {
+  const cycles = await collection.find({
+    environment,
+    $or: [
+      { sourceAccountId },
+      { sourceAccountId: { $exists: false } },
+    ],
+  }).toArray();
+
+  for (const cycle of cycles) {
+    const lockedRisk = lockPerformanceRisk(cycle, riskVersions, cycle.openedAt);
+    await collection.updateOne(
+      { _id: cycle._id },
+      {
+        $set: {
+          sourceAccountId,
+          ...(lockedRisk ?? {}),
+        },
+      }
+    );
+  }
+}
+
 async function upsertExecutions(
   collection: Collection<PrivateExecutionDocument>,
   environment: string,
+  sourceAccountId: string,
   executions: BybitExecution[],
   capturedAt: Date
 ) {
@@ -155,7 +305,7 @@ async function upsertExecutions(
     await collection.updateOne(
       { _id: privateId(environment, execution.execId) },
       {
-        $set: { ...execution, environment, lastSeenAt: capturedAt },
+        $set: { ...execution, environment, sourceAccountId, lastSeenAt: capturedAt },
         $setOnInsert: { firstSeenAt: capturedAt },
       },
       { upsert: true }
@@ -166,6 +316,7 @@ async function upsertExecutions(
 async function upsertOrders(
   collection: Collection<PrivateOrderDocument>,
   environment: string,
+  sourceAccountId: string,
   orders: BybitOrder[],
   capturedAt: Date
 ) {
@@ -173,7 +324,7 @@ async function upsertOrders(
     await collection.updateOne(
       { _id: privateId(environment, order.orderId) },
       {
-        $set: { ...order, environment, lastSeenAt: capturedAt },
+        $set: { ...order, environment, sourceAccountId, lastSeenAt: capturedAt },
         $setOnInsert: { firstSeenAt: capturedAt },
       },
       { upsert: true }
@@ -184,6 +335,7 @@ async function upsertOrders(
 async function upsertClosedPnl(
   collection: Collection<PrivateClosedPnlDocument>,
   environment: string,
+  sourceAccountId: string,
   records: BybitClosedPnl[],
   capturedAt: Date
 ) {
@@ -191,7 +343,7 @@ async function upsertClosedPnl(
     await collection.updateOne(
       { _id: privateId(environment, record.orderId) },
       {
-        $set: { ...record, environment, lastSeenAt: capturedAt },
+        $set: { ...record, environment, sourceAccountId, lastSeenAt: capturedAt },
         $setOnInsert: { firstSeenAt: capturedAt },
       },
       { upsert: true }
@@ -202,6 +354,8 @@ async function upsertClosedPnl(
 async function capturePositionCycles(
   collection: Collection<PositionCycleDocument>,
   environment: string,
+  sourceAccountId: string,
+  riskVersions: PerformanceRiskVersion[],
   positions: BybitPosition[],
   capturedAt: Date
 ): Promise<Set<string>> {
@@ -209,8 +363,17 @@ async function capturePositionCycles(
 
   for (const position of positions) {
     const openedAt = dateValue(position.openTime, dateValue(position.createdTime, capturedAt));
-    const id = cycleId(environment, position, openedAt);
-    const existing = await collection.findOne({ _id: id });
+    const newId = cycleId(environment, sourceAccountId, position, openedAt);
+    const oldId = legacyCycleId(environment, position, openedAt);
+    const existing = await collection.findOne({
+      $or: [
+        { _id: newId },
+        { _id: oldId, sourceAccountId },
+        { _id: oldId, sourceAccountId: { $exists: false } },
+      ],
+    });
+    const id = existing?._id ?? newId;
+    const lockedRisk = lockPerformanceRisk(existing, riskVersions, openedAt);
     const stop = numberValue(position.stopLoss);
     active.add(id);
 
@@ -219,6 +382,7 @@ async function capturePositionCycles(
       {
         $set: {
           environment,
+          sourceAccountId,
           symbol: position.symbol,
           direction: positionDirection(position.side),
           positionIdx: position.positionIdx,
@@ -228,6 +392,7 @@ async function capturePositionCycles(
           quantity: numberValue(position.size),
           leverage: numberValue(position.leverage) || null,
           status: "open",
+          ...(lockedRisk ?? {}),
           ...(existing?.initialStopPrice || stop <= 0
             ? {}
             : { initialStopPrice: stop, stopCapturedAt: capturedAt }),
@@ -245,10 +410,11 @@ async function capturePositionCycles(
 async function assignClosedPnlToCycles(
   cycles: PositionCycleDocument[],
   closedPnl: Collection<PrivateClosedPnlDocument>,
-  environment: string
+  environment: string,
+  sourceAccountId: string
 ) {
   const records = await closedPnl
-    .find({ environment, execType: "Trade" })
+    .find({ environment, sourceAccountId, execType: "Trade" })
     .sort({ updatedTime: 1 })
     .toArray();
   const orderedCycles = [...cycles].sort((a, b) => b.openedAt.getTime() - a.openedAt.getTime());
@@ -273,15 +439,20 @@ async function publishClosedCycles(
   closedPnl: Collection<PrivateClosedPnlDocument>,
   published: Collection<PublishedPerformanceTrade>,
   environment: string,
+  sourceAccountId: string,
   activeIds: Set<string>,
   capturedAt: Date
 ): Promise<{ published: number; unresolved: number }> {
   const candidates = await cycles
-    .find({ environment, status: { $in: ["open", "awaiting_close", "unresolved"] } })
+    .find({
+      environment,
+      sourceAccountId,
+      status: { $in: ["open", "awaiting_close", "unresolved", "published"] },
+    })
     .sort({ openedAt: -1 })
     .toArray();
 
-  await assignClosedPnlToCycles(candidates, closedPnl, environment);
+  await assignClosedPnlToCycles(candidates, closedPnl, environment, sourceAccountId);
 
   let publishedCount = 0;
   let unresolvedCount = 0;
@@ -290,7 +461,7 @@ async function publishClosedCycles(
     if (activeIds.has(cycle._id)) continue;
 
     const records = await closedPnl
-      .find({ environment, cycleId: cycle._id, execType: "Trade" })
+      .find({ environment, sourceAccountId, cycleId: cycle._id, execType: "Trade" })
       .sort({ updatedTime: 1 })
       .toArray();
     if (!records.length) {
@@ -309,7 +480,7 @@ async function publishClosedCycles(
         direction: cycle.direction,
         openedAt: cycle.openedAt,
         fallbackEntryPrice: cycle.entryPrice,
-        initialStopPrice: cycle.initialStopPrice,
+        riskAmount: cycle.riskAmount,
       },
       records
     );
@@ -321,9 +492,9 @@ async function publishClosedCycles(
         {
           $set: {
             status: "unresolved",
-            resolutionIssue: normalized.reason === "missing_stop"
-              ? "Initial stop was not captured"
-              : "Captured risk data is invalid",
+            resolutionIssue: normalized.reason === "missing_risk"
+              ? "Risk version was not configured"
+              : "Locked risk data is invalid",
           },
         }
       );
@@ -331,11 +502,12 @@ async function publishClosedCycles(
     }
 
     const closedAt = new Date(normalized.trade.closedAt);
+    const existingPublic = await published.findOne({ _id: id });
     const publicRecord: PublishedPerformanceTrade = {
       _id: id,
       ...normalized.trade,
       source: "bybit",
-      publishedAt: capturedAt,
+      publishedAt: existingPublic?.publishedAt ?? capturedAt,
       updatedAt: capturedAt,
     };
 
@@ -355,7 +527,15 @@ async function publishClosedCycles(
         $unset: { resolutionIssue: "" },
       }
     );
-    publishedCount += 1;
+    const changed = !existingPublic ||
+      existingPublic.symbol !== publicRecord.symbol ||
+      existingPublic.direction !== publicRecord.direction ||
+      existingPublic.openedAt !== publicRecord.openedAt ||
+      existingPublic.closedAt !== publicRecord.closedAt ||
+      existingPublic.entryPrice !== publicRecord.entryPrice ||
+      existingPublic.exitPrice !== publicRecord.exitPrice ||
+      existingPublic.resultR !== publicRecord.resultR;
+    if (changed) publishedCount += 1;
   }
 
   return { published: publishedCount, unresolved: unresolvedCount };
@@ -383,23 +563,36 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
     const snapshot = await fetchBybitSnapshot();
     const capturedAt = new Date(snapshot.serverTime || Date.now());
     const environment = snapshot.environment;
+    const sourceAccountId = accountScopeId(environment, snapshot.apiKey.userID);
     const executions = db.collection<PrivateExecutionDocument>(PERFORMANCE_COLLECTIONS.executions);
     const orders = db.collection<PrivateOrderDocument>(PERFORMANCE_COLLECTIONS.orders);
     const closedPnl = db.collection<PrivateClosedPnlDocument>(PERFORMANCE_COLLECTIONS.closedPnl);
     const cycles = db.collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles);
+    const riskVersionCollection = db.collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions);
     const published = db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades);
+    const riskVersions = await loadRiskVersions(riskVersionCollection, environment, sourceAccountId);
 
     await Promise.all([
-      upsertExecutions(executions, environment, snapshot.executions, capturedAt),
-      upsertOrders(orders, environment, snapshot.orders, capturedAt),
-      upsertClosedPnl(closedPnl, environment, snapshot.closedPnl, capturedAt),
+      upsertExecutions(executions, environment, sourceAccountId, snapshot.executions, capturedAt),
+      upsertOrders(orders, environment, sourceAccountId, snapshot.orders, capturedAt),
+      upsertClosedPnl(closedPnl, environment, sourceAccountId, snapshot.closedPnl, capturedAt),
+      runs.updateOne({ _id: runId }, { $set: { environment, sourceAccountId } }),
     ]);
-    const activeIds = await capturePositionCycles(cycles, environment, snapshot.positions, capturedAt);
+    await backfillCycleRiskLocks(cycles, environment, sourceAccountId, riskVersions);
+    const activeIds = await capturePositionCycles(
+      cycles,
+      environment,
+      sourceAccountId,
+      riskVersions,
+      snapshot.positions,
+      capturedAt
+    );
     const normalized = await publishClosedCycles(
       cycles,
       closedPnl,
       published,
       environment,
+      sourceAccountId,
       activeIds,
       capturedAt
     );

@@ -4,7 +4,7 @@ import { normalizeClosedCycle } from "./normalize";
 
 const openedAt = new Date("2026-09-10T00:00:00.000Z");
 
-test("normalizes a long trade from net PnL and captured initial risk", () => {
+test("normalizes a long trade from net PnL and its locked risk amount", () => {
   const result = normalizeClosedCycle(
     {
       id: "long-trade",
@@ -12,7 +12,7 @@ test("normalizes a long trade from net PnL and captured initial risk", () => {
       direction: "Long",
       openedAt,
       fallbackEntryPrice: 100,
-      initialStopPrice: 90,
+      riskAmount: 20,
     },
     [{
       avgEntryPrice: 100,
@@ -36,7 +36,7 @@ test("weights partial exits without exposing quantity in the public trade", () =
       direction: "Short",
       openedAt,
       fallbackEntryPrice: 200,
-      initialStopPrice: 210,
+      riskAmount: 40,
     },
     [
       { avgEntryPrice: 200, avgExitPrice: 190, closedSize: 1, qty: 1, closedPnl: 9, updatedTime: 1_000 },
@@ -60,7 +60,7 @@ test("weights partial exits without exposing quantity in the public trade", () =
   ]);
 });
 
-test("refuses to publish when the initial stop was not captured", () => {
+test("refuses to publish when no risk version was locked", () => {
   const result = normalizeClosedCycle(
     {
       id: "missing-risk",
@@ -72,10 +72,10 @@ test("refuses to publish when the initial stop was not captured", () => {
     [{ avgEntryPrice: 100, avgExitPrice: 120, closedSize: 1, qty: 1, closedPnl: 20, updatedTime: 2_000 }]
   );
 
-  assert.deepEqual(result, { ok: false, reason: "missing_stop" });
+  assert.deepEqual(result, { ok: false, reason: "missing_risk" });
 });
 
-test("refuses a stop on the wrong side of the entry", () => {
+test("refuses a non-positive risk amount", () => {
   const result = normalizeClosedCycle(
     {
       id: "invalid-risk",
@@ -83,7 +83,7 @@ test("refuses a stop on the wrong side of the entry", () => {
       direction: "Short",
       openedAt,
       fallbackEntryPrice: 100,
-      initialStopPrice: 90,
+      riskAmount: 0,
     },
     [{ avgEntryPrice: 100, avgExitPrice: 80, closedSize: 1, qty: 1, closedPnl: 20, updatedTime: 2_000 }]
   );

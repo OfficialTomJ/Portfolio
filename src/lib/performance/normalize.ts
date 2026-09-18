@@ -6,7 +6,7 @@ export interface ClosedCycleInput {
   direction: TradeDirection;
   openedAt: Date;
   fallbackEntryPrice: number;
-  initialStopPrice?: number;
+  riskAmount?: number;
 }
 
 export interface ClosedPnlSlice {
@@ -20,7 +20,7 @@ export interface ClosedPnlSlice {
 
 export type NormalizeClosedCycleResult =
   | { ok: true; trade: PerformanceTrade }
-  | { ok: false; reason: "missing_stop" | "invalid_risk" | "invalid_close" };
+  | { ok: false; reason: "missing_risk" | "invalid_risk" | "invalid_close" };
 
 function finiteNumber(value: string | number | undefined): number {
   const parsed = Number(value);
@@ -47,19 +47,14 @@ export function normalizeClosedCycle(
   cycle: ClosedCycleInput,
   records: ClosedPnlSlice[]
 ): NormalizeClosedCycleResult {
-  if (!cycle.initialStopPrice) return { ok: false, reason: "missing_stop" };
+  if (cycle.riskAmount === undefined) return { ok: false, reason: "missing_risk" };
 
   const quantity = records.reduce((total, item) => total + sliceQuantity(item), 0);
   const entryPrice = weightedAverage(records, "avgEntryPrice") || cycle.fallbackEntryPrice;
   const exitPrice = weightedAverage(records, "avgExitPrice");
-  const stopIsValid = cycle.direction === "Long"
-    ? cycle.initialStopPrice < entryPrice
-    : cycle.initialStopPrice > entryPrice;
-  const initialRisk = stopIsValid
-    ? Math.abs(entryPrice - cycle.initialStopPrice) * quantity
-    : 0;
+  const initialRisk = finiteNumber(cycle.riskAmount);
 
-  if (!stopIsValid || initialRisk <= 0) return { ok: false, reason: "invalid_risk" };
+  if (initialRisk <= 0) return { ok: false, reason: "invalid_risk" };
   if (!records.length || quantity <= 0 || exitPrice <= 0) {
     return { ok: false, reason: "invalid_close" };
   }

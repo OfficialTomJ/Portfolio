@@ -32,6 +32,23 @@ function nearestTime(candles: TradeCandle[], target: number): number {
   return candles.reduce((best, item) => Math.abs(item.time - target) < Math.abs(best - target) ? item.time : best, candles[0]?.time ?? target);
 }
 
+async function fetchMoreCandles(
+  symbol: string,
+  direction: "before" | "after",
+  boundary: number,
+  signal: AbortSignal
+): Promise<TradeCandle[]> {
+  const query = new URLSearchParams({
+    symbol,
+    direction,
+    time: String(boundary),
+  });
+  const response = await fetch(`/api/performance/market?${query}`, { signal });
+  if (!response.ok) throw new Error(`Market history returned ${response.status}`);
+  const payload = (await response.json()) as { candles?: TradeCandle[] };
+  return Array.isArray(payload.candles) ? payload.candles : [];
+}
+
 export default function TradePriceChart({ trade, candles }: { trade: PerformanceTrade; candles: TradeCandle[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -48,6 +65,12 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
   useEffect(() => {
     const element = ref.current;
     if (!element || !candles.length) return;
+    let allCandles = [...candles].sort((a, b) => a.time - b.time);
+    let disposed = false;
+    const loading = { before: false, after: false };
+    const exhausted = { before: false, after: false };
+    const controllers = new Set<AbortController>();
+    element.dataset.candleCount = String(allCandles.length);
 
     const precision = trade.entryPrice < 100 ? 3 : trade.entryPrice < 1000 ? 2 : trade.entryPrice < 10_000 ? 1 : 0;
     const chart = createChart(element, {
@@ -77,7 +100,7 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
       borderVisible: false,
       priceLineVisible: false,
     });
-    series.setData(candles.map((item) => ({ ...item, time: item.time as Time })));
+    series.setData(allCandles.map((item) => ({ ...item, time: item.time as Time })));
 
     const entryTime = nearestTime(candles, Math.floor(Date.parse(trade.openedAt) / 1000));
     const exitTime = nearestTime(candles, Math.floor(Date.parse(trade.closedAt) / 1000));
@@ -174,13 +197,58 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
 
     const resizeObserver = new ResizeObserver(updateOverlay);
     resizeObserver.observe(element);
-    chart.timeScale().subscribeVisibleLogicalRangeChange(updateOverlay);
+
+    const loadHistory = async (direction: "before" | "after") => {
+      if (disposed || loading[direction] || exhausted[direction]) return;
+      const boundary = direction === "before"
+        ? allCandles[0]?.time
+        : allCandles[allCandles.length - 1]?.time;
+      if (!boundary) return;
+
+      loading[direction] = true;
+      const controller = new AbortController();
+      controllers.add(controller);
+      try {
+        const previousVisibleRange = chart.timeScale().getVisibleRange();
+        const incoming = await fetchMoreCandles(trade.symbol, direction, boundary, controller.signal);
+        if (disposed) return;
+        const byTime = new Map(allCandles.map((item) => [item.time, item]));
+        for (const item of incoming) byTime.set(item.time, item);
+        const merged = [...byTime.values()].sort((a, b) => a.time - b.time);
+        if (merged.length === allCandles.length || incoming.length < 200) exhausted[direction] = true;
+        if (merged.length !== allCandles.length) {
+          allCandles = merged;
+          element.dataset.candleCount = String(allCandles.length);
+          series.setData(allCandles.map((item) => ({ ...item, time: item.time as Time })));
+          if (previousVisibleRange) chart.timeScale().setVisibleRange(previousVisibleRange);
+          updateOverlay();
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("[performance/chart-history]", error);
+        }
+      } finally {
+        controllers.delete(controller);
+        loading[direction] = false;
+      }
+    };
+
+    const handleVisibleRange = (range: { from: number; to: number } | null) => {
+      updateOverlay();
+      if (!range) return;
+      if (range.from < 12) void loadHistory("before");
+      if (range.to > allCandles.length - 12) void loadHistory("after");
+    };
+
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRange);
     updateOverlay();
 
     return () => {
+      disposed = true;
+      for (const controller of controllers) controller.abort();
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
-      chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateOverlay);
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRange);
       chart.remove();
       chartRef.current = null;
     };
@@ -207,7 +275,13 @@ export default function TradePriceChart({ trade, candles }: { trade: Performance
         </span>
       </div>
       <div className="relative h-[360px] w-full overflow-hidden sm:h-[500px]">
-        <div ref={ref} className="absolute inset-0" />
+        <div
+          ref={ref}
+          data-performance-chart
+          role="img"
+          aria-label={`Interactive ${trade.symbol} one hour price chart. Drag or scroll horizontally to explore more history.`}
+          className="absolute inset-0"
+        />
         <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
           <div ref={beforeWindowRef} className="absolute bg-black/25 opacity-0" />
           <div ref={afterWindowRef} className="absolute bg-black/25 opacity-0" />

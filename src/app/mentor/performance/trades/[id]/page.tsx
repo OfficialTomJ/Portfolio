@@ -5,6 +5,7 @@ import TradePriceChart from "@/Components/performance/TradePriceChart";
 import { getPerformanceTrade, parsePerformanceSource } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
+import { tradeOpenGraphAlt } from "@/lib/performance/og";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -15,14 +16,41 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const source = parsePerformanceSource((await searchParams).source);
   const item = await getPerformanceTrade(source, (await params).id);
   if (!item) return { title: "Trade not found, The Blueprint" };
-  const title = `${item.symbol} ${item.direction} ${signedR(item.resultR)}, Performance Journal`;
-  const description = `A retrospective chart of a completed ${item.symbol} trade, measured in R.`;
+  const displaySymbol = item.symbol.replace("USDT", " / USDT");
+  const title = `${displaySymbol} ${item.direction}: ${signedR(item.resultR)} | Performance Journal`;
+  const description = `Review a completed ${displaySymbol} ${item.direction.toLowerCase()} from ${metadataDate.format(new Date(item.openedAt))} to ${metadataDate.format(new Date(item.closedAt))}, with its entry-to-exit price chart and recorded ${signedR(item.resultR)} result.`;
+  const id = (await params).id;
+  const sourceQuery = source === "live" ? "?source=live" : "";
+  const canonical = `https://mentor.thomas-johnston.com/performance/trades/${encodeURIComponent(id)}${sourceQuery}`;
+  const image = `${imageOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og${sourceQuery}`;
+  const images = [{ url: image, width: 1200, height: 630, alt: tradeOpenGraphAlt(item) }];
   return {
     title,
     description,
-    openGraph: { title, description, images: [] },
-    twitter: { card: "summary" as const, title, description, images: [] },
+    alternates: { canonical },
+    openGraph: { type: "article" as const, url: canonical, title, description, images },
+    twitter: { card: "summary_large_image" as const, title, description, images },
   };
+}
+
+const metadataDate = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Australia/Sydney",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+function imageOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      // Fall through to the deployment URL.
+    }
+  }
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
 }
 
 const fullDate = new Intl.DateTimeFormat("en-AU", {
@@ -101,7 +129,7 @@ export default async function TradePage({ params, searchParams }: Props) {
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Price action</p>
               <h2 className="mt-1 text-lg font-medium">{trade.direction} entry to exit</h2>
             </div>
-            <p className="text-xs text-zinc-600">Public asset prices · no position sizing</p>
+            <p className="text-xs text-zinc-600">Public asset prices · drag or scroll to explore history</p>
           </div>
           <div className="p-2 sm:p-4">
             {candles.length ? (

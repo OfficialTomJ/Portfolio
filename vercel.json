@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/performance/sync/route.ts": {
+      "regions": ["syd1"],
+      "maxDuration": 60
+    }
+  }
+}

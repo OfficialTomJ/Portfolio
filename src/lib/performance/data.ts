@@ -3,7 +3,6 @@ import "server-only";
 import { getDb } from "@/lib/mongodb";
 import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
-import { isPerformanceDatasetStale } from "./health";
 import type {
   PerformanceDatasetLoadResult,
   PerformanceTrade,
@@ -54,7 +53,6 @@ function isPerformanceTrade(trade: PerformanceTrade | null): trade is Performanc
 }
 
 export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoadResult> {
-  const now = new Date();
   try {
     const db = getDb();
     const environment = process.env.BYBIT_ENV ?? "demo";
@@ -75,7 +73,7 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
     const trades = documents.map(toPublicTrade).filter(isPerformanceTrade);
 
     return {
-      status: isPerformanceDatasetStale(asOf, now) ? "stale" : "available",
+      status: "available",
       dataset: {
         id: "live",
         label: "Connected account",

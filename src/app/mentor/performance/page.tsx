@@ -48,18 +48,7 @@ export default async function PerformancePage() {
 
       <section className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 sm:pt-6">
         {dataset ? (
-          <>
-            {result.status === "stale" && (
-              <div
-                role="status"
-                className="mb-5 rounded-xl border border-[#ff6719]/20 bg-[#ff6719]/[0.045] px-4 py-3 text-sm leading-6 text-zinc-300"
-              >
-                <span className="font-medium text-[#ff9a67]">Updates delayed.</span>{" "}
-                Results shown below were last synchronized {updatedFormatter.format(new Date(dataset.asOf))} GMT. New closed trades may not appear until the connection recovers.
-              </div>
-            )}
-            <PerformanceDashboard dataset={dataset} />
-          </>
+          <PerformanceDashboard dataset={dataset} />
         ) : (
           <PerformanceUnavailable />
         )}

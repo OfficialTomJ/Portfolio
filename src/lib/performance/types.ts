@@ -23,7 +23,7 @@ export interface PerformanceDataset {
 
 export type PerformanceDatasetLoadResult =
   | {
-      status: "available" | "stale";
+      status: "available";
       dataset: PerformanceDataset;
     }
   | {

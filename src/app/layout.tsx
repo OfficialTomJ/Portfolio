@@ -1,5 +1,6 @@
 import './globals.css'
 import { Jost } from 'next/font/google'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const jost = Jost({ subsets: ['latin'] })
 
@@ -15,7 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={jost.className}>{children}</body>
+      <body className={jost.className}>
+        {children}
+        <SpeedInsights />
+      </body>
     </html>
   )
 }

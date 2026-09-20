@@ -21,6 +21,30 @@ export interface PerformanceDataset {
   trades: PerformanceTrade[];
 }
 
+export type PerformanceDatasetLoadResult =
+  | {
+      status: "available";
+      dataset: PerformanceDataset;
+    }
+  | {
+      status: "unavailable";
+      dataset: null;
+    };
+
+export type PerformanceTradeLoadResult =
+  | {
+      status: "available";
+      trade: PerformanceTrade;
+    }
+  | {
+      status: "not-found";
+      trade: null;
+    }
+  | {
+      status: "unavailable";
+      trade: null;
+    };
+
 export interface PerformanceStats {
   totalR: number;
   tradeCount: number;

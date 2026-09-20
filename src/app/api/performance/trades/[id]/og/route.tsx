@@ -10,8 +10,14 @@ export const maxDuration = 30;
 type Context = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Context) {
-  const trade = await getLivePerformanceTrade((await params).id);
-  if (!trade) return new Response("Trade not found", { status: 404 });
+  const result = await getLivePerformanceTrade((await params).id);
+  if (result.status === "unavailable") {
+    return new Response("Performance journal unavailable", { status: 503 });
+  }
+  if (result.status === "not-found") {
+    return new Response("Trade not found", { status: 404 });
+  }
+  const trade = result.trade;
 
   const candles = await getHistoricalCandles(trade, "1h");
   return new ImageResponse(<TradeOpenGraphCard trade={trade} candles={candles} />, {

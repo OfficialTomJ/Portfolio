@@ -1,4 +1,5 @@
 import PerformanceDashboard from "@/Components/performance/PerformanceDashboard";
+import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import { getLivePerformanceDataset } from "@/lib/performance/data";
 
 export const metadata = {
@@ -18,8 +19,11 @@ const updatedFormatter = new Intl.DateTimeFormat("en-AU", {
 export const dynamic = "force-dynamic";
 
 export default async function PerformancePage() {
-  const dataset = await getLivePerformanceDataset();
-  const tradeLabel = `${dataset.trades.length} closed trade${dataset.trades.length === 1 ? "" : "s"}`;
+  const result = await getLivePerformanceDataset();
+  const dataset = result.dataset;
+  const tradeLabel = dataset
+    ? `${dataset.trades.length} closed trade${dataset.trades.length === 1 ? "" : "s"}`
+    : null;
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-12 sm:pb-16">
@@ -34,14 +38,20 @@ export default async function PerformancePage() {
               Closed prop-trading results, measured in R.
             </p>
             <p className="text-xs leading-5 text-zinc-500">
-              {tradeLabel} · Updated {updatedFormatter.format(new Date(dataset.asOf))} GMT
+              {dataset && tradeLabel
+                ? `${tradeLabel} · Updated ${updatedFormatter.format(new Date(dataset.asOf))} GMT`
+                : "Performance figures are temporarily unavailable"}
             </p>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 sm:pt-6">
-        <PerformanceDashboard dataset={dataset} />
+        {dataset ? (
+          <PerformanceDashboard dataset={dataset} />
+        ) : (
+          <PerformanceUnavailable />
+        )}
       </section>
 
       <section className="mx-auto mt-8 max-w-7xl px-4 sm:mt-10 sm:px-6">

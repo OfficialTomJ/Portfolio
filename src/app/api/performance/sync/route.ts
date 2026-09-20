@@ -6,8 +6,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const preferredRegion = "syd1";
-export const maxDuration = 60;
 
 async function handleSync(request: NextRequest) {
   const secret = process.env.CRON_SECRET;

@@ -1,5 +1,4 @@
 export type TradeDirection = "Long" | "Short";
-export type PerformanceDataSource = "mock" | "live";
 export type PerformanceRange = "30D" | "60D" | "90D" | "6M" | "YTD" | "YEAR" | "CUSTOM";
 
 export interface PerformanceTrade {

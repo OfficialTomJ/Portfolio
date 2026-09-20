@@ -2,27 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
-import { getPerformanceTrade, parsePerformanceSource } from "@/lib/performance/data";
+import { getLivePerformanceTrade } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
 import { tradeOpenGraphAlt } from "@/lib/performance/og";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ source?: string }>;
 };
 
-export async function generateMetadata({ params, searchParams }: Props) {
-  const source = parsePerformanceSource((await searchParams).source);
-  const item = await getPerformanceTrade(source, (await params).id);
+export async function generateMetadata({ params }: Props) {
+  const item = await getLivePerformanceTrade((await params).id);
   if (!item) return { title: "Trade not found, The Blueprint" };
   const displaySymbol = item.symbol.replace("USDT", " / USDT");
   const title = `${displaySymbol} ${item.direction}: ${signedR(item.resultR)} | Performance Journal`;
   const description = `Review a completed ${displaySymbol} ${item.direction.toLowerCase()} from ${metadataDate.format(new Date(item.openedAt))} to ${metadataDate.format(new Date(item.closedAt))}, with its entry-to-exit price chart and recorded ${signedR(item.resultR)} result.`;
   const id = (await params).id;
-  const sourceQuery = source === "live" ? "?source=live" : "";
-  const canonical = `https://mentor.thomas-johnston.com/performance/trades/${encodeURIComponent(id)}${sourceQuery}`;
-  const image = `${imageOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og${sourceQuery}`;
+  const canonical = `https://mentor.thomas-johnston.com/performance/trades/${encodeURIComponent(id)}`;
+  const image = `${imageOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og`;
   const images = [{ url: image, width: 1200, height: 630, alt: tradeOpenGraphAlt(item) }];
   return {
     title,
@@ -92,23 +89,22 @@ function Detail({ label, value, tone }: { label: string; value: string; tone?: "
   );
 }
 
-export default async function TradePage({ params, searchParams }: Props) {
-  const source = parsePerformanceSource((await searchParams).source);
-  const trade = await getPerformanceTrade(source, (await params).id);
+export default async function TradePage({ params }: Props) {
+  const trade = await getLivePerformanceTrade((await params).id);
   if (!trade) notFound();
   const candles = await getHistoricalCandles(trade, "4h", 24);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-24">
       <div className="mx-auto max-w-7xl px-4 pt-7 sm:px-6 sm:pt-10">
-        <Link href={`/performance${source === "live" ? "?source=live" : ""}`} className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white">
+        <Link href="/performance" className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white">
           <FaArrowLeftLong className="text-xs" /> Performance journal
         </Link>
 
         <header className="mt-7 flex flex-col gap-5 border-b border-white/[0.08] pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">{source === "live" ? "Connected data" : "Mock data"}</span>
+              <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">Verified result</span>
               <span className={`rounded-full border px-3 py-1 font-semibold uppercase tracking-[0.14em] ${trade.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
                 {trade.direction} {trade.direction === "Long" ? "↑" : "↓"}
               </span>

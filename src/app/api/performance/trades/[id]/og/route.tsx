@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getPerformanceTrade, parsePerformanceSource } from "@/lib/performance/data";
+import { getLivePerformanceTrade } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { TradeOpenGraphCard } from "@/lib/performance/og";
 
@@ -9,9 +9,8 @@ export const maxDuration = 30;
 
 type Context = { params: Promise<{ id: string }> };
 
-export async function GET(request: Request, { params }: Context) {
-  const source = parsePerformanceSource(new URL(request.url).searchParams.get("source") ?? undefined);
-  const trade = await getPerformanceTrade(source, (await params).id);
+export async function GET(_request: Request, { params }: Context) {
+  const trade = await getLivePerformanceTrade((await params).id);
   if (!trade) return new Response("Trade not found", { status: 404 });
 
   const candles = await getHistoricalCandles(trade, "1h");

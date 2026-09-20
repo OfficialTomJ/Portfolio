@@ -1,12 +1,10 @@
 import "server-only";
 
 import { getDb } from "@/lib/mongodb";
-import { performanceDatasets, getMockTrade } from "./mock";
 import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
 import type {
   PerformanceDataset,
-  PerformanceDataSource,
   PerformanceTrade,
 } from "./types";
 
@@ -53,10 +51,6 @@ function isPerformanceTrade(trade: PerformanceTrade | null): trade is Performanc
   return trade !== null;
 }
 
-export function parsePerformanceSource(value: string | undefined): PerformanceDataSource {
-  return value === "live" ? "live" : "mock";
-}
-
 export async function getLivePerformanceDataset(): Promise<PerformanceDataset> {
   const now = new Date();
   try {
@@ -95,18 +89,7 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDataset> {
   }
 }
 
-export async function getPerformanceDataset(
-  source: PerformanceDataSource
-): Promise<PerformanceDataset> {
-  return source === "live" ? getLivePerformanceDataset() : performanceDatasets.mature;
-}
-
-export async function getPerformanceTrade(
-  source: PerformanceDataSource,
-  id: string
-): Promise<PerformanceTrade | null> {
-  if (source === "mock") return getMockTrade(id);
-
+export async function getLivePerformanceTrade(id: string): Promise<PerformanceTrade | null> {
   try {
     const document = await getDb()
       .collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)

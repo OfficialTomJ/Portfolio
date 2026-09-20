@@ -39,7 +39,7 @@ const markerTime = new Intl.DateTimeFormat("en-AU", {
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
-  hour12: false,
+  hourCycle: "h23",
   timeZoneName: "short",
 });
 

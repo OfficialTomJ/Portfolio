@@ -3,9 +3,11 @@ import "server-only";
 import { getDb } from "@/lib/mongodb";
 import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
+import { isPerformanceDatasetStale } from "./health";
 import type {
-  PerformanceDataset,
+  PerformanceDatasetLoadResult,
   PerformanceTrade,
+  PerformanceTradeLoadResult,
 } from "./types";
 
 interface SyncStateView {
@@ -51,7 +53,7 @@ function isPerformanceTrade(trade: PerformanceTrade | null): trade is Performanc
   return trade !== null;
 }
 
-export async function getLivePerformanceDataset(): Promise<PerformanceDataset> {
+export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoadResult> {
   const now = new Date();
   try {
     const db = getDb();
@@ -63,40 +65,46 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDataset> {
         .toArray(),
       db.collection<SyncStateView>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: environment }),
     ]);
-    const asOf = state?.lastSuccessAt ?? now;
-    const inceptionAt = state?.firstSyncAt ?? asOf;
+    if (!state?.lastSuccessAt || !state.firstSyncAt) {
+      console.error(`[performance/data] no successful sync state for ${environment}`);
+      return { status: "unavailable", dataset: null };
+    }
+    const asOf = state.lastSuccessAt;
+    const inceptionAt = state.firstSyncAt;
 
     const trades = documents.map(toPublicTrade).filter(isPerformanceTrade);
 
     return {
-      id: "live",
-      label: "Connected account",
-      description: trades.length ? "Published closed trades" : "No published closed trades yet",
-      inceptionAt: inceptionAt.toISOString(),
-      asOf: asOf.toISOString(),
-      trades,
+      status: isPerformanceDatasetStale(asOf, now) ? "stale" : "available",
+      dataset: {
+        id: "live",
+        label: "Connected account",
+        description: trades.length ? "Published closed trades" : "No published closed trades yet",
+        inceptionAt: inceptionAt.toISOString(),
+        asOf: asOf.toISOString(),
+        trades,
+      },
     };
   } catch (error) {
     console.error("[performance/data] failed to load connected dataset", error);
     return {
-      id: "live-unavailable",
-      label: "Connected account",
-      description: "Connected data is temporarily unavailable",
-      inceptionAt: now.toISOString(),
-      asOf: now.toISOString(),
-      trades: [],
+      status: "unavailable",
+      dataset: null,
     };
   }
 }
 
-export async function getLivePerformanceTrade(id: string): Promise<PerformanceTrade | null> {
+export async function getLivePerformanceTrade(id: string): Promise<PerformanceTradeLoadResult> {
   try {
     const document = await getDb()
       .collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
       .findOne({ _id: id }, { projection: PUBLIC_TRADE_PROJECTION });
-    return document ? toPublicTrade(document) : null;
+    const trade = document ? toPublicTrade(document) : null;
+    return trade
+      ? { status: "available", trade }
+      : { status: "not-found", trade: null };
   } catch (error) {
     console.error("[performance/data] failed to load connected trade", error);
-    return null;
+    return { status: "unavailable", trade: null };
   }
 }

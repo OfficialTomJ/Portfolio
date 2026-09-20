@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
+import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
 import { getLivePerformanceTrade } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
@@ -12,8 +13,9 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props) {
-  const item = await getLivePerformanceTrade((await params).id);
-  if (!item) return { title: "Trade not found, The Blueprint" };
+  const result = await getLivePerformanceTrade((await params).id);
+  if (result.status !== "available") return { title: "Trade unavailable, The Blueprint" };
+  const item = result.trade;
   const displaySymbol = item.symbol.replace("USDT", " / USDT");
   const title = `${displaySymbol} ${item.direction}: ${signedR(item.resultR)} | Performance Journal`;
   const description = `Review a completed ${displaySymbol} ${item.direction.toLowerCase()} from ${metadataDate.format(new Date(item.openedAt))} to ${metadataDate.format(new Date(item.closedAt))}, with its entry-to-exit price chart and recorded ${signedR(item.resultR)} result.`;
@@ -90,8 +92,23 @@ function Detail({ label, value, tone }: { label: string; value: string; tone?: "
 }
 
 export default async function TradePage({ params }: Props) {
-  const trade = await getLivePerformanceTrade((await params).id);
-  if (!trade) notFound();
+  const result = await getLivePerformanceTrade((await params).id);
+  if (result.status === "not-found") notFound();
+  if (result.status === "unavailable") {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] pb-24">
+        <div className="mx-auto max-w-7xl px-4 pt-7 sm:px-6 sm:pt-10">
+          <Link href="/performance" className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white">
+            <FaArrowLeftLong className="text-xs" /> Performance journal
+          </Link>
+          <div className="mt-7">
+            <PerformanceUnavailable title="This trade is temporarily unavailable." />
+          </div>
+        </div>
+      </main>
+    );
+  }
+  const trade = result.trade;
   const candles = await getHistoricalCandles(trade, "4h", 24);
 
   return (

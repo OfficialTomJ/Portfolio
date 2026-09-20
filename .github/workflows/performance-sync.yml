@@ -1,8 +1,12 @@
 name: Performance journal sync
+run-name: Performance journal sync · ${{ github.event_name }}
 
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    # A committed cron change re-registers the scheduled-workflow actor. Keep
+    # the minutes away from the top of the hour, when GitHub documents higher
+    # schedule load and a greater chance of delayed or dropped events.
+    - cron: "9,24,39,54 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,11 +24,14 @@ jobs:
     steps:
       - name: Call protected sync endpoint
         env:
+          SCHEDULE: ${{ github.event.schedule || 'manual' }}
           SYNC_SECRET: ${{ secrets.PERFORMANCE_SYNC_SECRET }}
           SYNC_URL: https://mentor.thomas-johnston.com/api/performance/sync
         shell: bash
         run: |
           set -euo pipefail
+
+          echo "Trigger: ${GITHUB_EVENT_NAME}; schedule: ${SCHEDULE}"
 
           if [[ -z "${SYNC_SECRET}" ]]; then
             echo "::error::PERFORMANCE_SYNC_SECRET is not configured"

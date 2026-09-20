@@ -30,12 +30,12 @@ export default function MentorLayout({
       <MentorAnalytics />
       <TopProgress />
       <header className="sticky top-0 z-50 backdrop-blur-md bg-black/60 border-b border-[var(--bp-border)]">
-        <nav className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-baseline gap-2">
-            <span className="text-lg font-semibold tracking-tight">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap sm:gap-2">
+            <span className="text-base font-semibold tracking-tight sm:text-lg">
               The Blueprint
             </span>
-            <span className="text-[var(--bp-accent)] text-lg leading-none">.</span>
+            <span className="text-base leading-none text-[var(--bp-accent)] sm:text-lg">.</span>
           </Link>
           <AuthNav />
         </nav>

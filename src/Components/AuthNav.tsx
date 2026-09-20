@@ -16,16 +16,16 @@ export default function AuthNav() {
 
   if (!session?.user) {
     return (
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-4 sm:text-sm">
         <Link
           href="/sign-in"
-          className="text-[var(--bp-text-dim)] hover:text-white transition-colors"
+          className="whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
         >
           Log in
         </Link>
         <Link
           href="/sign-up"
-          className="rounded-md bg-[var(--bp-accent)] text-black font-semibold px-4 py-1.5 hover:brightness-110 transition-all"
+          className="whitespace-nowrap rounded-md bg-[var(--bp-accent)] px-3 py-1.5 font-semibold text-black transition-all hover:brightness-110 sm:px-4"
         >
           Sign up free
         </Link>
@@ -38,10 +38,10 @@ export default function AuthNav() {
   const initial = (name || email || "?").charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center gap-3 text-sm">
+    <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-3 sm:text-sm">
       <Link
         href="/blueprint"
-        className="hidden sm:block text-[var(--bp-text-dim)] hover:text-white transition-colors"
+        className="hidden whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white sm:block"
       >
         My course
       </Link>
@@ -49,9 +49,10 @@ export default function AuthNav() {
           did not exist below sm. The dot expires with isDashboardNew(). */}
       <Link
         href="/dashboard"
-        className="flex items-center gap-1.5 text-[var(--bp-text-dim)] hover:text-white transition-colors"
+        className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
       >
-        Dashboard
+        <span className="sm:hidden">TJSS</span>
+        <span className="hidden sm:inline">Dashboard</span>
         {isDashboardNew() && (
           <span
             className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--bp-accent)]"
@@ -60,8 +61,15 @@ export default function AuthNav() {
         )}
       </Link>
       <Link
+        href="/performance"
+        className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
+      >
+        <span className="sm:hidden">Journal</span>
+        <span className="hidden sm:inline">Performance</span>
+      </Link>
+      <Link
         href="/account"
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
         title="Account settings"
       >
         {image ? (
@@ -86,7 +94,7 @@ export default function AuthNav() {
           router.push("/");
           router.refresh();
         }}
-        className="text-[var(--bp-text-dim)] hover:text-white transition-colors"
+        className="hidden whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white min-[420px]:block"
       >
         Sign out
       </button>

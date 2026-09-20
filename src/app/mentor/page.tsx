@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FaPlay, FaLock, FaCheck, FaChartLine } from "react-icons/fa";
 import { getSession } from "../../lib/session";
 import { isDashboardNew } from "../../lib/whats-new";
+import PerformanceJournalCard from "../../Components/PerformanceJournalCard";
 
 // Marketing-only curriculum teaser (module names, not gated video content).
 const CURRICULUM = [
@@ -125,6 +126,13 @@ export default async function MentorLanding() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Public journal. This is intentionally separate from the TJSS dashboard
+          below: the recorded prop-trading results do not represent the course
+          method and should not read as proof of it. */}
+      <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6">
+        <PerformanceJournalCard variant="landing" />
       </section>
 
       {/* Members' dashboard.

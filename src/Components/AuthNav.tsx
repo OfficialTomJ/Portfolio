@@ -18,6 +18,13 @@ export default function AuthNav() {
     return (
       <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-4 sm:text-sm">
         <Link
+          href="/performance"
+          className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
+        >
+          <span className="sm:hidden">Journal</span>
+          <span className="hidden sm:inline">Performance Journal</span>
+        </Link>
+        <Link
           href="/sign-in"
           className="whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
         >
@@ -65,7 +72,7 @@ export default function AuthNav() {
         className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
       >
         <span className="sm:hidden">Journal</span>
-        <span className="hidden sm:inline">Performance</span>
+        <span className="hidden sm:inline">Performance Journal</span>
       </Link>
       <Link
         href="/account"

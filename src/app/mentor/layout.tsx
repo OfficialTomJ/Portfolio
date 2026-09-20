@@ -12,6 +12,10 @@ export const metadata = {
   title: "The Blueprint, Free Crypto Trading Course",
   description:
     "Learn to trade like a professional with Thomas Johnston's free Blueprint course.",
+  icons: {
+    icon: [{ url: "/mentor-icon.png", type: "image/png" }],
+    apple: [{ url: "/mentor-icon.png", type: "image/png" }],
+  },
 };
 
 // Dark browser chrome (fixes the white iOS Safari bottom-bar gradient).

@@ -1,0 +1,62 @@
+name: Performance journal sync
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-journal-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync closed trades
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call protected sync endpoint
+        env:
+          SYNC_SECRET: ${{ secrets.PERFORMANCE_SYNC_SECRET }}
+          SYNC_URL: https://mentor.thomas-johnston.com/api/performance/sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${SYNC_SECRET}" ]]; then
+            echo "::error::PERFORMANCE_SYNC_SECRET is not configured"
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+          trap 'rm -f "${response_file}"' EXIT
+
+          status="$(
+            curl --silent --show-error \
+              --request POST \
+              --retry 2 \
+              --retry-delay 10 \
+              --retry-all-errors \
+              --connect-timeout 10 \
+              --max-time 120 \
+              --header "Authorization: Bearer ${SYNC_SECRET}" \
+              --header "Accept: application/json" \
+              --output "${response_file}" \
+              --write-out "%{http_code}" \
+              "${SYNC_URL}"
+          )"
+
+          if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
+            echo "::error::Performance sync returned HTTP ${status}"
+            exit 1
+          fi
+
+          if ! jq -e '.ok == true' "${response_file}" >/dev/null; then
+            echo "::error::Performance sync response did not confirm success"
+            exit 1
+          fi
+
+          echo "Performance journal sync completed"

@@ -17,13 +17,16 @@ function isMentorHost(host: string): boolean {
 // Local dev: Google OAuth rejects *.localhost, so set DEV_AS_MENTOR=1 to serve
 // the mentor app on plain http://localhost:3000 (where Google OAuth works).
 const DEV_AS_MENTOR = process.env.DEV_AS_MENTOR === "1";
+// Branch previews do not have the mentor.* custom domain, so treat Vercel's
+// preview hostname as the mentor app. Production remains host-gated.
+const VERCEL_PREVIEW = process.env.VERCEL_ENV === "preview";
 
 export function middleware(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
   const url = req.nextUrl.clone();
   const { pathname } = url;
 
-  if (isMentorHost(host) || DEV_AS_MENTOR) {
+  if (isMentorHost(host) || DEV_AS_MENTOR || VERCEL_PREVIEW) {
     // API routes live at /api/* for both hosts, don't prefix them.
     if (pathname.startsWith("/api") || pathname.startsWith("/mentor")) {
       return NextResponse.next();

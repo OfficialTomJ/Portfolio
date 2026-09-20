@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
 import { buildPerformanceView, getAvailableYears, signedR, sydneyDateKey } from "@/lib/performance/metrics";
-import type { PerformanceDataset, PerformanceDataSource, PerformanceRange } from "@/lib/performance/types";
+import type { PerformanceDataset, PerformanceRange } from "@/lib/performance/types";
 import PerformanceCalendar from "./PerformanceCalendar";
 import PerformanceEquityChart from "./PerformanceEquityChart";
 
@@ -57,10 +57,8 @@ function Stat({ label, value, featured }: { label: string; value: string; featur
 
 export default function PerformanceDashboard({
   dataset,
-  source,
 }: {
   dataset: PerformanceDataset;
-  source: PerformanceDataSource;
 }) {
   const [range, setRange] = useState<PerformanceRange>("30D");
   const asOfKey = dataset.asOf.slice(0, 10);
@@ -201,12 +199,12 @@ export default function PerformanceDashboard({
             <div className="grid flex-1 place-items-center px-5 py-16 text-center">
               <div>
                 <p className="text-zinc-300">
-                  {source === "live" && dataset.trades.length === 0
+                  {dataset.trades.length === 0
                     ? "No connected-account trades have closed and qualified for publication yet."
                     : `No closed trades ${selectedDateLabel ? `on ${selectedDateLabel}` : "in this period"}.`}
                 </p>
                 <p className="mt-2 text-sm text-zinc-600">
-                  {source === "live" && dataset.trades.length === 0
+                  {dataset.trades.length === 0
                     ? "Open positions remain private and never appear here."
                     : "Choose another date or period."}
                 </p>
@@ -217,7 +215,7 @@ export default function PerformanceDashboard({
               {visibleTrades.map((item) => (
                 <Link
                   key={item.id}
-                  href={`/performance/trades/${item.id}${source === "live" ? "?source=live" : ""}`}
+                  href={`/performance/trades/${item.id}`}
                   className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6"
                 >
                   <div className="min-w-0">

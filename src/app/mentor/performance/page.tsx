@@ -1,7 +1,6 @@
-import Link from "next/link";
 import PerformanceDashboard from "@/Components/performance/PerformanceDashboard";
 import JournalUpdatesPrompt from "@/Components/performance/JournalUpdatesPrompt";
-import { getPerformanceDataset, parsePerformanceSource } from "@/lib/performance/data";
+import { getLivePerformanceDataset } from "@/lib/performance/data";
 
 export const metadata = {
   title: "Performance Journal | Thomas Johnston",
@@ -17,13 +16,10 @@ const updatedFormatter = new Intl.DateTimeFormat("en-AU", {
   hourCycle: "h23",
 });
 
-type Props = { searchParams: Promise<{ source?: string }> };
-
 export const dynamic = "force-dynamic";
 
-export default async function PerformancePage({ searchParams }: Props) {
-  const source = parsePerformanceSource((await searchParams).source);
-  const dataset = await getPerformanceDataset(source);
+export default async function PerformancePage() {
+  const dataset = await getLivePerformanceDataset();
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-24">
@@ -34,24 +30,8 @@ export default async function PerformancePage({ searchParams }: Props) {
             <div className="max-w-2xl">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ff8b52]">
-                  {source === "live" ? "Connected data" : "Mock data"}
+                  Verified results
                 </span>
-                <nav aria-label="Performance dataset" className="inline-flex rounded-lg border border-white/[0.09] bg-black/50 p-1 text-xs">
-                  <Link
-                    href="/performance"
-                    aria-current={source === "mock" ? "page" : undefined}
-                    className={`rounded-md px-3 py-1.5 transition-colors ${source === "mock" ? "bg-[#ff6719]/15 text-[#ff9a67]" : "text-zinc-500 hover:text-white"}`}
-                  >
-                    Mock
-                  </Link>
-                  <Link
-                    href="/performance?source=live"
-                    aria-current={source === "live" ? "page" : undefined}
-                    className={`rounded-md px-3 py-1.5 transition-colors ${source === "live" ? "bg-[#ff6719]/15 text-[#ff9a67]" : "text-zinc-500 hover:text-white"}`}
-                  >
-                    Connected
-                  </Link>
-                </nav>
               </div>
               <h1 className="mt-4 break-words text-3xl font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl">
                 Performance Journal
@@ -71,7 +51,7 @@ export default async function PerformancePage({ searchParams }: Props) {
             {[
               ["Account", "Simulated prop trading"],
               ["Publication", "Closed trades only"],
-              ["Schedule", source === "live" ? `Last synced ${updatedFormatter.format(new Date(dataset.asOf))} GMT` : "Mock history"],
+              ["Schedule", `Last synced ${updatedFormatter.format(new Date(dataset.asOf))} GMT`],
             ].map(([label, value]) => (
               <div key={label} className="bg-black/80 px-4 py-3.5 sm:px-5">
                 <p className="text-[10px] font-medium uppercase tracking-[0.17em] text-zinc-600">{label}</p>
@@ -86,7 +66,7 @@ export default async function PerformancePage({ searchParams }: Props) {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8">
-        <PerformanceDashboard key={source} dataset={dataset} source={source} />
+        <PerformanceDashboard dataset={dataset} />
       </section>
       <JournalUpdatesPrompt />
     </main>

@@ -16,6 +16,9 @@ next-portfolio/.next/
 # production
 /build
 
+# locally generated social publishing assets
+/output/social/
+
 # misc
 .DS_Store
 *.pem

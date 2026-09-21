@@ -1,5 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { PerformanceTrade, TradeCandle } from "./types";
+import type {
+  PerformanceDataset,
+  PerformanceTrade,
+  PerformanceView,
+  TradeCandle,
+} from "./types";
 import { signedR } from "./metrics";
 
 const GREEN = "#22c55e";
@@ -175,6 +180,147 @@ export function TradeOpenGraphCard({
       <div style={{ position: "absolute", display: "flex", left: 446, top: 514, color: "#71717a", fontSize: 13, letterSpacing: 1.1 }}>BINANCE 1H</div>
       <div style={{ position: "absolute", left: 60, right: 60, top: 560, height: 1, background: "rgba(255,255,255,0.08)" }} />
       <div style={{ position: "absolute", display: "flex", left: 60, top: 581, color: "#d4d4d8", fontSize: 17, fontWeight: 600 }}>THOMAS JOHNSTON</div>
+      <div style={{ position: "absolute", display: "flex", right: 60, top: 581, color: "#71717a", fontSize: 16 }}>mentor.thomas-johnston.com/performance</div>
+    </div>
+  );
+}
+
+const gmtDate = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Etc/UTC",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function chartBounds(values: number[]): { min: number; max: number } {
+  const rawMin = Math.min(0, ...values);
+  const rawMax = Math.max(0, ...values);
+  const spread = Math.max(0.5, rawMax - rawMin);
+  const rawStep = spread / 3;
+  const power = 10 ** Math.floor(Math.log10(rawStep));
+  const normalized = rawStep / power;
+  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * power;
+  const min = Math.floor((rawMin - spread * 0.08) / step) * step;
+  const max = Math.ceil((rawMax + spread * 0.08) / step) * step;
+  return max === min ? { min: min - 0.5, max: max + 0.5 } : { min, max };
+}
+
+function smoothPath(points: { x: number; y: number }[]): string {
+  if (!points.length) return "";
+  if (points.length === 1) return `M${points[0].x} ${points[0].y}`;
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previous = points[index];
+    const third = (point.x - previous.x) / 3;
+    return `${path} C${previous.x + third} ${previous.y} ${point.x - third} ${point.y} ${point.x} ${point.y}`;
+  }, `M${points[0].x} ${points[0].y}`);
+}
+
+function ogPercent(value: number | null): string {
+  return value == null ? "N/A" : `${Math.round(value)}%`;
+}
+
+function tickLabel(value: number): string {
+  if (Math.abs(value) < 0.005) return "0R";
+  const digits = Math.abs(value) < 1 ? 1 : Number.isInteger(value) ? 0 : 1;
+  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}R`;
+}
+
+export function performanceOpenGraphAlt(
+  dataset: PerformanceDataset,
+  view: PerformanceView
+): string {
+  return `Performance Journal year-to-date result of ${signedR(view.stats.totalR)} across ${view.stats.tradeCount} closed trade${view.stats.tradeCount === 1 ? "" : "s"}, updated ${gmtDate.format(new Date(dataset.asOf))} GMT.`;
+}
+
+export function PerformanceOpenGraphCard({
+  dataset,
+  view,
+}: {
+  dataset: PerformanceDataset;
+  view: PerformanceView;
+}) {
+  const values = view.equity.map((point) => point.value);
+  const bounds = chartBounds(values);
+  const plot = { left: 60, right: 654, top: 88, bottom: 384 };
+  const points = view.equity.map((point, index, items) => ({
+    x: plot.left + index * (plot.right - plot.left) / Math.max(1, items.length - 1),
+    y: plot.top + (bounds.max - point.value) * (plot.bottom - plot.top) / (bounds.max - bounds.min),
+  }));
+  const linePath = smoothPath(points);
+  const areaPath = points.length
+    ? `${linePath} L${points[points.length - 1].x} ${plot.bottom} L${points[0].x} ${plot.bottom} Z`
+    : "";
+  const ticks = Array.from({ length: 5 }, (_, index) => ({
+    value: bounds.max - index * (bounds.max - bounds.min) / 4,
+    y: plot.top + index * (plot.bottom - plot.top) / 4,
+  }));
+  const inception = shortDate.format(new Date(dataset.inceptionAt));
+  const tradeWord = `${view.stats.tradeCount} closed trade${view.stats.tradeCount === 1 ? "" : "s"}`;
+  const rootStyle: CSSProperties = {
+    position: "relative",
+    display: "flex",
+    width: 1200,
+    height: 630,
+    overflow: "hidden",
+    color: "white",
+    background: "radial-gradient(circle at 13% 13%, rgba(255,103,25,0.15), transparent 42%), linear-gradient(135deg, #020203 0%, #090a0d 100%)",
+    fontFamily: "sans-serif",
+  };
+
+  return (
+    <div style={rootStyle}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 5, background: ORANGE }} />
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 57, color: "#ff8b52", fontSize: 18, fontWeight: 700, letterSpacing: 3.6 }}>PERFORMANCE JOURNAL</div>
+
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 112, padding: "9px 16px", borderRadius: 999, border: "1px solid rgba(255,103,25,0.34)", background: "rgba(255,103,25,0.10)", color: "#ff9b6a", fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>YEAR TO DATE</div>
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 180, color: "#71717a", fontSize: 14, fontWeight: 700, letterSpacing: 2.4 }}>NET RESULT</div>
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 207, color: "#f4f4f5", fontSize: 76, fontWeight: 650, letterSpacing: -3 }}>{signedR(view.stats.totalR)}</div>
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 300, color: "#a1a1aa", fontSize: 18 }}>{tradeWord} · {ogPercent(view.stats.winRate)} win rate</div>
+      <div style={{ position: "absolute", left: 60, top: 354, width: 305, height: 1, background: "rgba(255,255,255,0.09)" }} />
+
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 380, color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1.8 }}>EXPECTANCY</div>
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 404, color: "#d4d4d8", fontSize: 24, fontWeight: 600 }}>{view.stats.expectancy == null ? "N/A" : signedR(view.stats.expectancy)}</div>
+      <div style={{ position: "absolute", display: "flex", left: 218, top: 380, color: "#71717a", fontSize: 12, fontWeight: 700, letterSpacing: 1.8 }}>MAX DRAWDOWN</div>
+      <div style={{ position: "absolute", display: "flex", left: 218, top: 404, color: "#d4d4d8", fontSize: 24, fontWeight: 600 }}>{signedR(view.stats.maxDrawdown)}</div>
+
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 468, color: "#71717a", fontSize: 14 }}>Journal data from {inception}</div>
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 495, color: "#52525b", fontSize: 13 }}>Closed prop-trading results, measured in R.</div>
+
+      <div style={{ position: "absolute", display: "flex", left: 410, top: 92, width: 730, height: 426, overflow: "hidden", borderRadius: 16, border: "1px solid rgba(255,255,255,0.11)", background: "#07090d" }}>
+        <div style={{ position: "absolute", display: "flex", left: 32, top: 25, color: "#d4d4d8", fontSize: 15, fontWeight: 700, letterSpacing: 1.8 }}>CUMULATIVE R</div>
+        <div style={{ position: "absolute", display: "flex", right: 31, top: 26, color: "#71717a", fontSize: 13 }}>Updated {gmtDate.format(new Date(dataset.asOf))} GMT</div>
+        <svg width="730" height="426" viewBox="0 0 730 426" style={{ position: "absolute", left: 0, top: 0 }}>
+          <defs>
+            <linearGradient id="performance-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ff6719" stopOpacity="0.32" />
+              <stop offset="1" stopColor="#ff6719" stopOpacity="0.015" />
+            </linearGradient>
+          </defs>
+          {ticks.map((tick) => (
+            <line key={tick.y} x1="32" x2="684" y1={tick.y} y2={tick.y} stroke="rgba(255,255,255,0.045)" />
+          ))}
+          {[160, 290, 420, 550].map((x) => (
+            <line key={x} x1={x} x2={x} y1="64" y2="384" stroke="rgba(255,255,255,0.04)" />
+          ))}
+          <line x1="32" x2="684" y1={plot.top + bounds.max * (plot.bottom - plot.top) / (bounds.max - bounds.min)} y2={plot.top + bounds.max * (plot.bottom - plot.top) / (bounds.max - bounds.min)} stroke="rgba(255,255,255,0.18)" strokeDasharray="6 7" />
+          {areaPath && <path d={areaPath} fill="url(#performance-area)" />}
+          {linePath && <path d={linePath} fill="none" stroke="#ff6719" strokeWidth="4" strokeLinecap="round" />}
+          {points.map((point, index) => (
+            <circle key={`${point.x}-${point.y}`} cx={point.x} cy={point.y} r={index === points.length - 1 ? 7 : 6} fill="#ff8b52" stroke="#07090d" strokeWidth="3" />
+          ))}
+        </svg>
+        {ticks.slice(0, -1).map((tick) => (
+          <div key={tick.y} style={{ position: "absolute", display: "flex", right: 13, top: tick.y - 8, color: Math.abs(tick.value) < 0.005 ? "#a1a1aa" : "#71717a", fontSize: 12 }}>{tickLabel(tick.value)}</div>
+        ))}
+        <div style={{ position: "absolute", display: "flex", left: 32, bottom: 15, color: "#52525b", fontSize: 12 }}>JOURNAL START</div>
+        <div style={{ position: "absolute", display: "flex", right: 45, bottom: 15, color: "#52525b", fontSize: 12 }}>CURRENT</div>
+      </div>
+
+      <div style={{ position: "absolute", left: 60, right: 60, top: 560, height: 1, background: "rgba(255,255,255,0.08)" }} />
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 581, color: "#d4d4d8", fontSize: 17, fontWeight: 700 }}>THOMAS JOHNSTON</div>
       <div style={{ position: "absolute", display: "flex", right: 60, top: 581, color: "#71717a", fontSize: 16 }}>mentor.thomas-johnston.com/performance</div>
     </div>
   );

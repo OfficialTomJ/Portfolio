@@ -3,22 +3,34 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
-import { buildPerformanceView, getAvailableYears, signedR, sydneyDateKey } from "@/lib/performance/metrics";
+import {
+  buildPerformanceView,
+  calendarMonthRange,
+  getAvailableYears,
+  getCalendarMonthKeys,
+  signedR,
+  sydneyDateKey,
+} from "@/lib/performance/metrics";
 import type { PerformanceDataset, PerformanceRange } from "@/lib/performance/types";
 import { track } from "@/lib/track";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
 import PerformanceCalendar from "./PerformanceCalendar";
 import PerformanceEquityChart from "./PerformanceEquityChart";
 
-const RANGES: { value: PerformanceRange; label: string }[] = [
+const ROLLING_RANGES: { value: PerformanceRange; label: string }[] = [
   { value: "30D", label: "Last 30 days" },
   { value: "60D", label: "Last 60 days" },
   { value: "90D", label: "Last 90 days" },
   { value: "6M", label: "6 months" },
+];
+
+const CALENDAR_RANGES: { value: PerformanceRange; label: string }[] = [
   { value: "YTD", label: "Year to date" },
   { value: "YEAR", label: "Calendar year" },
   { value: "CUSTOM", label: "Custom dates" },
 ];
+
+type PeriodSelection = PerformanceRange | `MONTH:${string}`;
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney",
@@ -33,6 +45,19 @@ const shortDateFormatter = new Intl.DateTimeFormat("en-AU", {
   month: "short",
   year: "numeric",
 });
+
+const monthFormatter = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "UTC",
+  month: "short",
+  year: "numeric",
+});
+
+function monthLabel(monthKey: string, currentMonthKey: string): string {
+  const formatted = monthFormatter.format(new Date(`${monthKey}-01T00:00:00Z`));
+  return monthKey === currentMonthKey
+    ? `${formatted.replace(/ \d{4}$/, "")} (current)`
+    : formatted;
+}
 
 function pct(value: number | null): string {
   return value == null ? "N/A" : `${Math.round(value)}%`;
@@ -62,20 +87,28 @@ export default function PerformanceDashboard({
 }: {
   dataset: PerformanceDataset;
 }) {
-  const [range, setRange] = useState<PerformanceRange>("30D");
-  const asOfKey = dataset.asOf.slice(0, 10);
+  const [period, setPeriod] = useState<PeriodSelection>("30D");
+  const asOfKey = sydneyDateKey(dataset.asOf);
+  const inceptionKey = sydneyDateKey(dataset.inceptionAt);
+  const monthKeys = getCalendarMonthKeys(dataset);
+  const currentMonthKey = asOfKey.slice(0, 7);
+  const selectedMonthKey = period.startsWith("MONTH:") ? period.slice(6) : null;
+  const range = selectedMonthKey ? "CUSTOM" : period as PerformanceRange;
   const years = getAvailableYears(dataset);
   const fallbackYear = Number(asOfKey.slice(0, 4));
   const [selectedYear, setSelectedYear] = useState(years[0] ?? fallbackYear);
-  const [customStart, setCustomStart] = useState(dataset.inceptionAt.slice(0, 10));
+  const [customStart, setCustomStart] = useState(inceptionKey);
   const [customEnd, setCustomEnd] = useState(asOfKey);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const year = years.includes(selectedYear) ? selectedYear : years[0] ?? fallbackYear;
-  const customStartKey = customStart || dataset.inceptionAt.slice(0, 10);
+  const customStartKey = customStart || inceptionKey;
   const customEndKey = customEnd || asOfKey;
-  const customRange = customStartKey <= customEndKey
+  const manualCustomRange = customStartKey <= customEndKey
     ? { start: customStartKey, end: customEndKey }
     : { start: customEndKey, end: customStartKey };
+  const customRange = selectedMonthKey
+    ? calendarMonthRange(selectedMonthKey, dataset.asOf)
+    : manualCustomRange;
   const view = buildPerformanceView(dataset, range, year, customRange);
   const { stats } = view;
   const visibleTrades = selectedDate
@@ -85,15 +118,15 @@ export default function PerformanceDashboard({
     ? shortDateFormatter.format(new Date(`${selectedDate}T12:00:00Z`))
     : null;
 
-  const selectRange = (nextRange: PerformanceRange) => {
-    setRange(nextRange);
+  const selectPeriod = (nextPeriod: PeriodSelection) => {
+    setPeriod(nextPeriod);
     setSelectedDate(null);
-    track("performance_period_change", { period: nextRange });
+    track("performance_period_change", { period: nextPeriod });
   };
 
   const selectDate = (date: string | null) => {
     setSelectedDate(date);
-    if (date) track("performance_calendar_day_select", { period: range });
+    if (date) track("performance_calendar_day_select", { period });
   };
 
   return (
@@ -116,11 +149,23 @@ export default function PerformanceDashboard({
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Period</span>
                 <select
                   aria-label="Performance period"
-                  value={range}
-                  onChange={(event) => selectRange(event.target.value as PerformanceRange)}
+                  value={period}
+                  onChange={(event) => selectPeriod(event.target.value as PeriodSelection)}
                   className="h-10 w-full rounded-lg border border-white/[0.1] bg-black px-3 text-sm text-zinc-200 outline-none focus:border-[#ff6719]/50"
                 >
-                  {RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  <optgroup label="Rolling periods">
+                    {ROLLING_RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </optgroup>
+                  <optgroup label="Calendar months">
+                    {monthKeys.map((monthKey) => (
+                      <option key={monthKey} value={`MONTH:${monthKey}`}>
+                        {monthLabel(monthKey, currentMonthKey)}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Calendar periods">
+                    {CALENDAR_RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </optgroup>
                 </select>
               </label>
               {range === "YEAR" && (
@@ -139,7 +184,7 @@ export default function PerformanceDashboard({
             </div>
           </div>
 
-          {range === "CUSTOM" && (
+          {period === "CUSTOM" && (
             <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/[0.07] pt-4 min-[480px]:grid-cols-2 sm:max-w-md sm:ml-auto">
               <label>
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">From</span>
@@ -198,9 +243,10 @@ export default function PerformanceDashboard({
 
       <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
         <PerformanceCalendar
-          key={`${range}-${year}-${customRange.start}-${customRange.end}`}
+          key={`${period}-${year}-${customRange.start}-${customRange.end}`}
           trades={view.trades}
           asOf={dataset.asOf}
+          focusMonth={selectedMonthKey}
           selectedDate={selectedDate}
           onSelectDate={selectDate}
         />
@@ -238,7 +284,7 @@ export default function PerformanceDashboard({
                 <Link
                   key={item.id}
                   href={`/performance/trades/${item.id}`}
-                  onClick={() => track("performance_trade_open", { direction: item.direction.toLowerCase(), period: range })}
+                  onClick={() => track("performance_trade_open", { direction: item.direction.toLowerCase(), period })}
                   className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6"
                 >
                   <div className="min-w-0">

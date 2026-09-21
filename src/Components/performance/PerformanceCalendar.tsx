@@ -19,15 +19,18 @@ function monthFromTrades(trades: PerformanceTrade[], fallback: string): Date {
 export default function PerformanceCalendar({
   trades,
   asOf,
+  focusMonth,
   selectedDate,
   onSelectDate,
 }: {
   trades: PerformanceTrade[];
   asOf: string;
+  focusMonth?: string | null;
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
 }) {
-  const latest = useMemo(() => monthFromTrades(trades, asOf), [trades, asOf]);
+  const fallback = focusMonth ? `${focusMonth}-01` : asOf;
+  const latest = useMemo(() => monthFromTrades(trades, fallback), [trades, fallback]);
   const [month, setMonth] = useState(latest);
 
   const totals = useMemo(() => {

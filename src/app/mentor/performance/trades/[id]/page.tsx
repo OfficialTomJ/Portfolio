@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
+import JournalUpdatesPrompt from "@/Components/performance/JournalUpdatesPrompt";
 import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import TradePriceChart from "@/Components/performance/TradePriceChart";
 import { getLivePerformanceTrade } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
 import { tradeOpenGraphAlt } from "@/lib/performance/og";
+import { siteOrigin } from "@/lib/site-origin";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -21,7 +23,7 @@ export async function generateMetadata({ params }: Props) {
   const description = `Review a completed ${displaySymbol} ${item.direction.toLowerCase()} from ${metadataDate.format(new Date(item.openedAt))} to ${metadataDate.format(new Date(item.closedAt))}, with its entry-to-exit price chart and recorded ${signedR(item.resultR)} result.`;
   const id = (await params).id;
   const canonical = `https://mentor.thomas-johnston.com/performance/trades/${encodeURIComponent(id)}`;
-  const image = `${imageOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og`;
+  const image = `${siteOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og`;
   const images = [{ url: image, width: 1200, height: 630, alt: tradeOpenGraphAlt(item) }];
   return {
     title,
@@ -38,25 +40,6 @@ const metadataDate = new Intl.DateTimeFormat("en-GB", {
   month: "short",
   year: "numeric",
 });
-
-function imageOrigin(): string {
-  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  if (process.env.VERCEL_ENV === "production") {
-    return "https://mentor.thomas-johnston.com";
-  }
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-  if (configured) {
-    try {
-      return new URL(configured).origin;
-    } catch {
-      // Fall through to the deployment URL.
-    }
-  }
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
 
 const fullDate = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney",
@@ -182,6 +165,10 @@ export default async function TradePage({ params }: Props) {
             </p>
           </div>
         </section>
+
+        <div className="mt-6">
+          <JournalUpdatesPrompt placement="trade_detail" />
+        </div>
       </div>
     </main>
   );

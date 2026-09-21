@@ -37,6 +37,46 @@ export function getAvailableYears(dataset: PerformanceDataset): number[] {
   );
 }
 
+export function getCalendarMonthKeys(dataset: PerformanceDataset): string[] {
+  const firstKey = sydneyDateKey(dataset.inceptionAt).slice(0, 7);
+  const lastKey = sydneyDateKey(dataset.asOf).slice(0, 7);
+  const [firstYear, firstMonth] = firstKey.split("-").map(Number);
+  const [lastYear, lastMonth] = lastKey.split("-").map(Number);
+  const months: string[] = [];
+
+  let year = firstYear;
+  let month = firstMonth;
+  while (year < lastYear || (year === lastYear && month <= lastMonth)) {
+    months.push(`${year}-${String(month).padStart(2, "0")}`);
+    month += 1;
+    if (month === 13) {
+      year += 1;
+      month = 1;
+    }
+  }
+
+  return months.reverse();
+}
+
+export function calendarMonthRange(
+  monthKey: string,
+  asOf: string | Date
+): { start: string; end: string } {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) {
+    throw new Error("Invalid calendar month");
+  }
+
+  const [year, month] = monthKey.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthEnd = `${monthKey}-${String(lastDay).padStart(2, "0")}`;
+  const asOfKey = sydneyDateKey(asOf);
+
+  return {
+    start: `${monthKey}-01`,
+    end: asOfKey.slice(0, 7) === monthKey && asOfKey < monthEnd ? asOfKey : monthEnd,
+  };
+}
+
 function periodStart(range: PerformanceRange, asOf: Date, year: number): Date {
   if (range === "30D") return new Date(asOf.getTime() - 29 * DAY);
   if (range === "60D") return new Date(asOf.getTime() - 59 * DAY);

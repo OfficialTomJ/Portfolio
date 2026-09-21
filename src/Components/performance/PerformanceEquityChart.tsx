@@ -7,6 +7,7 @@ import {
   CrosshairMode,
   createChart,
   LineStyle,
+  LineType,
   type IChartApi,
   type Time,
 } from "lightweight-charts";
@@ -39,7 +40,7 @@ export default function PerformanceEquityChart({ points }: { points: EquityPoint
       },
       timeScale: {
         borderColor: "rgba(255,255,255,0.09)",
-        rightOffset: 2,
+        rightOffset: 0.4,
         timeVisible: false,
       },
       localization: { priceFormatter: (value: number) => `${value.toFixed(1)}R` },
@@ -48,6 +49,7 @@ export default function PerformanceEquityChart({ points }: { points: EquityPoint
 
     const series = chart.addSeries(AreaSeries, {
       lineColor: "#ff6719",
+      lineType: LineType.Curved,
       topColor: "rgba(255,103,25,0.28)",
       bottomColor: "rgba(255,103,25,0.012)",
       lineWidth: 2,

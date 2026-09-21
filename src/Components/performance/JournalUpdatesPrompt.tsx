@@ -5,9 +5,16 @@ import { useEffect, useRef } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
 import { track } from "@/lib/track";
 
-export default function JournalUpdatesPrompt() {
+type JournalUpdatesPlacement = "after_results" | "trade_detail";
+
+export default function JournalUpdatesPrompt({
+  placement = "after_results",
+}: {
+  placement?: JournalUpdatesPlacement;
+}) {
   const ref = useRef<HTMLElement>(null);
   const tracked = useRef(false);
+  const titleId = `journal-updates-title-${placement}`;
 
   useEffect(() => {
     const element = ref.current;
@@ -15,28 +22,28 @@ export default function JournalUpdatesPrompt() {
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || tracked.current) return;
       tracked.current = true;
-      track("performance_cta_view", { placement: "after_results" });
+      track("performance_cta_view", { placement });
       observer.disconnect();
     }, { threshold: 0.5 });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [placement]);
 
   const trackClick = (channel: "substack" | "discord") => {
-    track("performance_cta_click", { channel, placement: "after_results" });
+    track("performance_cta_click", { channel, placement });
   };
 
   return (
     <section
       ref={ref}
-      aria-labelledby="journal-updates-title"
+      aria-labelledby={titleId}
       className="relative overflow-hidden rounded-2xl border border-[#ff6719]/20 bg-[#0a0a0b]"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(255,103,25,0.15),transparent_45%)]" />
       <div className="relative grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,.85fr)_minmax(28rem,1.15fr)] lg:items-center lg:gap-8">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff8b52]">Follow the journal</p>
-          <h2 id="journal-updates-title" className="mt-2 text-xl font-medium tracking-[-0.025em] text-white sm:text-2xl">
+          <h2 id={titleId} className="mt-2 text-xl font-medium tracking-[-0.025em] text-white sm:text-2xl">
             Follow my market work.
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">

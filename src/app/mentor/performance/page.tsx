@@ -1,11 +1,51 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import PerformanceDashboard from "@/Components/performance/PerformanceDashboard";
 import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import { getLivePerformanceDataset } from "@/lib/performance/data";
+import { buildPerformanceView, sydneyYear } from "@/lib/performance/metrics";
+import { performanceOpenGraphAlt } from "@/lib/performance/og";
+import { siteOrigin } from "@/lib/site-origin";
 
-export const metadata = {
-  title: "Performance Journal | Thomas Johnston",
-  description: "A public record of completed private leverage and prop trades, measured in R and published after positions close.",
-};
+const pageTitle = "Performance Journal | Thomas Johnston";
+const pageDescription = "A public record of completed private leverage and prop trades, measured in R and published after positions close.";
+const getPerformancePageDataset = cache(getLivePerformanceDataset);
+
+export async function generateMetadata(): Promise<Metadata> {
+  const result = await getPerformancePageDataset();
+  const canonical = "https://mentor.thomas-johnston.com/performance";
+  const view = result.dataset
+    ? buildPerformanceView(result.dataset, "YTD", sydneyYear(result.dataset.asOf))
+    : null;
+  const latestTrade = view?.trades[0];
+  const version = result.dataset && view
+    ? encodeURIComponent(`${view.stats.tradeCount}-${latestTrade?.id ?? "empty"}-${view.stats.totalR.toFixed(4)}`)
+    : "latest";
+  const image = `${siteOrigin()}/api/performance/og?v=${version}`;
+  const alt = result.dataset && view
+    ? performanceOpenGraphAlt(result.dataset, view)
+    : "Thomas Johnston Performance Journal, completed prop-trading results measured in R.";
+  const images = [{ url: image, width: 1200, height: 630, alt }];
+
+  return {
+    title: pageTitle,
+    description: pageDescription,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title: pageTitle,
+      description: pageDescription,
+      images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pageTitle,
+      description: pageDescription,
+      images,
+    },
+  };
+}
 
 const updatedFormatter = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Etc/UTC",
@@ -19,7 +59,7 @@ const updatedFormatter = new Intl.DateTimeFormat("en-AU", {
 export const dynamic = "force-dynamic";
 
 export default async function PerformancePage() {
-  const result = await getLivePerformanceDataset();
+  const result = await getPerformancePageDataset();
   const dataset = result.dataset;
   const tradeLabel = dataset
     ? `${dataset.trades.length} closed trade${dataset.trades.length === 1 ? "" : "s"}`

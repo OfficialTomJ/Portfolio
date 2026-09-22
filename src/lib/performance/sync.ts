@@ -28,6 +28,10 @@ import {
   type PerformanceSnapshotValidation,
 } from "./snapshot-archive";
 import type { PerformanceTrade, TradeDirection } from "./types";
+import {
+  PERFORMANCE_SOCIAL_IMAGE_COLLECTION,
+  type PerformanceSocialImageDocument,
+} from "./social-image-types";
 
 export const PERFORMANCE_COLLECTIONS = {
   closedPnl: "performance_private_closed_pnl",
@@ -42,6 +46,7 @@ export const PERFORMANCE_COLLECTIONS = {
   syncLocks: "performance_private_sync_locks",
   syncRuns: "performance_private_sync_runs",
   syncState: "performance_private_sync_state",
+  socialImages: PERFORMANCE_SOCIAL_IMAGE_COLLECTION,
 } as const;
 
 const SYNC_LOCK_ID = "performance-journal";
@@ -242,6 +247,10 @@ async function ensureIndexes() {
       .createIndex({ startedAt: -1 }),
     db.collection<SyncLockDocument>(PERFORMANCE_COLLECTIONS.syncLocks)
       .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection<PerformanceSocialImageDocument>(PERFORMANCE_COLLECTIONS.socialImages)
+      .createIndex({ kind: 1, subjectId: 1, createdAt: -1 }),
+    db.collection<PerformanceSocialImageDocument>(PERFORMANCE_COLLECTIONS.socialImages)
+      .createIndex({ legacyKeys: 1, createdAt: -1 }),
   ]);
 }
 
@@ -737,6 +746,24 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
         { upsert: true }
       ),
     ]);
+
+    try {
+      const { publishCurrentPerformanceSocialImages } = await import(
+        "./social-image-publisher"
+      );
+      const imageResult = await publishCurrentPerformanceSocialImages();
+      if (imageResult.failures.length) {
+        console.error(
+          "[performance/sync] journal data published, but some social images failed",
+          imageResult.failures
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[performance/sync] journal data published, but social image publication failed",
+        error
+      );
+    }
 
     return result;
   } catch (error) {

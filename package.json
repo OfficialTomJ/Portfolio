@@ -13,6 +13,7 @@
     "performance:risk:set": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-set-risk.ts",
     "performance:snapshot:verify": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-verify-snapshot.ts",
     "performance:instagram": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-instagram-card.ts",
+    "performance:images:backfill": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-backfill-social-images.ts",
     "performance:test": "tsx --test src/lib/performance/*.test.ts",
     "tjss:check": "tsx scripts/tjss-check.ts",
     "tjss:seed": "tsx scripts/seed-tjss.ts"

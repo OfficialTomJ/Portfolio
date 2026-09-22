@@ -5,6 +5,11 @@ import PerformanceUnavailable from "@/Components/performance/PerformanceUnavaila
 import { getLivePerformanceDataset } from "@/lib/performance/data";
 import { buildPerformanceView, sydneyYear } from "@/lib/performance/metrics";
 import { performanceOpenGraphAlt } from "@/lib/performance/og";
+import {
+  legacyJournalImageVersion,
+  socialImagePath,
+} from "@/lib/performance/social-image-keys";
+import { ensureJournalSocialImage } from "@/lib/performance/social-images";
 import { siteOrigin } from "@/lib/site-origin";
 
 const pageTitle = "Performance Journal | Thomas Johnston";
@@ -17,11 +22,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const view = result.dataset
     ? buildPerformanceView(result.dataset, "YTD", sydneyYear(result.dataset.asOf))
     : null;
-  const latestTrade = view?.trades[0];
-  const version = result.dataset && view
-    ? encodeURIComponent(`${view.stats.tradeCount}-${latestTrade?.id ?? "empty"}-${view.stats.totalR.toFixed(4)}`)
-    : "latest";
-  const image = `${siteOrigin()}/api/performance/og?v=${version}`;
+  let image = `${siteOrigin()}/api/performance/og?v=latest`;
+  if (result.dataset && view) {
+    const legacyVersion = encodeURIComponent(legacyJournalImageVersion(view));
+    image = `${siteOrigin()}/api/performance/og?v=${legacyVersion}`;
+    try {
+      const stored = await ensureJournalSocialImage(result.dataset, view);
+      image = `${siteOrigin()}${socialImagePath(stored.publicKey)}`;
+    } catch (error) {
+      console.error("[performance/metadata] failed to prepare journal image", error);
+    }
+  }
   const alt = result.dataset && view
     ? performanceOpenGraphAlt(result.dataset, view)
     : "Thomas Johnston Performance Journal, completed prop-trading results measured in R.";

@@ -8,6 +8,8 @@ import { getLivePerformanceTrade } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
 import { tradeOpenGraphAlt } from "@/lib/performance/og";
+import { socialImagePath } from "@/lib/performance/social-image-keys";
+import { ensureTradeSocialImage } from "@/lib/performance/social-images";
 import { siteOrigin } from "@/lib/site-origin";
 
 type Props = {
@@ -15,15 +17,21 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props) {
-  const result = await getLivePerformanceTrade((await params).id);
+  const id = (await params).id;
+  const result = await getLivePerformanceTrade(id);
   if (result.status !== "available") return { title: "Trade unavailable, The Blueprint" };
   const item = result.trade;
   const displaySymbol = item.symbol.replace("USDT", " / USDT");
   const title = `${displaySymbol} ${item.direction}: ${signedR(item.resultR)} | Performance Journal`;
   const description = `Review a completed ${displaySymbol} ${item.direction.toLowerCase()} from ${metadataDate.format(new Date(item.openedAt))} to ${metadataDate.format(new Date(item.closedAt))}, with its entry-to-exit price chart and recorded ${signedR(item.resultR)} result.`;
-  const id = (await params).id;
   const canonical = `https://mentor.thomas-johnston.com/performance/trades/${encodeURIComponent(id)}`;
-  const image = `${siteOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og`;
+  let image = `${siteOrigin()}/api/performance/trades/${encodeURIComponent(id)}/og`;
+  try {
+    const stored = await ensureTradeSocialImage(item);
+    image = `${siteOrigin()}${socialImagePath(stored.publicKey)}`;
+  } catch (error) {
+    console.error(`[performance/metadata] failed to prepare image for ${id}`, error);
+  }
   const images = [{ url: image, width: 1200, height: 630, alt: tradeOpenGraphAlt(item) }];
   return {
     title,

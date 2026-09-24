@@ -45,3 +45,24 @@ export function parseBybitCandles(payload: unknown, symbol: string): TradeCandle
   }
   return normalizeRows(body.result.list);
 }
+
+/** A chart source must contain every candle while the trade was open. */
+export function coversTradePeriod(
+  candles: TradeCandle[],
+  openedAtMs: number,
+  closedAtMs: number,
+  intervalMs: number
+): boolean {
+  if (!candles.length || openedAtMs > closedAtMs || intervalMs <= 0) return false;
+  const openedAt = Math.floor(openedAtMs / 1000);
+  const closedAt = Math.floor(closedAtMs / 1000);
+  const interval = intervalMs / 1000;
+  const active = candles.filter((candle) =>
+    candle.time <= closedAt && candle.time + interval > openedAt
+  );
+  if (!active.length || active[0].time > openedAt ||
+      active[active.length - 1].time + interval <= closedAt) return false;
+  return active.every((candle, index) =>
+    index === 0 || candle.time - active[index - 1].time === interval
+  );
+}

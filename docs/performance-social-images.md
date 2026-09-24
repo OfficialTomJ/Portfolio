@@ -12,7 +12,9 @@ The `performance_public_social_images` collection stores:
 - the public trade or journal subject;
 - aliases for the previous trade and journal image routes.
 
-There is no TTL and existing image bytes are never overwritten. A corrected trade, changed journal result or renderer update creates a new versioned document and URL. A trade image is not stored if its Binance candles are unavailable, allowing a later retry to recover instead of preserving an incomplete chart. The public image endpoint only accepts a bounded safe key and serves a verified PNG with a one-year immutable cache policy.
+There is no TTL and existing image bytes are never overwritten. A corrected trade, changed journal result or renderer update creates a new versioned document and URL. Trade charts use Binance candles when available and Bybit public linear candles otherwise; the selected source is shown on the card and stored with the image. A trade image is not stored if neither source has usable candles, allowing a later retry to recover instead of preserving an incomplete chart. The public image endpoint only accepts a bounded safe key and serves a verified PNG with a one-year immutable cache policy.
+
+The image reader supports both renderer versions 1 and 2, so older immutable URLs continue to serve their original PNGs after the new renderer is deployed.
 
 ## Environment isolation
 

@@ -4,6 +4,7 @@ import type {
   PerformanceTrade,
   PerformanceView,
   TradeCandle,
+  TradeCandleSource,
 } from "./types";
 import { signedR } from "./metrics";
 
@@ -146,9 +147,11 @@ export function tradeOpenGraphAlt(trade: PerformanceTrade): string {
 export function TradeOpenGraphCard({
   trade,
   candles,
+  source,
 }: {
   trade: PerformanceTrade;
   candles: TradeCandle[];
+  source: TradeCandleSource | null;
 }) {
   const directionColor = trade.direction === "Long" ? GREEN : RED;
   const rootStyle: CSSProperties = {
@@ -177,7 +180,9 @@ export function TradeOpenGraphCard({
       <div style={{ position: "absolute", display: "flex", left: 60, top: 503, color: "#71717a", fontSize: 17 }}>{duration(trade.openedAt, trade.closedAt)} · Closed trade</div>
 
       <TradeChart trade={trade} candles={candles} />
-      <div style={{ position: "absolute", display: "flex", left: 446, top: 514, color: "#71717a", fontSize: 13, letterSpacing: 1.1 }}>BINANCE 1H</div>
+      <div style={{ position: "absolute", display: "flex", left: 446, top: 514, color: "#71717a", fontSize: 13, letterSpacing: 1.1 }}>
+        {source ? `${source.toUpperCase()} 1H` : "MARKET DATA UNAVAILABLE"}
+      </div>
       <div style={{ position: "absolute", left: 60, right: 60, top: 560, height: 1, background: "rgba(255,255,255,0.08)" }} />
       <div style={{ position: "absolute", display: "flex", left: 60, top: 581, color: "#d4d4d8", fontSize: 17, fontWeight: 600 }}>THOMAS JOHNSTON</div>
       <div style={{ position: "absolute", display: "flex", right: 60, top: 581, color: "#71717a", fontSize: 16 }}>mentor.thomas-johnston.com/performance</div>

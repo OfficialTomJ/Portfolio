@@ -24,19 +24,25 @@ async function main() {
   if (result.status === "unavailable") throw new Error("The performance database is unavailable");
   if (result.status === "not-found") throw new Error(`Closed trade not found: ${tradeId}`);
 
-  const candles = await getHistoricalCandles(result.trade, "1h", 12);
-  if (!candles.length) throw new Error("Binance did not return candles for this trade");
+  const market = await getHistoricalCandles(result.trade, "1h", 12);
+  if (!market) throw new Error("Neither market source returned candles for this trade");
 
   const requestedOutput = argument("--out");
   const outputPath = resolve(
     requestedOutput ?? `output/social/${card.defaultInstagramCardFilename(result.trade)}`
   );
-  await card.renderInstagramTradeCard({ trade: result.trade, candles, outputPath });
+  await card.renderInstagramTradeCard({
+    trade: result.trade,
+    candles: market.candles,
+    source: market.source,
+    outputPath,
+  });
 
   console.log(JSON.stringify({
     ok: true,
     tradeId: result.trade.id,
     symbol: result.trade.symbol,
+    source: market.source,
     dimensions: "1080x1350",
     outputPath,
   }, null, 2));

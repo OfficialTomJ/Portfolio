@@ -100,7 +100,7 @@ export default async function TradePage({ params }: Props) {
     );
   }
   const trade = result.trade;
-  const candles = await getHistoricalCandles(trade, "4h", 24);
+  const market = await getHistoricalCandles(trade, "4h", 24);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-24">
@@ -139,11 +139,19 @@ export default async function TradePage({ params }: Props) {
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Price action</p>
               <h2 className="mt-1 text-lg font-medium">{trade.direction} entry to exit</h2>
             </div>
-            <p className="text-xs text-zinc-600">Public asset prices · drag or scroll to explore history</p>
+            <p className="text-xs text-zinc-600">
+              {market ? `${market.source === "bybit" ? "Bybit" : "Binance"} prices · ` : ""}
+              Drag or scroll to explore history
+            </p>
           </div>
           <div className="p-2 sm:p-4">
-            {candles.length ? (
-              <TradePriceChart trade={trade} candles={candles} initialInterval="4h" />
+            {market ? (
+              <TradePriceChart
+                trade={trade}
+                candles={market.candles}
+                source={market.source}
+                initialInterval="4h"
+              />
             ) : (
               <div className="grid h-[360px] place-items-center text-sm text-zinc-600 sm:h-[500px]">
                 Market chart unavailable

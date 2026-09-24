@@ -79,3 +79,9 @@ export interface TradeCandle {
 }
 
 export type TradeCandleInterval = "1h" | "4h" | "1d";
+export type TradeCandleSource = "binance" | "bybit";
+
+export interface MarketCandles {
+  candles: TradeCandle[];
+  source: TradeCandleSource;
+}

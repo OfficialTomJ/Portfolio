@@ -23,7 +23,12 @@ import {
   type PerformanceSocialImageKind,
   type PerformanceSocialImageReference,
 } from "./social-image-types";
-import type { PerformanceDataset, PerformanceTrade, PerformanceView } from "./types";
+import type {
+  PerformanceDataset,
+  PerformanceTrade,
+  PerformanceView,
+  TradeCandleSource,
+} from "./types";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -105,6 +110,7 @@ async function persistImage(input: {
   kind: PerformanceSocialImageKind;
   subjectId: string;
   payload: Buffer;
+  marketSource?: TradeCandleSource;
   legacyKeys?: string[];
 }): Promise<PerformanceSocialImageReference> {
   validatePng(input.payload);
@@ -114,6 +120,7 @@ async function persistImage(input: {
     rendererVersion: PERFORMANCE_SOCIAL_IMAGE_RENDERER_VERSION,
     kind: input.kind,
     subjectId: input.subjectId,
+    ...(input.marketSource ? { marketSource: input.marketSource } : {}),
     contentType: "image/png",
     width: 1200,
     height: 630,
@@ -138,10 +145,14 @@ async function persistImage(input: {
 export function assertStoredImageIntegrity(document: PerformanceSocialImageDocument): Buffer {
   if (
     document.schemaVersion !== PERFORMANCE_SOCIAL_IMAGE_SCHEMA_VERSION ||
-    document.rendererVersion !== PERFORMANCE_SOCIAL_IMAGE_RENDERER_VERSION ||
+    !Number.isInteger(document.rendererVersion) ||
+    document.rendererVersion < 1 ||
+    document.rendererVersion > PERFORMANCE_SOCIAL_IMAGE_RENDERER_VERSION ||
     document.contentType !== "image/png" ||
     document.width !== 1200 ||
-    document.height !== 630
+    document.height !== 630 ||
+    (document.kind === "trade" && document.rendererVersion >= 2 &&
+      document.marketSource !== "binance" && document.marketSource !== "bybit")
   ) {
     throw new Error(`Stored performance image ${document._id} has invalid metadata`);
   }
@@ -164,16 +175,19 @@ export async function ensureTradeSocialImage(
   const existing = await findReference(publicKey, legacyKeys);
   if (existing) return existing;
 
-  const candles = await getHistoricalCandles(trade, "1h");
-  if (!candles.length) {
+  const market = await getHistoricalCandles(trade, "1h");
+  if (!market) {
     throw new Error(`Market candles unavailable for ${trade.id}; image was not persisted`);
   }
-  const payload = await renderPng(<TradeOpenGraphCard trade={trade} candles={candles} />);
+  const payload = await renderPng(
+    <TradeOpenGraphCard trade={trade} candles={market.candles} source={market.source} />
+  );
   return persistImage({
     publicKey,
     kind: "trade",
     subjectId: trade.id,
     payload,
+    marketSource: market.source,
     legacyKeys,
   });
 }

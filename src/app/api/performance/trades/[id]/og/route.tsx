@@ -42,12 +42,19 @@ export async function GET(_request: Request, { params }: Context) {
     console.error(`[performance/trade-og] failed to persist image for ${id}`, error);
   }
 
-  const candles = await getHistoricalCandles(trade, "1h");
-  return new ImageResponse(<TradeOpenGraphCard trade={trade} candles={candles} />, {
-    width: 1200,
-    height: 630,
-    headers: {
-      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
-    },
-  });
+  const market = await getHistoricalCandles(trade, "1h");
+  return new ImageResponse(
+    <TradeOpenGraphCard
+      trade={trade}
+      candles={market?.candles ?? []}
+      source={market?.source ?? null}
+    />,
+    {
+      width: 1200,
+      height: 630,
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    }
+  );
 }

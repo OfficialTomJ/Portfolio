@@ -15,7 +15,13 @@ import {
   type WhitespaceData,
 } from "lightweight-charts";
 import { signedR } from "@/lib/performance/metrics";
-import type { PerformanceTrade, TradeCandle, TradeCandleInterval } from "@/lib/performance/types";
+import type {
+  MarketCandles,
+  PerformanceTrade,
+  TradeCandle,
+  TradeCandleInterval,
+  TradeCandleSource,
+} from "@/lib/performance/types";
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -73,6 +79,7 @@ function withRightPadding(
 async function fetchMoreCandles(
   symbol: string,
   interval: TradeCandleInterval,
+  source: TradeCandleSource,
   direction: "before" | "after",
   boundary: number,
   signal: AbortSignal
@@ -80,41 +87,48 @@ async function fetchMoreCandles(
   const query = new URLSearchParams({
     symbol,
     interval,
+    source,
     direction,
     time: String(boundary),
   });
   const response = await fetch(`/api/performance/market?${query}`, { signal });
   if (!response.ok) throw new Error(`Market history returned ${response.status}`);
-  const payload = (await response.json()) as { candles?: TradeCandle[] };
+  const payload = (await response.json()) as Partial<MarketCandles>;
+  if (payload.source !== source) throw new Error("Market source changed during chart history");
   return Array.isArray(payload.candles) ? payload.candles : [];
 }
 
 async function fetchCandleWindow(
   trade: PerformanceTrade,
   interval: TradeCandleInterval,
+  source: TradeCandleSource,
   signal: AbortSignal
 ): Promise<TradeCandle[]> {
   const intervalSeconds = INTERVAL_SECONDS[interval];
   const query = new URLSearchParams({
     symbol: trade.symbol,
     interval,
+    source,
     direction: "window",
     start: String(Math.floor(Date.parse(trade.openedAt) / 1000) - DATA_BUFFER_BARS * intervalSeconds),
     end: String(Math.ceil(Date.parse(trade.closedAt) / 1000) + DATA_BUFFER_BARS * intervalSeconds),
   });
   const response = await fetch(`/api/performance/market?${query}`, { signal });
   if (!response.ok) throw new Error(`Market window returned ${response.status}`);
-  const payload = (await response.json()) as { candles?: TradeCandle[] };
+  const payload = (await response.json()) as Partial<MarketCandles>;
+  if (payload.source !== source) throw new Error("Market source changed during timeframe switch");
   return Array.isArray(payload.candles) ? payload.candles : [];
 }
 
 export default function TradePriceChart({
   trade,
   candles,
+  source,
   initialInterval = "4h",
 }: {
   trade: PerformanceTrade;
   candles: TradeCandle[];
+  source: TradeCandleSource;
   initialInterval?: TradeCandleInterval;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -140,7 +154,7 @@ export default function TradePriceChart({
     intervalRequestRef.current = controller;
     setLoadingInterval(nextInterval);
     try {
-      const incoming = await fetchCandleWindow(trade, nextInterval, controller.signal);
+      const incoming = await fetchCandleWindow(trade, nextInterval, source, controller.signal);
       if (!incoming.length) throw new Error("No candles returned for this timeframe");
       setChartCandles(incoming);
       setInterval(nextInterval);
@@ -324,7 +338,14 @@ export default function TradePriceChart({
       controllers.add(controller);
       try {
         const previousVisibleRange = chart.timeScale().getVisibleRange();
-        const incoming = await fetchMoreCandles(trade.symbol, interval, direction, boundary, controller.signal);
+        const incoming = await fetchMoreCandles(
+          trade.symbol,
+          interval,
+          source,
+          direction,
+          boundary,
+          controller.signal
+        );
         if (disposed) return;
         const byTime = new Map(allCandles.map((item) => [item.time, item]));
         for (const item of incoming) byTime.set(item.time, item);
@@ -374,7 +395,7 @@ export default function TradePriceChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [trade, chartCandles, interval, directionColor, result, resultColor]);
+  }, [trade, chartCandles, interval, source, directionColor, result, resultColor]);
 
   return (
     <div>

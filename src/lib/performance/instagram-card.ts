@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { signedR, sydneyDateKey } from "./metrics";
-import type { PerformanceTrade, TradeCandle } from "./types";
+import type { PerformanceTrade, TradeCandle, TradeCandleSource } from "./types";
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
@@ -153,15 +153,21 @@ function buildCardSvg(trade: PerformanceTrade, sourceCandles: TradeCandle[]): st
 export async function renderInstagramTradeCard({
   trade,
   candles,
+  source,
   outputPath,
 }: {
   trade: PerformanceTrade;
   candles: TradeCandle[];
+  source: TradeCandleSource;
   outputPath: string;
 }): Promise<void> {
   if (!candles.length) throw new Error("Cannot render an Instagram card without market candles");
   await mkdir(dirname(outputPath), { recursive: true });
-  await sharp(Buffer.from(buildCardSvg(trade, candles)))
+  const svg = buildCardSvg(trade, candles).replace(
+    ">BINANCE 1H<",
+    `>${source.toUpperCase()} 1H<`
+  );
+  await sharp(Buffer.from(svg))
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(outputPath);
 }

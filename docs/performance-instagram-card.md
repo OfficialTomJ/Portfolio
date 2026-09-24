@@ -23,7 +23,7 @@ npm run performance:instagram -- \
 ## Data and layout
 
 - The trade facts come from the published closed-trades collection in MongoDB.
-- The chart uses Binance 1-hour candles with context before entry and after exit.
+- The chart uses Binance 1-hour candles when available, otherwise Bybit public linear 1-hour candles, with context before entry and after exit. The image labels the selected source.
 - Results are presented only in R; the image contains no position size or dollar PnL.
 - LONG and SHORT cards automatically use the journal's green and red direction colors.
 - The right-side price scale is calculated from the exact candle window used for the trade.

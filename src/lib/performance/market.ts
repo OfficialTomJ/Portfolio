@@ -6,7 +6,7 @@ import type {
   TradeCandleInterval,
   TradeCandleSource,
 } from "./types";
-import { parseBinanceCandles, parseBybitCandles } from "./market-response";
+import { coversTradePeriod, parseBinanceCandles, parseBybitCandles } from "./market-response";
 
 const BINANCE_HOSTS = ["https://api.binance.com", "https://data-api.binance.vision"];
 const BYBIT_HOST = "https://api.bybit.com";
@@ -30,6 +30,7 @@ export interface HistoricalCandleQuery {
   startTime?: number;
   endTime?: number;
   source?: TradeCandleSource;
+  requiredTradePeriod?: { openedAtMs: number; closedAtMs: number };
 }
 
 function limit(value: number | undefined, maximum: number): number {
@@ -98,6 +99,13 @@ export async function getBybitCandles({
 }
 
 export async function getMarketCandles(query: HistoricalCandleQuery): Promise<MarketCandles> {
+  const coversRequiredPeriod = (candles: TradeCandle[]) =>
+    !query.requiredTradePeriod || coversTradePeriod(
+      candles,
+      query.requiredTradePeriod.openedAtMs,
+      query.requiredTradePeriod.closedAtMs,
+      CANDLE_INTERVAL_MS[query.interval ?? "1h"]
+    );
   if (query.source === "binance") {
     return { candles: await getBinanceCandles(query), source: "binance" };
   }
@@ -108,11 +116,13 @@ export async function getMarketCandles(query: HistoricalCandleQuery): Promise<Ma
   try {
     const candles = await getBinanceCandles(query);
     if (!candles.length) throw new Error("Binance returned no candles");
+    if (!coversRequiredPeriod(candles)) throw new Error("Binance did not cover the trade period");
     return { candles, source: "binance" };
   } catch (binanceError) {
     try {
       const candles = await getBybitCandles(query);
       if (!candles.length) throw new Error("Bybit returned no candles");
+      if (!coversRequiredPeriod(candles)) throw new Error("Bybit did not cover the trade period");
       return { candles, source: "bybit" };
     } catch (bybitError) {
       throw new AggregateError(
@@ -139,6 +149,10 @@ export async function getHistoricalCandles(
       limit: Math.min(500, Math.max(200, tradeBars + bufferBars * 2 + 1)),
       startTime: Date.parse(trade.openedAt) - padding,
       endTime: Date.parse(trade.closedAt) + padding,
+      requiredTradePeriod: {
+        openedAtMs: Date.parse(trade.openedAt),
+        closedAtMs: Date.parse(trade.closedAt),
+      },
     });
   } catch (error) {
     console.error("[performance/market]", trade.id, error);

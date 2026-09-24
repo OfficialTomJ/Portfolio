@@ -3,7 +3,7 @@ import type { TradeCandleSource } from "./types";
 
 export const PERFORMANCE_SOCIAL_IMAGE_COLLECTION = "performance_public_social_images";
 export const PERFORMANCE_SOCIAL_IMAGE_SCHEMA_VERSION = 1;
-export const PERFORMANCE_SOCIAL_IMAGE_RENDERER_VERSION = 2;
+export const PERFORMANCE_SOCIAL_IMAGE_RENDERER_VERSION = 3;
 
 export type PerformanceSocialImageKind = "trade" | "journal";
 

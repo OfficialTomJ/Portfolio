@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseBinanceCandles, parseBybitCandles } from "./market-response";
+import { coversTradePeriod, parseBinanceCandles, parseBybitCandles } from "./market-response";
 
 test("Bybit linear candles are validated and sorted oldest first", () => {
   const candles = parseBybitCandles({
@@ -41,4 +41,16 @@ test("Bybit rejects the wrong market and malformed candles", () => {
     ...response,
     result: { ...response.result, list: [["1790244000000", "90.46", "0", "89.77", "90.04"]] },
   }, "HYPEUSDT"), /Invalid market candle values/);
+});
+
+test("a source must cover the entry, exit, and intervening trade candles", () => {
+  const candle = (time: number) => ({ time, open: 90, high: 91, low: 89, close: 90 });
+  const hour = 3_600;
+  const openedAt = (100 * hour + 900) * 1000;
+  const closedAt = (102 * hour + 900) * 1000;
+
+  assert.equal(coversTradePeriod([candle(100 * hour), candle(101 * hour), candle(102 * hour)], openedAt, closedAt, hour * 1000), true);
+  assert.equal(coversTradePeriod([candle(103 * hour)], openedAt, closedAt, hour * 1000), false);
+  assert.equal(coversTradePeriod([candle(100 * hour), candle(102 * hour)], openedAt, closedAt, hour * 1000), false);
+  assert.equal(coversTradePeriod([candle(100 * hour), candle(101 * hour)], openedAt, closedAt, hour * 1000), false);
 });

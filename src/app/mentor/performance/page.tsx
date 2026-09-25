@@ -110,7 +110,7 @@ export default async function PerformancePage() {
           <div>
             <h2 className="text-sm font-medium text-zinc-300">About this record</h2>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-zinc-600 sm:text-sm sm:leading-6">
-              This journal records completed leverage and prop strategy trades, not every account order. Active positions, signals, strategy rules, position sizing and dollar returns are not shown.
+              This journal records completed leverage and prop strategy trades. Active positions, signals, strategy rules, position sizing and dollar returns are not shown.
             </p>
           </div>
           <p className="mt-3 max-w-md text-xs leading-5 text-zinc-600 sm:mt-0 sm:text-right">

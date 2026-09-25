@@ -2,6 +2,7 @@ import "server-only";
 
 import { getDb } from "@/lib/mongodb";
 import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync";
+import { excludedTradeIds } from "./publication";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
 import type {
   PerformanceDatasetLoadResult,
@@ -13,6 +14,10 @@ interface SyncStateView {
   _id: string;
   firstSyncAt: Date;
   lastSuccessAt: Date;
+}
+
+interface ExcludedCycleView {
+  _id: string;
 }
 
 const PUBLIC_TRADE_PROJECTION = {
@@ -56,12 +61,15 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
   try {
     const db = getDb();
     const environment = process.env.BYBIT_ENV ?? "demo";
-    const [documents, state] = await Promise.all([
+    const [documents, state, excludedCycles] = await Promise.all([
       db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
         .find({}, { projection: PUBLIC_TRADE_PROJECTION })
         .sort({ closedAt: -1 })
         .toArray(),
       db.collection<SyncStateView>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: environment }),
+      db.collection<ExcludedCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
+        .find({ excludedFromJournal: true }, { projection: { _id: 1 } })
+        .toArray(),
     ]);
     if (!state?.lastSuccessAt || !state.firstSyncAt) {
       console.error(`[performance/data] no successful sync state for ${environment}`);
@@ -70,7 +78,11 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
     const asOf = state.lastSuccessAt;
     const inceptionAt = state.firstSyncAt;
 
-    const trades = documents.map(toPublicTrade).filter(isPerformanceTrade);
+    const excludedIds = excludedTradeIds(excludedCycles);
+    const trades = documents
+      .filter((document) => !excludedIds.has(document._id))
+      .map(toPublicTrade)
+      .filter(isPerformanceTrade);
 
     return {
       status: "available",
@@ -94,10 +106,17 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
 
 export async function getLivePerformanceTrade(id: string): Promise<PerformanceTradeLoadResult> {
   try {
-    const document = await getDb()
-      .collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
-      .findOne({ _id: id }, { projection: PUBLIC_TRADE_PROJECTION });
-    const trade = document ? toPublicTrade(document) : null;
+    const db = getDb();
+    const [document, excludedCycles] = await Promise.all([
+      db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
+        .findOne({ _id: id }, { projection: PUBLIC_TRADE_PROJECTION }),
+      db.collection<ExcludedCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
+        .find({ excludedFromJournal: true }, { projection: { _id: 1 } })
+        .toArray(),
+    ]);
+    const trade = document && !excludedTradeIds(excludedCycles).has(id)
+      ? toPublicTrade(document)
+      : null;
     return trade
       ? { status: "available", trade }
       : { status: "not-found", trade: null };

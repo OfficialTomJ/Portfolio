@@ -12,6 +12,7 @@ import {
   type BybitPosition,
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
+import { publicTradeIdForCycle } from "./publication";
 import {
   lockPerformanceRisk,
   type PerformanceRiskVersion,
@@ -52,7 +53,7 @@ export const PERFORMANCE_COLLECTIONS = {
 const SYNC_LOCK_ID = "performance-journal";
 const SYNC_LOCK_TTL_MS = 10 * 60 * 1000;
 
-type CycleStatus = "open" | "awaiting_close" | "unresolved" | "published";
+type CycleStatus = "open" | "awaiting_close" | "unresolved" | "published" | "excluded";
 
 interface PositionCycleDocument {
   _id: string;
@@ -73,6 +74,9 @@ interface PositionCycleDocument {
   riskAmount?: number;
   riskCurrency?: "USDT";
   status: CycleStatus;
+  excludedFromJournal?: boolean;
+  excludedAt?: Date;
+  exclusionReason?: "user_request";
   resolutionIssue?: string;
   closedAt?: Date;
   publishedTradeId?: string;
@@ -200,10 +204,6 @@ function cycleId(
   openedAt: Date
 ): string {
   return [sourceAccountId, environment, "linear", position.symbol, position.positionIdx, openedAt.getTime()].join(":");
-}
-
-function publicTradeId(sourceCycleId: string): string {
-  return `trade-${createHash("sha256").update(sourceCycleId).digest("hex").slice(0, 20)}`;
 }
 
 function privateId(environment: string, externalId: string): string {
@@ -481,7 +481,7 @@ async function capturePositionCycles(
           entryPrice: numberValue(position.avgPrice),
           quantity: numberValue(position.size),
           leverage: numberValue(position.leverage) || null,
-          status: "open",
+          status: existing?.excludedFromJournal ? "excluded" : "open",
           ...(lockedRisk ?? {}),
           ...(existing?.initialStopPrice || stop <= 0
             ? {}
@@ -537,7 +537,7 @@ async function publishClosedCycles(
     .find({
       environment,
       sourceAccountId,
-      status: { $in: ["open", "awaiting_close", "unresolved", "published"] },
+      status: { $in: ["open", "awaiting_close", "unresolved", "published", "excluded"] },
     })
     .sort({ openedAt: -1 })
     .toArray();
@@ -554,6 +554,18 @@ async function publishClosedCycles(
       .find({ environment, sourceAccountId, cycleId: cycle._id, execType: "Trade" })
       .sort({ updatedTime: 1 })
       .toArray();
+    if (cycle.excludedFromJournal) {
+      await cycles.updateOne(
+        { _id: cycle._id },
+        { $set: {
+          status: "excluded",
+          ...(records.length
+            ? { closedAt: dateValue(records[records.length - 1].updatedTime, capturedAt) }
+            : {}),
+        } }
+      );
+      continue;
+    }
     if (!records.length) {
       await cycles.updateOne(
         { _id: cycle._id },
@@ -562,7 +574,7 @@ async function publishClosedCycles(
       continue;
     }
 
-    const id = publicTradeId(cycle._id);
+    const id = publicTradeIdForCycle(cycle._id);
     const normalized = normalizeClosedCycle(
       {
         id,

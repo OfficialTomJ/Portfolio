@@ -73,6 +73,7 @@ export interface BybitOrder {
   orderStatus: string;
   orderType: string;
   stopOrderType: string;
+  tpslMode?: string;
   triggerPrice: string;
   takeProfit: string;
   stopLoss: string;
@@ -114,6 +115,7 @@ export interface BybitSnapshot {
   positions: BybitPosition[];
   executions: BybitExecution[];
   orders: BybitOrder[];
+  openOrders: BybitOrder[];
   closedPnl: BybitClosedPnl[];
 }
 
@@ -213,7 +215,7 @@ export async function fetchBybitAccountIdentity(): Promise<BybitAccountIdentity>
 }
 
 export async function fetchBybitSnapshot(): Promise<BybitSnapshot> {
-  const [apiKeyResponse, positions, executions, orders, closedPnl] = await Promise.all([
+  const [apiKeyResponse, positions, executions, orders, openOrders, closedPnl] = await Promise.all([
     fetchBybitAccountIdentity(),
     bybitList<BybitPosition>("/v5/position/list", {
       category: "linear",
@@ -226,6 +228,12 @@ export async function fetchBybitSnapshot(): Promise<BybitSnapshot> {
     }),
     bybitList<BybitOrder>("/v5/order/history", {
       category: "linear",
+      limit: 50,
+    }),
+    bybitList<BybitOrder>("/v5/order/realtime", {
+      category: "linear",
+      settleCoin: "USDT",
+      openOnly: 0,
       limit: 50,
     }),
     bybitList<BybitClosedPnl>("/v5/position/closed-pnl", {
@@ -241,6 +249,7 @@ export async function fetchBybitSnapshot(): Promise<BybitSnapshot> {
     positions: positions.filter((item) => Number(item.size) > 0 && item.side),
     executions,
     orders,
+    openOrders,
     closedPnl,
   };
 }

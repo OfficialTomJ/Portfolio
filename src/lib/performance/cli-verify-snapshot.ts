@@ -49,10 +49,11 @@ async function main() {
     environment: manifest.environment,
     capturedAt: manifest.capturedAt.toISOString(),
     validation: manifest.validation.status,
-    sections: archive.PERFORMANCE_SNAPSHOT_SECTIONS.length,
+    sections: Object.keys(manifest.sections).length,
     positions: snapshot.positions.length,
     executions: snapshot.executions.length,
     orders: snapshot.orders.length,
+    openOrders: snapshot.openOrders.length,
     closedPnl: snapshot.closedPnl.length,
   }, null, 2));
   process.exit(0);

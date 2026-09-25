@@ -68,11 +68,12 @@ function snapshot(): BybitSnapshot {
       },
     ],
     orders: [],
+    openOrders: [],
     closedPnl: [],
   };
 }
 
-test("creates five section blobs and a lightweight reconstruction manifest", () => {
+test("creates six section blobs and a lightweight reconstruction manifest", () => {
   const original = snapshot();
   const archive = buildPerformanceSnapshotArchive(
     "run-1",
@@ -87,7 +88,7 @@ test("creates five section blobs and a lightweight reconstruction manifest", () 
     PERFORMANCE_SNAPSHOT_MANIFEST_SCHEMA_VERSION
   );
   assert.equal(archive.manifest.capturedAt.toISOString(), "2026-09-20T00:00:00.000Z");
-  assert.equal(archive.blobs.length, 5);
+  assert.equal(archive.blobs.length, 6);
   assert.ok(archive.blobs.every(
     (blob) => blob.schemaVersion === PERFORMANCE_SNAPSHOT_BLOB_SCHEMA_VERSION
   ));
@@ -144,9 +145,9 @@ test("persists one manifest per run while reusing unchanged blobs", async () => 
     second
   );
 
-  assert.deepEqual(firstResult, { blobsCreated: 5, blobsReused: 0 });
-  assert.deepEqual(secondResult, { blobsCreated: 0, blobsReused: 5 });
-  assert.equal(blobs.documents.size, 5);
+  assert.deepEqual(firstResult, { blobsCreated: 6, blobsReused: 0 });
+  assert.deepEqual(secondResult, { blobsCreated: 0, blobsReused: 6 });
+  assert.equal(blobs.documents.size, 6);
   assert.equal(manifests.documents.size, 2);
 });
 
@@ -204,16 +205,67 @@ test("changes only the blob for a section whose payload changed", () => {
     { status: "accepted" }
   );
 
-  for (const section of ["apiKey", "positions", "orders", "closedPnl"] as const) {
+  for (const section of ["apiKey", "positions", "orders", "openOrders", "closedPnl"] as const) {
+    const firstReference = first.manifest.sections[section];
+    const secondReference = second.manifest.sections[section];
+    assert.ok(firstReference && secondReference);
     assert.equal(
-      first.manifest.sections[section].blobId,
-      second.manifest.sections[section].blobId
+      firstReference.blobId,
+      secondReference.blobId
     );
   }
   assert.notEqual(
     first.manifest.sections.executions.blobId,
     second.manifest.sections.executions.blobId
   );
+});
+
+test("live order changes get their own deduplicated archive section", () => {
+  const first = buildPerformanceSnapshotArchive(
+    "run-1", snapshot(), new Date(0), { status: "accepted" }
+  );
+  const changed = snapshot();
+  changed.openOrders = [{
+    orderId: "stop-1",
+    orderLinkId: "",
+    symbol: "ETHUSDT",
+    side: "Buy",
+    positionIdx: 0,
+    orderStatus: "Untriggered",
+    orderType: "Market",
+    stopOrderType: "StopLoss",
+    tpslMode: "Partial",
+    triggerPrice: "2500",
+    takeProfit: "",
+    stopLoss: "2500",
+    reduceOnly: true,
+    closeOnTrigger: true,
+    qty: "1",
+    cumExecQty: "0",
+    avgPrice: "",
+    createdTime: String(Date.parse("2026-09-20T00:00:00.000Z")),
+    updatedTime: String(Date.parse("2026-09-20T00:00:00.000Z")),
+  }];
+  const second = buildPerformanceSnapshotArchive(
+    "run-2", changed, new Date(1), { status: "accepted" }
+  );
+  assert.notEqual(
+    first.manifest.sections.openOrders?.blobId,
+    second.manifest.sections.openOrders?.blobId
+  );
+  assert.equal(first.manifest.sections.executions.blobId, second.manifest.sections.executions.blobId);
+  assert.deepEqual(reconstructPerformanceSnapshot(second.manifest, second.blobs), changed);
+});
+
+test("schema 2 archives still reconstruct with no observed live orders", () => {
+  const current = buildPerformanceSnapshotArchive(
+    "old-run", snapshot(), new Date(0), { status: "accepted" }
+  );
+  const manifest = structuredClone(current.manifest);
+  manifest.schemaVersion = 2;
+  delete manifest.sections.openOrders;
+  const blobs = current.blobs.filter((blob) => blob.section !== "openOrders");
+  assert.deepEqual(reconstructPerformanceSnapshot(manifest, blobs), snapshot());
 });
 
 test("records rejected snapshots without dropping their payload", () => {

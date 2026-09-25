@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import type { Collection } from "mongodb";
 import type { BybitSnapshot } from "./bybit";
 
-export const PERFORMANCE_SNAPSHOT_MANIFEST_SCHEMA_VERSION = 2;
+export const PERFORMANCE_SNAPSHOT_MANIFEST_SCHEMA_VERSION = 3;
 export const PERFORMANCE_SNAPSHOT_BLOB_SCHEMA_VERSION = 1;
 
 export const PERFORMANCE_SNAPSHOT_SECTIONS = [
@@ -11,9 +11,14 @@ export const PERFORMANCE_SNAPSHOT_SECTIONS = [
   "executions",
   "orders",
   "closedPnl",
+  "openOrders",
 ] as const;
 
 export type PerformanceSnapshotSection = typeof PERFORMANCE_SNAPSHOT_SECTIONS[number];
+type LegacySnapshotSection = Exclude<PerformanceSnapshotSection, "openOrders">;
+const LEGACY_SNAPSHOT_SECTIONS = PERFORMANCE_SNAPSHOT_SECTIONS.filter(
+  (section): section is LegacySnapshotSection => section !== "openOrders"
+);
 export type PerformanceSnapshotValidation =
   | { status: "accepted" }
   | { status: "rejected"; error: string };
@@ -40,14 +45,15 @@ export interface PerformanceSnapshotSectionReference {
 
 export interface PerformanceSnapshotManifestDocument {
   _id: string;
-  schemaVersion: typeof PERFORMANCE_SNAPSHOT_MANIFEST_SCHEMA_VERSION;
+  schemaVersion: 2 | typeof PERFORMANCE_SNAPSHOT_MANIFEST_SCHEMA_VERSION;
   source: "bybit-v5";
   environment: BybitSnapshot["environment"];
   serverTime: number;
   capturedAt: Date;
   receivedAt: Date;
   validation: PerformanceSnapshotValidation;
-  sections: Record<PerformanceSnapshotSection, PerformanceSnapshotSectionReference>;
+  sections: Record<LegacySnapshotSection, PerformanceSnapshotSectionReference> &
+    Partial<Record<"openOrders", PerformanceSnapshotSectionReference>>;
 }
 
 export interface PerformanceSnapshotArchive {
@@ -122,7 +128,7 @@ export function buildPerformanceSnapshotArchive(
   );
   const sections = Object.fromEntries(
     blobs.map((blob) => [blob.section, sectionReference(blob)])
-  ) as Record<PerformanceSnapshotSection, PerformanceSnapshotSectionReference>;
+  ) as PerformanceSnapshotManifestDocument["sections"];
   const serverTime = Number(snapshot.serverTime);
 
   return {
@@ -187,6 +193,7 @@ export async function persistPerformanceSnapshotArchive(
 
   for (const section of PERFORMANCE_SNAPSHOT_SECTIONS) {
     const reference = archive.manifest.sections[section];
+    if (!reference) throw new Error(`Archived ${section} snapshot reference is missing`);
     const stored = storedById.get(reference.blobId);
     if (!stored) throw new Error(`Archived ${section} snapshot blob is missing`);
     assertBlobIntegrity(stored, reference, section);
@@ -206,10 +213,14 @@ export function reconstructPerformanceSnapshot(
   blobs: PerformanceSnapshotBlobDocument[]
 ): BybitSnapshot {
   const blobsById = new Map(blobs.map((blob) => [blob._id, blob]));
-  const payloads = {} as Record<PerformanceSnapshotSection, SnapshotSectionPayload>;
+  const payloads = {} as Partial<Record<PerformanceSnapshotSection, SnapshotSectionPayload>>;
+  const sections = manifest.schemaVersion === 2
+    ? LEGACY_SNAPSHOT_SECTIONS
+    : PERFORMANCE_SNAPSHOT_SECTIONS;
 
-  for (const section of PERFORMANCE_SNAPSHOT_SECTIONS) {
+  for (const section of sections) {
     const reference = manifest.sections[section];
+    if (!reference) throw new Error(`Archived ${section} snapshot reference is missing`);
     const blob = blobsById.get(reference.blobId);
     if (!blob) throw new Error(`Archived ${section} snapshot blob is missing`);
     assertBlobIntegrity(blob, reference, section);
@@ -223,6 +234,7 @@ export function reconstructPerformanceSnapshot(
     positions: payloads.positions as BybitSnapshot["positions"],
     executions: payloads.executions as BybitSnapshot["executions"],
     orders: payloads.orders as BybitSnapshot["orders"],
+    openOrders: (payloads.openOrders ?? []) as BybitSnapshot["openOrders"],
     closedPnl: payloads.closedPnl as BybitSnapshot["closedPnl"],
   };
 }
@@ -235,9 +247,14 @@ export async function loadPerformanceSnapshotArchive(
   const manifest = await manifestCollection.findOne({ _id: runId });
   if (!manifest) return null;
 
-  const blobIds = PERFORMANCE_SNAPSHOT_SECTIONS.map(
-    (section) => manifest.sections[section].blobId
-  );
+  const sections = manifest.schemaVersion === 2
+    ? LEGACY_SNAPSHOT_SECTIONS
+    : PERFORMANCE_SNAPSHOT_SECTIONS;
+  const blobIds = sections.map((section) => {
+    const reference = manifest.sections[section];
+    if (!reference) throw new Error(`Archived ${section} snapshot reference is missing`);
+    return reference.blobId;
+  });
   const blobs = await blobCollection.find({ _id: { $in: blobIds } }).toArray();
   return reconstructPerformanceSnapshot(manifest, blobs);
 }

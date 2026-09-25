@@ -18,13 +18,6 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Context) {
   const id = (await params).id;
-  try {
-    const legacyImage = await loadStoredSocialImageByLegacyKey(tradeLegacyImageKey(id));
-    if (legacyImage) return storedSocialImageResponse(legacyImage);
-  } catch (error) {
-    console.error(`[performance/trade-og] failed to load stored image for ${id}`, error);
-  }
-
   const result = await getLivePerformanceTrade(id);
   if (result.status === "unavailable") {
     return new Response("Performance journal unavailable", { status: 503 });
@@ -33,6 +26,13 @@ export async function GET(_request: Request, { params }: Context) {
     return new Response("Trade not found", { status: 404 });
   }
   const trade = result.trade;
+
+  try {
+    const legacyImage = await loadStoredSocialImageByLegacyKey(tradeLegacyImageKey(id));
+    if (legacyImage) return storedSocialImageResponse(legacyImage);
+  } catch (error) {
+    console.error(`[performance/trade-og] failed to load stored image for ${id}`, error);
+  }
 
   try {
     const reference = await ensureTradeSocialImage(trade);

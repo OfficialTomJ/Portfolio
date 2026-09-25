@@ -12,6 +12,10 @@ import {
   type BybitPosition,
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
+import {
+  hasMultipleOpeningOrdersInCycle,
+  hasOverlappingPositionEntries,
+} from "./overlap-guard";
 import { publicTradeIdForCycle } from "./publication";
 import {
   lockPerformanceRisk,
@@ -53,7 +57,7 @@ export const PERFORMANCE_COLLECTIONS = {
 const SYNC_LOCK_ID = "performance-journal";
 const SYNC_LOCK_TTL_MS = 10 * 60 * 1000;
 
-type CycleStatus = "open" | "awaiting_close" | "unresolved" | "published" | "excluded";
+type CycleStatus = "open" | "awaiting_close" | "awaiting_attribution" | "unresolved" | "published" | "excluded";
 
 interface PositionCycleDocument {
   _id: string;
@@ -77,6 +81,9 @@ interface PositionCycleDocument {
   excludedFromJournal?: boolean;
   excludedAt?: Date;
   exclusionReason?: string;
+  publicationHold?: boolean;
+  publicationHoldAt?: Date;
+  publicationHoldReason?: "overlapping_entries";
   resolutionIssue?: string;
   closedAt?: Date;
   publishedTradeId?: string;
@@ -447,6 +454,7 @@ async function capturePositionCycles(
   sourceAccountId: string,
   riskVersions: PerformanceRiskVersion[],
   positions: BybitPosition[],
+  executions: BybitExecution[],
   capturedAt: Date
 ): Promise<Set<string>> {
   const active = new Set<string>();
@@ -463,6 +471,34 @@ async function capturePositionCycles(
       ],
     });
     const id = existing?._id ?? newId;
+    const priorOpenCycles = await collection.find({
+      environment,
+      sourceAccountId,
+      symbol: position.symbol,
+      direction: positionDirection(position.side),
+      positionIdx: position.positionIdx,
+      status: "open",
+    }).toArray();
+    const publicationHold = hasOverlappingPositionEntries({
+      cycleId: id,
+      position,
+      priorOpenCycles: priorOpenCycles.map((cycle) => ({
+        id: cycle._id,
+        quantity: cycle.quantity,
+        entryPrice: cycle.entryPrice,
+        publicationHold: cycle.publicationHold,
+      })),
+      executions,
+    });
+    if (publicationHold && priorOpenCycles.length) {
+      await collection.updateMany(
+        { _id: { $in: priorOpenCycles.map((cycle) => cycle._id) } },
+        {
+          $set: { publicationHold: true, publicationHoldReason: "overlapping_entries" },
+          $min: { publicationHoldAt: capturedAt },
+        }
+      );
+    }
     const lockedRisk = lockPerformanceRisk(existing, riskVersions, openedAt);
     const stop = numberValue(position.stopLoss);
     active.add(id);
@@ -482,12 +518,17 @@ async function capturePositionCycles(
           quantity: numberValue(position.size),
           leverage: numberValue(position.leverage) || null,
           status: existing?.excludedFromJournal ? "excluded" : "open",
+          ...(publicationHold ? {
+            publicationHold: true,
+            publicationHoldReason: "overlapping_entries" as const,
+          } : {}),
           ...(lockedRisk ?? {}),
           ...(existing?.initialStopPrice || stop <= 0
             ? {}
             : { initialStopPrice: stop, stopCapturedAt: capturedAt }),
         },
         $setOnInsert: { firstSeenAt: capturedAt },
+        ...(publicationHold ? { $min: { publicationHoldAt: capturedAt } } : {}),
         $unset: { resolutionIssue: "", closedAt: "" },
       },
       { upsert: true }
@@ -526,6 +567,7 @@ async function assignClosedPnlToCycles(
 
 async function publishClosedCycles(
   cycles: Collection<PositionCycleDocument>,
+  executions: Collection<PrivateExecutionDocument>,
   closedPnl: Collection<PrivateClosedPnlDocument>,
   published: Collection<PublishedPerformanceTrade>,
   environment: string,
@@ -537,7 +579,7 @@ async function publishClosedCycles(
     .find({
       environment,
       sourceAccountId,
-      status: { $in: ["open", "awaiting_close", "unresolved", "published", "excluded"] },
+      status: { $in: ["open", "awaiting_close", "awaiting_attribution", "unresolved", "published", "excluded"] },
     })
     .sort({ openedAt: -1 })
     .toArray();
@@ -563,6 +605,46 @@ async function publishClosedCycles(
             ? { closedAt: dateValue(records[records.length - 1].updatedTime, capturedAt) }
             : {}),
         } }
+      );
+      continue;
+    }
+    const candidateClosedAt = records.length
+      ? dateValue(records[records.length - 1].updatedTime, capturedAt)
+      : capturedAt;
+    const relevantExecutions = cycle.status === "published" || cycle.publicationHold
+      ? []
+      : await executions.find({
+          environment,
+          sourceAccountId,
+          symbol: cycle.symbol,
+          execType: "Trade",
+          execTime: {
+            $gte: String(cycle.openedAt.getTime() - 1000),
+            $lte: String(candidateClosedAt.getTime() + 1000),
+          },
+        }).toArray();
+    const publicationHold = cycle.publicationHold ||
+      (cycle.status !== "published" && hasMultipleOpeningOrdersInCycle({
+        symbol: cycle.symbol,
+        side: cycle.direction === "Long" ? "Buy" : "Sell",
+        openedAt: cycle.openedAt,
+        closedAt: candidateClosedAt,
+        executions: relevantExecutions,
+      }));
+    if (publicationHold) {
+      unresolvedCount += 1;
+      await cycles.updateOne(
+        { _id: cycle._id },
+        {
+          $set: {
+            status: "awaiting_attribution",
+            publicationHold: true,
+            publicationHoldReason: "overlapping_entries",
+            resolutionIssue: "Overlapping entries require attribution before publication",
+            ...(records.length ? { closedAt: candidateClosedAt } : {}),
+          },
+          $min: { publicationHoldAt: capturedAt },
+        }
       );
       continue;
     }
@@ -712,7 +794,10 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
 
     await Promise.all([
       upsertExecutions(executions, environment, sourceAccountId, snapshot.executions, capturedAt),
-      upsertOrders(orders, environment, sourceAccountId, snapshot.orders, capturedAt),
+      (async () => {
+        await upsertOrders(orders, environment, sourceAccountId, snapshot.orders, capturedAt);
+        await upsertOrders(orders, environment, sourceAccountId, snapshot.openOrders, capturedAt);
+      })(),
       upsertClosedPnl(closedPnl, environment, sourceAccountId, snapshot.closedPnl, capturedAt),
       runs.updateOne({ _id: runId }, { $set: { environment, sourceAccountId } }),
     ]);
@@ -723,10 +808,12 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
       sourceAccountId,
       riskVersions,
       snapshot.positions,
+      snapshot.executions,
       capturedAt
     );
     const normalized = await publishClosedCycles(
       cycles,
+      executions,
       closedPnl,
       published,
       environment,
@@ -738,7 +825,7 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
     const result: PerformanceSyncResult = {
       positionsCaptured: snapshot.positions.length,
       executionsUpserted: snapshot.executions.length,
-      ordersUpserted: snapshot.orders.length,
+      ordersUpserted: snapshot.orders.length + snapshot.openOrders.length,
       closedPnlUpserted: snapshot.closedPnl.length,
       tradesPublished: normalized.published,
       unresolvedCycles: normalized.unresolved,

@@ -13,7 +13,7 @@ import { ensureJournalSocialImage } from "@/lib/performance/social-images";
 import { siteOrigin } from "@/lib/site-origin";
 
 const pageTitle = "Performance Journal | Thomas Johnston";
-const pageDescription = "A public record of completed private leverage and prop trades, measured in R and published after positions close.";
+const pageDescription = "A public journal of completed leverage and prop strategy trades, measured in R after positions close.";
 const getPerformancePageDataset = cache(getLivePerformanceDataset);
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
   const alt = result.dataset && view
     ? performanceOpenGraphAlt(result.dataset, view)
-    : "Thomas Johnston Performance Journal, completed prop-trading results measured in R.";
+    : "Thomas Johnston Performance Journal, completed strategy-trade results measured in R.";
   const images = [{ url: image, width: 1200, height: 630, alt }];
 
   return {
@@ -86,7 +86,7 @@ export default async function PerformancePage() {
           </h1>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
             <p className="break-words text-base leading-6 text-zinc-300 sm:text-lg">
-              Closed prop-trading results, measured in R.
+              Closed strategy trades, measured in R.
             </p>
             <p className="text-xs leading-5 text-zinc-500">
               {dataset && tradeLabel
@@ -110,7 +110,7 @@ export default async function PerformancePage() {
           <div>
             <h2 className="text-sm font-medium text-zinc-300">About this record</h2>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-zinc-600 sm:text-sm sm:leading-6">
-              This journal publishes completed trades from my private leverage and prop-trading strategies. It excludes active positions, signals, strategy rules, position sizing and dollar returns.
+              This journal records completed leverage and prop strategy trades. Active positions, signals, strategy rules, position sizing and dollar returns are not shown.
             </p>
           </div>
           <p className="mt-3 max-w-md text-xs leading-5 text-zinc-600 sm:mt-0 sm:text-right">

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { excludedTradeIds, publicTradeIdForCycle } from "./publication";
 
-test("a cycle exception targets only its own deterministic public trade", () => {
-  const first = "account-test:demo:linear:HYPEUSDT:0:1790199973711";
-  const second = "account-test:demo:linear:HYPEUSDT:0:1790324750667";
+test("journal eligibility targets only the matching position cycle", () => {
+  const first = "account-test:demo:linear:BTCUSDT:0:1700000000000";
+  const second = "account-test:demo:linear:BTCUSDT:0:1700003600000";
   const excluded = excludedTradeIds([{ _id: second }]);
 
   assert.equal(excluded.has(publicTradeIdForCycle(second)), true);

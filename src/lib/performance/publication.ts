@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-/** The public ID is deterministic so an exception can hide a trade even if a
- * prior sync wrote its public document before marking the cycle complete. */
+/** A deterministic ID keeps journal eligibility tied to the same position
+ * cycle, including when ingestion has already written a public document. */
 export function publicTradeIdForCycle(cycleId: string): string {
   return `trade-${createHash("sha256").update(cycleId).digest("hex").slice(0, 20)}`;
 }

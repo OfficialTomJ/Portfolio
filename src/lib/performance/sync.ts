@@ -76,7 +76,7 @@ interface PositionCycleDocument {
   status: CycleStatus;
   excludedFromJournal?: boolean;
   excludedAt?: Date;
-  exclusionReason?: "user_request";
+  exclusionReason?: string;
   resolutionIssue?: string;
   closedAt?: Date;
   publishedTradeId?: string;

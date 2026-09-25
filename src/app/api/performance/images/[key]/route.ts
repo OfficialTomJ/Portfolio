@@ -1,4 +1,5 @@
 import { parseSocialImagePathKey } from "@/lib/performance/social-image-keys";
+import { getLivePerformanceTrade } from "@/lib/performance/data";
 import {
   loadStoredSocialImage,
   storedSocialImageResponse,
@@ -15,6 +16,15 @@ export async function GET(_request: Request, { params }: Context) {
 
   try {
     const image = await loadStoredSocialImage(publicKey);
+    if (image?.kind === "trade") {
+      const trade = await getLivePerformanceTrade(image.subjectId);
+      if (trade.status === "unavailable") {
+        return new Response("Performance journal unavailable", { status: 503 });
+      }
+      if (trade.status === "not-found") {
+        return new Response("Image not found", { status: 404 });
+      }
+    }
     return image
       ? storedSocialImageResponse(image)
       : new Response("Image not found", { status: 404 });

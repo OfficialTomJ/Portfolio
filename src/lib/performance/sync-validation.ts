@@ -32,6 +32,7 @@ export function assertValidPerformanceSnapshot(snapshot: BybitSnapshot): void {
     !Array.isArray(snapshot.positions) ||
     !Array.isArray(snapshot.executions) ||
     !Array.isArray(snapshot.orders) ||
+    !Array.isArray(snapshot.openOrders) ||
     !Array.isArray(snapshot.closedPnl)
   ) {
     throw new Error("Bybit snapshot collections are invalid");
@@ -63,7 +64,7 @@ export function assertValidPerformanceSnapshot(snapshot: BybitSnapshot): void {
     }
   }
 
-  for (const order of snapshot.orders) {
+  for (const order of [...snapshot.orders, ...snapshot.openOrders]) {
     if (
       !order.orderId ||
       !SYMBOL_PATTERN.test(order.symbol) ||
@@ -94,6 +95,7 @@ export function assertValidPerformanceSnapshot(snapshot: BybitSnapshot): void {
 
   assertUnique(snapshot.executions.map((item) => item.execId), "execution IDs");
   assertUnique(snapshot.orders.map((item) => item.orderId), "order IDs");
+  assertUnique(snapshot.openOrders.map((item) => item.orderId), "open order IDs");
   assertUnique(snapshot.closedPnl.map((item) => item.orderId), "closed PnL IDs");
 }
 

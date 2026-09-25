@@ -68,7 +68,10 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
         .toArray(),
       db.collection<SyncStateView>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: environment }),
       db.collection<ExcludedCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
-        .find({ excludedFromJournal: true }, { projection: { _id: 1 } })
+        .find(
+          { $or: [{ excludedFromJournal: true }, { publicationHold: true }] },
+          { projection: { _id: 1 } }
+        )
         .toArray(),
     ]);
     if (!state?.lastSuccessAt || !state.firstSyncAt) {
@@ -111,7 +114,10 @@ export async function getLivePerformanceTrade(id: string): Promise<PerformanceTr
       db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
         .findOne({ _id: id }, { projection: PUBLIC_TRADE_PROJECTION }),
       db.collection<ExcludedCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
-        .find({ excludedFromJournal: true }, { projection: { _id: 1 } })
+        .find(
+          { $or: [{ excludedFromJournal: true }, { publicationHold: true }] },
+          { projection: { _id: 1 } }
+        )
         .toArray(),
     ]);
     const trade = document && !excludedTradeIds(excludedCycles).has(id)

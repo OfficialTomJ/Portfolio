@@ -32,6 +32,7 @@ function snapshot(): BybitSnapshot {
       },
     ],
     orders: [],
+    openOrders: [],
     closedPnl: [
       {
         orderId: "order-close",
@@ -70,6 +71,34 @@ test("rejects duplicate upstream identifiers", () => {
     () => assertValidPerformanceSnapshot(value),
     /duplicate execution IDs/
   );
+});
+
+test("validates live conditional orders before archiving and ingestion", () => {
+  const value = snapshot();
+  value.openOrders = [{
+    orderId: "stop-1",
+    orderLinkId: "",
+    symbol: "BTCUSDT",
+    side: "Buy",
+    positionIdx: 0,
+    orderStatus: "Untriggered",
+    orderType: "Market",
+    stopOrderType: "StopLoss",
+    tpslMode: "Partial",
+    triggerPrice: "49000",
+    takeProfit: "",
+    stopLoss: "49000",
+    reduceOnly: true,
+    closeOnTrigger: true,
+    qty: "1",
+    cumExecQty: "0",
+    avgPrice: "",
+    createdTime: String(Date.parse("2026-09-20T00:00:00.000Z")),
+    updatedTime: String(Date.parse("2026-09-20T00:00:00.000Z")),
+  }];
+  assert.doesNotThrow(() => assertValidPerformanceSnapshot(value));
+  value.openOrders[0].positionIdx = Number.NaN;
+  assert.throws(() => assertValidPerformanceSnapshot(value), /invalid order/);
 });
 
 test("accepts a safe public trade", () => {

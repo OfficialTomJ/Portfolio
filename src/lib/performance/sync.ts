@@ -17,6 +17,7 @@ import {
   hasOverlappingPositionEntries,
 } from "./overlap-guard";
 import { publicTradeIdForCycle } from "./publication";
+import { mayPublishReviewedTrade, performanceReviewFingerprint } from "./review";
 import {
   lockPerformanceRisk,
   type PerformanceRiskVersion,
@@ -57,7 +58,7 @@ export const PERFORMANCE_COLLECTIONS = {
 const SYNC_LOCK_ID = "performance-journal";
 const SYNC_LOCK_TTL_MS = 10 * 60 * 1000;
 
-type CycleStatus = "open" | "awaiting_close" | "awaiting_attribution" | "unresolved" | "published" | "excluded";
+type CycleStatus = "open" | "awaiting_close" | "awaiting_attribution" | "unresolved" | "pending_review" | "published" | "excluded";
 
 interface PositionCycleDocument {
   _id: string;
@@ -87,6 +88,10 @@ interface PositionCycleDocument {
   resolutionIssue?: string;
   closedAt?: Date;
   publishedTradeId?: string;
+  reviewCandidate?: PerformanceTrade;
+  reviewFingerprint?: string;
+  reviewApprovedFingerprint?: string;
+  reviewApprovedAt?: Date;
 }
 
 interface PrivateExecutionDocument extends BybitExecution {
@@ -173,6 +178,69 @@ export class PerformanceSyncAlreadyRunningError extends Error {
     super("A performance synchronization is already running");
     this.name = "PerformanceSyncAlreadyRunningError";
   }
+}
+
+async function currentReviewScope() {
+  const identity = await fetchBybitAccountIdentity();
+  return {
+    environment: identity.environment,
+    sourceAccountId: accountScopeId(identity.environment, identity.apiKey.userID),
+  };
+}
+
+export async function listPerformanceReviewCandidates() {
+  const scope = await currentReviewScope();
+  const cycles = await getDb().collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles)
+    .find({
+      ...scope,
+      status: "pending_review",
+      publicationHold: { $ne: true },
+      excludedFromJournal: { $ne: true },
+      reviewFingerprint: { $exists: true },
+    })
+    .sort({ closedAt: -1 })
+    .toArray();
+  return cycles.filter((cycle) => cycle.reviewCandidate && cycle.reviewFingerprint).map((cycle) => ({
+    trade: cycle.reviewCandidate!,
+    fingerprint: cycle.reviewFingerprint!,
+  }));
+}
+
+export async function approvePerformanceReviewCandidate(tradeId: string, fingerprint: string) {
+  if (!/^trade-[a-f0-9]+$/.test(tradeId) || !/^[a-f0-9]{64}$/.test(fingerprint)) {
+    throw new Error("A valid trade ID and exact review fingerprint are required");
+  }
+  const scope = await currentReviewScope();
+  const cycles = getDb().collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles);
+  const result = await cycles.updateOne(
+    {
+      ...scope,
+      status: "pending_review",
+      "reviewCandidate.id": tradeId,
+      reviewFingerprint: fingerprint,
+      publicationHold: { $ne: true },
+      excludedFromJournal: { $ne: true },
+    },
+    { $set: { reviewApprovedFingerprint: fingerprint, reviewApprovedAt: new Date() } }
+  );
+  if (result.matchedCount !== 1) {
+    throw new Error("No matching pending result. Sync and review the latest candidate before approving.");
+  }
+}
+
+export async function isPerformanceReviewPublished(tradeId: string): Promise<boolean> {
+  const scope = await currentReviewScope();
+  const cycle = await getDb().collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles)
+    .findOne({
+      ...scope,
+      status: "published",
+      publishedTradeId: tradeId,
+      publicationHold: { $ne: true },
+      excludedFromJournal: { $ne: true },
+    });
+  if (!cycle) return false;
+  return !!await getDb().collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
+    .findOne({ _id: tradeId });
 }
 
 function numberValue(value: string | number | undefined): number {
@@ -579,7 +647,7 @@ async function publishClosedCycles(
     .find({
       environment,
       sourceAccountId,
-      status: { $in: ["open", "awaiting_close", "awaiting_attribution", "unresolved", "published", "excluded"] },
+      status: { $in: ["open", "awaiting_close", "awaiting_attribution", "unresolved", "pending_review", "published", "excluded"] },
     })
     .sort({ openedAt: -1 })
     .toArray();
@@ -604,7 +672,7 @@ async function publishClosedCycles(
           ...(records.length
             ? { closedAt: dateValue(records[records.length - 1].updatedTime, capturedAt) }
             : {}),
-        } }
+        }, $unset: { reviewApprovedFingerprint: "", reviewApprovedAt: "" } }
       );
       continue;
     }
@@ -644,6 +712,7 @@ async function publishClosedCycles(
             ...(records.length ? { closedAt: candidateClosedAt } : {}),
           },
           $min: { publicationHoldAt: capturedAt },
+          $unset: { reviewApprovedFingerprint: "", reviewApprovedAt: "" },
         }
       );
       continue;
@@ -651,7 +720,8 @@ async function publishClosedCycles(
     if (!records.length) {
       await cycles.updateOne(
         { _id: cycle._id },
-        { $set: { status: "awaiting_close", resolutionIssue: "No closed PnL record captured" } }
+        { $set: { status: "awaiting_close", resolutionIssue: "No closed PnL record captured" },
+          $unset: { reviewApprovedFingerprint: "", reviewApprovedAt: "" } }
       );
       continue;
     }
@@ -680,6 +750,7 @@ async function publishClosedCycles(
               ? "Risk version was not configured"
               : "Locked risk data is invalid",
           },
+          $unset: { reviewApprovedFingerprint: "", reviewApprovedAt: "" },
         }
       );
       continue;
@@ -695,12 +766,46 @@ async function publishClosedCycles(
             status: "unresolved",
             resolutionIssue: validationIssue,
           },
+          $unset: { reviewApprovedFingerprint: "", reviewApprovedAt: "" },
         }
       );
       continue;
     }
 
     const closedAt = new Date(normalized.trade.closedAt);
+    const fingerprint = performanceReviewFingerprint(
+      normalized.trade,
+      records,
+      cycle.riskVersionId,
+      cycle.riskAmount
+    );
+    if (!mayPublishReviewedTrade({
+      alreadyPublished: cycle.status === "published",
+      active: activeIds.has(cycle._id),
+      excluded: !!cycle.excludedFromJournal,
+      held: !!publicationHold,
+      candidateFingerprint: fingerprint,
+      approvedFingerprint: cycle.reviewApprovedFingerprint,
+    })) {
+      await cycles.updateOne(
+        { _id: cycle._id },
+        {
+          $set: {
+            status: "pending_review",
+            closedAt,
+            reviewCandidate: normalized.trade,
+            reviewFingerprint: fingerprint,
+          },
+          $unset: {
+            resolutionIssue: "",
+            ...(cycle.reviewApprovedFingerprint && cycle.reviewApprovedFingerprint !== fingerprint
+              ? { reviewApprovedFingerprint: "", reviewApprovedAt: "" }
+              : {}),
+          },
+        }
+      );
+      continue;
+    }
     const publicRecord: PublishedPerformanceTrade = {
       _id: id,
       ...normalized.trade,

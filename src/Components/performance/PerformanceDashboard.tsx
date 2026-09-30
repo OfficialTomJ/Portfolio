@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FaArrowRightLong } from "react-icons/fa6";
 import {
   buildPerformanceView,
   calendarMonthRange,
@@ -12,7 +11,9 @@ import {
   sydneyDateKey,
 } from "@/lib/performance/metrics";
 import type { PerformanceDataset, PerformanceRange } from "@/lib/performance/types";
+import type { AdminPendingReview } from "@/lib/performance/admin-selection";
 import { track } from "@/lib/track";
+import AdminPublishButton from "./AdminPublishButton";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
 import PerformanceCalendar from "./PerformanceCalendar";
 import PerformanceEquityChart from "./PerformanceEquityChart";
@@ -85,14 +86,16 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function PerformanceDashboard({
   dataset,
   reviewMode = false,
-  pendingTradeIds = [],
+  pendingReviews = [],
 }: {
   dataset: PerformanceDataset;
   reviewMode?: boolean;
-  pendingTradeIds?: string[];
+  pendingReviews?: AdminPendingReview[];
 }) {
-  const pendingIds = new Set(pendingTradeIds);
+  const pendingById = new Map(pendingReviews.map((review) => [review.id, review.fingerprint]));
   const [period, setPeriod] = useState<PeriodSelection>("30D");
+  const [publicationNotice, setPublicationNotice] = useState("");
+  const [publishingTradeId, setPublishingTradeId] = useState<string | null>(null);
   const asOfKey = sydneyDateKey(dataset.asOf);
   const inceptionKey = sydneyDateKey(dataset.inceptionAt);
   const monthKeys = getCalendarMonthKeys(dataset);
@@ -268,6 +271,11 @@ export default function PerformanceDashboard({
               <p className="text-xs text-zinc-500">Newest first</p>
             )}
           </div>
+          {reviewMode && publicationNotice && (
+            <p role="status" className="border-b border-white/[0.08] px-4 py-3 text-xs leading-5 text-[#ffb38d] sm:px-6">
+              {publicationNotice}
+            </p>
+          )}
           {visibleTrades.length === 0 ? (
             <div className="grid flex-1 place-items-center px-5 py-16 text-center">
               <div>
@@ -285,33 +293,45 @@ export default function PerformanceDashboard({
             </div>
           ) : (
             <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
-              {visibleTrades.map((item) => (
-                <Link
-                  key={item.id}
-                  href={reviewMode ? `/performance/review/trades/${item.id}` : `/performance/trades/${item.id}`}
-                  onClick={reviewMode ? undefined : () => track("performance_trade_open", { direction: item.direction.toLowerCase(), period })}
-                  className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6"
-                >
-                  <div className="min-w-0">
-                    <p className="break-words font-medium leading-5 text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] ${item.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
-                        {item.direction.toUpperCase()} {item.direction === "Long" ? "↑" : "↓"}
+              {visibleTrades.map((item) => {
+                const fingerprint = reviewMode ? pendingById.get(item.id) : undefined;
+                return (
+                  <div key={item.id} className="group flex items-stretch border-b border-white/[0.07] transition-colors last:border-0 hover:bg-white/[0.025]">
+                    <Link
+                      href={reviewMode ? `/performance/review/trades/${item.id}` : `/performance/trades/${item.id}`}
+                      onClick={reviewMode ? undefined : () => track("performance_trade_open", { direction: item.direction.toLowerCase(), period })}
+                      className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 focus-visible:outline focus-visible:outline-[#ff6719] sm:px-6"
+                    >
+                      <div className="min-w-0">
+                        <p className="break-words font-medium leading-5 text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] ${item.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
+                            {item.direction.toUpperCase()} {item.direction === "Long" ? "↑" : "↓"}
+                          </span>
+                          <span className="text-xs text-zinc-500">{dateFormatter.format(new Date(item.closedAt))}</span>
+                          {fingerprint && (
+                            <span className="rounded border border-[#ff6719]/30 bg-[#ff6719]/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-[#ffad83]">
+                              Pending review
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
+                        {signedR(item.resultR)}
                       </span>
-                      <span className="text-xs text-zinc-500">{dateFormatter.format(new Date(item.closedAt))}</span>
-                      {reviewMode && pendingIds.has(item.id) && (
-                        <span className="rounded border border-[#ff6719]/30 bg-[#ff6719]/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-[#ffad83]">
-                          Pending review
-                        </span>
-                      )}
-                    </div>
+                    </Link>
+                    {fingerprint && (
+                      <AdminPublishButton
+                        trade={item}
+                        fingerprint={fingerprint}
+                        onMessage={setPublicationNotice}
+                        anotherPublicationInProgress={publishingTradeId !== null && publishingTradeId !== item.id}
+                        onPublicationStateChange={setPublishingTradeId}
+                      />
+                    )}
                   </div>
-                  <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
-                    {signedR(item.resultR)}
-                  </span>
-                  <FaArrowRightLong className="hidden text-xs text-zinc-700 transition-transform group-hover:translate-x-1 group-hover:text-zinc-300" />
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

@@ -49,9 +49,23 @@ test("admin review combines published and valid pending trades without duplicate
     { ...baseCycle, reviewCandidate: { ...pending, id: "invalid" } },
     { ...baseCycle, reviewFingerprint: undefined },
   ], [], lastSync);
-  assert.deepEqual(result.pendingTradeIds, [pending.id]);
+  assert.deepEqual(result.pendingReviews, [{ id: pending.id, fingerprint: "a".repeat(64) }]);
   assert.deepEqual(result.dataset.trades.map((trade) => trade.id), [published.id, pending.id]);
   assert.equal(result.dataset.trades.reduce((sum, trade) => sum + trade.resultR, 0), 0.25);
+});
+
+test("multiple pending results keep separate fingerprints and remain private candidates", () => {
+  const other = { ...pending, id: "trade-55555555555555555555", direction: "Long" as const };
+  const result = assembleAdminReview(dataset, [
+    baseCycle,
+    { ...baseCycle, direction: "Long", reviewCandidate: other, reviewFingerprint: "b".repeat(64) },
+  ], [], lastSync);
+  assert.deepEqual(result.pendingReviews, [
+    { id: pending.id, fingerprint: "a".repeat(64) },
+    { id: other.id, fingerprint: "b".repeat(64) },
+  ]);
+  assert.equal(result.dataset.trades.length, 3);
+  assert.deepEqual(dataset.trades, [published]);
 });
 
 test("active cards only represent positions observed in the latest successful sync", () => {

@@ -13,6 +13,14 @@
     "src/app/api/performance/sync/route.ts": {
       "regions": ["syd1"],
       "maxDuration": 60
+    },
+    "src/app/api/performance/admin/sync/route.ts": {
+      "regions": ["syd1"],
+      "maxDuration": 60
+    },
+    "src/app/api/performance/admin/review/[id]/publish/route.ts": {
+      "regions": ["syd1"],
+      "maxDuration": 60
     }
   }
 }

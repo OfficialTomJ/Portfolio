@@ -22,6 +22,11 @@ export interface AdminActivePosition {
   lastSeenAt: string;
 }
 
+export interface AdminPendingReview {
+  id: string;
+  fingerprint: string;
+}
+
 export function assembleAdminReview(
   publicDataset: PerformanceDataset,
   pendingCycles: ReviewCycleCandidate[],
@@ -32,9 +37,8 @@ export function assembleAdminReview(
   const pending = pendingCycles
     .filter((cycle) => cycle.status === "pending_review" && !cycle.publicationHold && !cycle.excludedFromJournal)
     .filter((cycle) => typeof cycle.reviewFingerprint === "string" && /^[a-f0-9]{64}$/.test(cycle.reviewFingerprint))
-    .map((cycle) => cycle.reviewCandidate)
-    .filter((trade): trade is PerformanceTrade => !!trade && !validatePublishedPerformanceTrade(trade))
-    .filter((trade) => !publishedIds.has(trade.id));
+    .filter((cycle) => !!cycle.reviewCandidate && !validatePublishedPerformanceTrade(cycle.reviewCandidate))
+    .filter((cycle) => !publishedIds.has(cycle.reviewCandidate!.id));
   const activePositions = activeCycles
     .filter((cycle) => (cycle.status === "open" || cycle.status === "excluded") && cycle.lastSeenAt instanceof Date && cycle.lastSeenAt.getTime() === lastSyncAt.getTime())
     .filter((cycle) => cycle.openedAt instanceof Date && Number.isFinite(cycle.entryPrice) && cycle.entryPrice > 0)
@@ -53,9 +57,12 @@ export function assembleAdminReview(
       id: "admin-review",
       label: "Private review",
       description: "Published and pending-review closed trades",
-      trades: [...publicDataset.trades, ...pending],
+      trades: [...publicDataset.trades, ...pending.map((cycle) => cycle.reviewCandidate!)],
     },
-    pendingTradeIds: pending.map((trade) => trade.id),
+    pendingReviews: pending.map((cycle) => ({
+      id: cycle.reviewCandidate!.id,
+      fingerprint: cycle.reviewFingerprint!,
+    })),
     activePositions,
     lastSyncAt: lastSyncAt.toISOString(),
   };

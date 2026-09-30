@@ -13,8 +13,12 @@ import {
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
 import {
+  currentPositionOpeningOrderIds,
   hasMultipleOpeningOrdersInCycle,
   hasOverlappingPositionEntries,
+  matchesAttributedOpeningOrders,
+  openingOrderIdsInCycle,
+  type SameTradeEntryAttribution,
 } from "./overlap-guard";
 import { publicTradeIdForCycle } from "./publication";
 import { mayPublishReviewedTrade, performanceReviewFingerprint } from "./review";
@@ -85,6 +89,7 @@ interface PositionCycleDocument {
   publicationHold?: boolean;
   publicationHoldAt?: Date;
   publicationHoldReason?: "overlapping_entries";
+  sameTradeAttribution?: SameTradeEntryAttribution;
   resolutionIssue?: string;
   closedAt?: Date;
   publishedTradeId?: string;
@@ -248,6 +253,90 @@ export async function isPerformanceReviewPublished(tradeId: string): Promise<boo
   if (!cycle) return false;
   return !!await getDb().collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
     .findOne({ _id: tradeId });
+}
+
+/** Record a creator-confirmed scale-in as one trade, scoped to its exact open cycle and entry orders. */
+export async function attributeSameTradeScaleIn(symbol: string, expectedStopPrice: number) {
+  if (!/^[A-Z0-9]{2,20}USDT$/.test(symbol) || !Number.isFinite(expectedStopPrice) || expectedStopPrice <= 0) {
+    throw new Error("A valid symbol and expected stop price are required");
+  }
+  const snapshot = await fetchBybitSnapshot();
+  assertValidPerformanceSnapshot(snapshot);
+  const positions = snapshot.positions.filter((position) => position.symbol === symbol);
+  if (positions.length !== 1) throw new Error("Expected exactly one active position for this symbol");
+  const position = positions[0];
+  const stopPrice = numberValue(position.stopLoss);
+  if (Math.abs(stopPrice - expectedStopPrice) > 1e-6) {
+    throw new Error("The live stop no longer matches the reviewed stop");
+  }
+
+  const environment = snapshot.environment;
+  const sourceAccountId = accountScopeId(environment, snapshot.apiKey.userID);
+  const db = getDb();
+  const state = await db.collection<SyncStateDocument>(PERFORMANCE_COLLECTIONS.syncState)
+    .findOne({ _id: environment });
+  const run = state?.lastRunId && await db.collection<SyncRunDocument>(PERFORMANCE_COLLECTIONS.syncRuns)
+    .findOne({ _id: state.lastRunId, environment, sourceAccountId, status: "succeeded" });
+  if (!state?.lastSuccessAt || !run) throw new Error("A successful sync for this account is required first");
+
+  const cycles = db.collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles);
+  const openCycles = await cycles.find({ environment, sourceAccountId, symbol, status: "open" }).toArray();
+  if (openCycles.length !== 1) throw new Error("Expected exactly one open journal cycle for this symbol");
+  const cycle = openCycles[0];
+  const openedAt = dateValue(position.openTime, dateValue(position.createdTime, state.lastSuccessAt));
+  if (cycle.openedAt.getTime() !== openedAt.getTime() ||
+      cycle.lastSeenAt.getTime() !== state.lastSuccessAt.getTime() ||
+      cycle.direction !== positionDirection(position.side) ||
+      cycle.positionIdx !== position.positionIdx ||
+      Math.abs((cycle.initialStopPrice ?? 0) - stopPrice) > 1e-6 ||
+      Math.abs(cycle.quantity - numberValue(position.size)) > 1e-6 ||
+      Math.abs(cycle.entryPrice - numberValue(position.avgPrice)) > 1e-6 ||
+      !cycle.riskVersionId || !cycle.riskAmount || cycle.riskAmount <= 0 ||
+      cycle.publicationHold !== true || cycle.publicationHoldReason !== "overlapping_entries" ||
+      cycle.excludedFromJournal || cycle.sameTradeAttribution) {
+    throw new Error("The current position no longer matches an unattributed, held journal cycle");
+  }
+
+  const storedExecutions = await db.collection<PrivateExecutionDocument>(PERFORMANCE_COLLECTIONS.executions)
+    .find({
+      environment,
+      sourceAccountId,
+      symbol,
+      execType: "Trade",
+      execTime: { $gte: String(cycle.openedAt.getTime() - 1000) },
+    }).toArray();
+  const openingOrderIds = [...currentPositionOpeningOrderIds(position, storedExecutions)].sort();
+  if (openingOrderIds.length !== 2) {
+    throw new Error("Expected exactly two recorded opening orders for this attribution");
+  }
+  const riskAtStop = Math.abs(stopPrice - numberValue(position.avgPrice)) * numberValue(position.size);
+  const riskAtStopR = riskAtStop / cycle.riskAmount;
+  if (!Number.isFinite(riskAtStopR) || riskAtStopR < 0.9 || riskAtStopR > 1.1) {
+    throw new Error("Combined position risk at the stop is not approximately 1R");
+  }
+
+  const result = await cycles.updateOne(
+    {
+      _id: cycle._id,
+      environment,
+      sourceAccountId,
+      status: "open",
+      lastSeenAt: state.lastSuccessAt,
+      initialStopPrice: stopPrice,
+      publicationHold: true,
+      publicationHoldReason: "overlapping_entries",
+      sameTradeAttribution: { $exists: false },
+    },
+    { $set: {
+      sameTradeAttribution: {
+        openingOrderIds,
+        stopPrice,
+        confirmedAt: new Date(),
+      },
+    } }
+  );
+  if (result.matchedCount !== 1) throw new Error("The journal cycle changed before attribution could be recorded");
+  return { cycleId: cycle._id, symbol, direction: cycle.direction, openingOrderCount: openingOrderIds.length, stopPrice, riskAtStopR };
 }
 
 function numberValue(value: string | number | undefined): number {
@@ -525,6 +614,7 @@ async function upsertClosedPnl(
 
 async function capturePositionCycles(
   collection: Collection<PositionCycleDocument>,
+  executionCollection: Collection<PrivateExecutionDocument>,
   environment: string,
   sourceAccountId: string,
   riskVersions: PerformanceRiskVersion[],
@@ -554,6 +644,15 @@ async function capturePositionCycles(
       positionIdx: position.positionIdx,
       status: "open",
     }).toArray();
+    const guardExecutions = existing?.sameTradeAttribution
+      ? await executionCollection.find({
+          environment,
+          sourceAccountId,
+          symbol: position.symbol,
+          execType: "Trade",
+          execTime: { $gte: String(openedAt.getTime() - 1000) },
+        }).toArray()
+      : executions;
     const publicationHold = hasOverlappingPositionEntries({
       cycleId: id,
       position,
@@ -563,8 +662,11 @@ async function capturePositionCycles(
         entryPrice: cycle.entryPrice,
         publicationHold: cycle.publicationHold,
       })),
-      executions,
+      executions: guardExecutions,
+      sameTradeAttribution: existing?.sameTradeAttribution,
     });
+    const attributed = !!existing?.sameTradeAttribution &&
+      !existing.sameTradeAttribution.invalidatedAt && !publicationHold;
     if (publicationHold && priorOpenCycles.length) {
       await collection.updateMany(
         { _id: { $in: priorOpenCycles.map((cycle) => cycle._id) } },
@@ -597,6 +699,9 @@ async function capturePositionCycles(
             publicationHold: true,
             publicationHoldReason: "overlapping_entries" as const,
           } : {}),
+          ...(publicationHold && existing?.sameTradeAttribution && !existing.sameTradeAttribution.invalidatedAt
+            ? { "sameTradeAttribution.invalidatedAt": capturedAt }
+            : {}),
           ...(lockedRisk ?? {}),
           ...(existing?.initialStopPrice || stop <= 0
             ? {}
@@ -604,7 +709,11 @@ async function capturePositionCycles(
         },
         $setOnInsert: { firstSeenAt: capturedAt },
         ...(publicationHold ? { $min: { publicationHoldAt: capturedAt } } : {}),
-        $unset: { resolutionIssue: "", closedAt: "" },
+        $unset: {
+          resolutionIssue: "",
+          closedAt: "",
+          ...(attributed ? { publicationHold: "", publicationHoldReason: "", publicationHoldAt: "" } : {}),
+        },
       },
       { upsert: true }
     );
@@ -686,7 +795,7 @@ async function publishClosedCycles(
     const candidateClosedAt = records.length
       ? dateValue(records[records.length - 1].updatedTime, capturedAt)
       : capturedAt;
-    const relevantExecutions = cycle.status === "published" || cycle.publicationHold
+    const relevantExecutions = cycle.status === "published" || (cycle.publicationHold && !cycle.sameTradeAttribution)
       ? []
       : await executions.find({
           environment,
@@ -698,13 +807,26 @@ async function publishClosedCycles(
             $lte: String(candidateClosedAt.getTime() + 1000),
           },
         }).toArray();
-    const publicationHold = cycle.publicationHold ||
+    const attributedClosed = !!cycle.sameTradeAttribution &&
+      !cycle.sameTradeAttribution.invalidatedAt &&
+      matchesAttributedOpeningOrders(
+        openingOrderIdsInCycle({
+          symbol: cycle.symbol,
+          side: cycle.direction === "Long" ? "Buy" : "Sell",
+          openedAt: cycle.openedAt,
+          closedAt: candidateClosedAt,
+          executions: relevantExecutions,
+        }),
+        cycle.sameTradeAttribution.openingOrderIds
+      );
+    const publicationHold = (cycle.publicationHold && !attributedClosed) ||
       (cycle.status !== "published" && hasMultipleOpeningOrdersInCycle({
         symbol: cycle.symbol,
         side: cycle.direction === "Long" ? "Buy" : "Sell",
         openedAt: cycle.openedAt,
         closedAt: candidateClosedAt,
         executions: relevantExecutions,
+        attributedOpeningOrderIds: attributedClosed ? cycle.sameTradeAttribution?.openingOrderIds : undefined,
       }));
     if (publicationHold) {
       unresolvedCount += 1;
@@ -805,6 +927,7 @@ async function publishClosedCycles(
           },
           $unset: {
             resolutionIssue: "",
+            ...(attributedClosed ? { publicationHold: "", publicationHoldReason: "", publicationHoldAt: "" } : {}),
             ...(cycle.reviewApprovedFingerprint && cycle.reviewApprovedFingerprint !== fingerprint
               ? { reviewApprovedFingerprint: "", reviewApprovedAt: "" }
               : {}),
@@ -834,7 +957,10 @@ async function publishClosedCycles(
           closedAt,
           publishedTradeId: id,
         },
-        $unset: { resolutionIssue: "" },
+        $unset: {
+          resolutionIssue: "",
+          ...(attributedClosed ? { publicationHold: "", publicationHoldReason: "", publicationHoldAt: "" } : {}),
+        },
       }
     );
     if (publishResult.upsertedCount === 1) publishedCount += 1;
@@ -916,6 +1042,7 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
     await backfillCycleRiskLocks(cycles, environment, sourceAccountId, riskVersions);
     const activeIds = await capturePositionCycles(
       cycles,
+      executions,
       environment,
       sourceAccountId,
       riskVersions,

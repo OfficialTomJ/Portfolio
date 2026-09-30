@@ -82,10 +82,10 @@ export default async function PerformanceReviewPage() {
         {snapshot ? (
           <>
             <div className="rounded-xl border border-[#ff6719]/20 bg-[#ff6719]/[0.05] px-4 py-3 text-xs leading-5 text-[#ffb38d]">
-              Private view · {snapshot.pendingTradeIds.length} result{snapshot.pendingTradeIds.length === 1 ? "" : "s"} pending review. Viewing and syncing do not grant publication approval.
+              Private view · {snapshot.pendingReviews.length} result{snapshot.pendingReviews.length === 1 ? "" : "s"} pending review. Only the checkmark beside a closed trade approves it for publication.
             </div>
             <ActivePositions positions={snapshot.activePositions} />
-            <PerformanceDashboard dataset={snapshot.dataset} reviewMode pendingTradeIds={snapshot.pendingTradeIds} />
+            <PerformanceDashboard dataset={snapshot.dataset} reviewMode pendingReviews={snapshot.pendingReviews} />
           </>
         ) : (
           <PerformanceUnavailable title="Private review is temporarily unavailable." />

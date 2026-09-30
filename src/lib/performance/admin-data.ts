@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getDb } from "@/lib/mongodb";
-import { assembleAdminReview, type AdminActivePosition, type ReviewCycleCandidate } from "./admin-selection";
+import { assembleAdminReview, type AdminActivePosition, type AdminPendingReview, type ReviewCycleCandidate } from "./admin-selection";
 import { getLivePerformanceDataset, getLivePerformanceTrade } from "./data";
 import { PERFORMANCE_COLLECTIONS } from "./sync";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
@@ -29,7 +29,7 @@ interface ReviewCycleView extends ReviewCycleCandidate {
 
 export interface AdminPerformanceSnapshot {
   dataset: PerformanceDataset;
-  pendingTradeIds: string[];
+  pendingReviews: AdminPendingReview[];
   activePositions: AdminActivePosition[];
   lastSyncAt: string;
 }

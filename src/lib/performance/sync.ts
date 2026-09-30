@@ -180,6 +180,13 @@ export class PerformanceSyncAlreadyRunningError extends Error {
   }
 }
 
+export class PerformanceReviewCandidateMismatchError extends Error {
+  constructor() {
+    super("The pending trade no longer matches the reviewed result");
+    this.name = "PerformanceReviewCandidateMismatchError";
+  }
+}
+
 async function currentReviewScope() {
   const identity = await fetchBybitAccountIdentity();
   return {
@@ -224,7 +231,7 @@ export async function approvePerformanceReviewCandidate(tradeId: string, fingerp
     { $set: { reviewApprovedFingerprint: fingerprint, reviewApprovedAt: new Date() } }
   );
   if (result.matchedCount !== 1) {
-    throw new Error("No matching pending result. Sync and review the latest candidate before approving.");
+    throw new PerformanceReviewCandidateMismatchError();
   }
 }
 

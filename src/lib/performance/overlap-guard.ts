@@ -7,6 +7,13 @@ interface PriorPositionCycle {
   publicationHold?: boolean;
 }
 
+export interface SameTradeEntryAttribution {
+  openingOrderIds: string[];
+  stopPrice: number;
+  confirmedAt: Date;
+  invalidatedAt?: Date;
+}
+
 const TOLERANCE = 1e-6;
 
 function amount(value: string | number | undefined): number {
@@ -20,6 +27,12 @@ function differs(left: number, right: number): boolean {
 
 function openingQuantity(execution: BybitExecution): number {
   return Math.max(0, amount(execution.execQty) - amount(execution.closedSize));
+}
+
+export function matchesAttributedOpeningOrders(actual: Set<string>, expected?: string[]): boolean {
+  if (!expected || expected.length < 2 || actual.size !== expected.length) return false;
+  const uniqueExpected = new Set(expected);
+  return uniqueExpected.size === expected.length && expected.every((id) => actual.has(id));
 }
 
 /** Rewind the net position to identify distinct orders that opened its current exposure. */
@@ -51,27 +64,33 @@ export function hasOverlappingPositionEntries(input: {
   position: BybitPosition;
   priorOpenCycles: PriorPositionCycle[];
   executions: BybitExecution[];
+  sameTradeAttribution?: SameTradeEntryAttribution;
 }): boolean {
-  if (input.priorOpenCycles.some((cycle) => cycle.publicationHold || cycle.id !== input.cycleId)) {
-    return true;
-  }
+  if (input.priorOpenCycles.some((cycle) => cycle.id !== input.cycleId)) return true;
   const prior = input.priorOpenCycles.find((cycle) => cycle.id === input.cycleId);
+  const openingOrders = currentPositionOpeningOrderIds(input.position, input.executions);
+  const attribution = input.sameTradeAttribution;
+  const attributed = !!prior && !!attribution && !attribution.invalidatedAt &&
+    !differs(amount(input.position.stopLoss), attribution.stopPrice) &&
+    matchesAttributedOpeningOrders(openingOrders, attribution.openingOrderIds);
+  if (attributed) return false;
+  if (prior?.publicationHold) return true;
   if (prior) {
     const currentQuantity = amount(input.position.size);
     if (currentQuantity > prior.quantity && differs(currentQuantity, prior.quantity)) return true;
     if (differs(amount(input.position.avgPrice), prior.entryPrice)) return true;
   }
-  return currentPositionOpeningOrderIds(input.position, input.executions).size > 1;
+  return openingOrders.size > 1;
 }
 
-/** Detect an add that opened and closed between syncs, before the net position went flat. */
-export function hasMultipleOpeningOrdersInCycle(input: {
+/** The distinct orders that opened one continuous position, stopping when it went flat. */
+export function openingOrderIdsInCycle(input: {
   symbol: string;
   side: "Buy" | "Sell";
   openedAt: Date;
   closedAt: Date;
   executions: BybitExecution[];
-}): boolean {
+}): Set<string> {
   const orders = new Set<string>();
   const start = input.openedAt.getTime() - 1000;
   const end = input.closedAt.getTime() + 1000;
@@ -96,9 +115,21 @@ export function hasMultipleOpeningOrdersInCycle(input: {
     } else {
       quantity -= amount(execution.execQty);
     }
-    if (orders.size > 1) return true;
     if (quantity <= TOLERANCE) break;
   }
 
-  return false;
+  return orders;
+}
+
+/** Detect an unattributed add, including one opened and closed between syncs. */
+export function hasMultipleOpeningOrdersInCycle(input: {
+  symbol: string;
+  side: "Buy" | "Sell";
+  openedAt: Date;
+  closedAt: Date;
+  executions: BybitExecution[];
+  attributedOpeningOrderIds?: string[];
+}): boolean {
+  const orders = openingOrderIdsInCycle(input);
+  return orders.size > 1 && !matchesAttributedOpeningOrders(orders, input.attributedOpeningOrderIds);
 }

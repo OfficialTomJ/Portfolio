@@ -80,6 +80,29 @@ test("a separate entry order holds publication while both legs remain open", () 
   }), true);
 });
 
+test("two confirmed entry orders remain one cycle only while the exact entries and stop match", () => {
+  const first = execution("entry", "Buy", 10, 1);
+  const addition = execution("addition", "Buy", 5, 60);
+  const third = execution("unreviewed", "Buy", 2, 120);
+  const attribution = {
+    openingOrderIds: ["addition", "entry"],
+    stopPrice: 85,
+    confirmedAt: new Date(openedAt + 90_000),
+  };
+  const input = {
+    cycleId: "cycle-a",
+    position: position({ size: "15", avgPrice: "91" }),
+    priorOpenCycles: [{ id: "cycle-a", quantity: 10, entryPrice: 90, publicationHold: true }],
+    executions: [first, addition],
+    sameTradeAttribution: attribution,
+  };
+  assert.equal(hasOverlappingPositionEntries(input), false);
+  assert.equal(hasOverlappingPositionEntries({ ...input, executions: [first, addition, third] }), true);
+  assert.equal(hasOverlappingPositionEntries({ ...input, position: position({ size: "15", stopLoss: "84" }) }), true);
+  assert.equal(hasOverlappingPositionEntries({ ...input, priorOpenCycles: [...input.priorOpenCycles, { id: "cycle-b", quantity: 2, entryPrice: 90 }] }), true);
+  assert.equal(hasOverlappingPositionEntries({ ...input, sameTradeAttribution: { ...attribution, invalidatedAt: new Date() } }), true);
+});
+
 test("an added entry and exit between syncs still holds the remaining exposure", () => {
   const executions = [
     execution("entry", "Buy", 10, 1),
@@ -144,6 +167,27 @@ test("a fully closed overlapping cycle is held, but a later separate trade is no
     closedAt: new Date(openedAt + 240_000),
     executions,
   }), false);
+});
+
+test("closed-cycle attribution accepts only the exact confirmed opening orders", () => {
+  const base = {
+    symbol: "BTCUSDT",
+    side: "Buy" as const,
+    openedAt: new Date(openedAt),
+    closedAt: new Date(openedAt + 180_000),
+    executions: [
+      execution("entry", "Buy", 10, 1),
+      execution("addition", "Buy", 5, 60),
+      execution("close", "Sell", 15, 180),
+    ],
+    attributedOpeningOrderIds: ["entry", "addition"],
+  };
+  assert.equal(hasMultipleOpeningOrdersInCycle(base), false);
+  assert.equal(hasMultipleOpeningOrdersInCycle({ ...base, attributedOpeningOrderIds: ["entry"] }), true);
+  assert.equal(hasMultipleOpeningOrdersInCycle({
+    ...base,
+    executions: [base.executions[0], base.executions[1], execution("unreviewed", "Buy", 2, 120), execution("close", "Sell", 17, 180)],
+  }), true);
 });
 
 test("a short add is guarded using the sell-side entry orders", () => {

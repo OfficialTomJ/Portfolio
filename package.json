@@ -11,6 +11,7 @@
     "db:reset-users": "tsx scripts/db-reset-users.ts",
     "performance:sync": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-sync.ts",
     "performance:review": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-review.ts",
+    "performance:attribute-scale-in": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-attribute-scale-in.ts",
     "performance:risk:set": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-set-risk.ts",
     "performance:snapshot:verify": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-verify-snapshot.ts",
     "performance:instagram": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-instagram-card.ts",

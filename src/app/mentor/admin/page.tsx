@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "../../../lib/session";
 import { isAdmin } from "../../../lib/admin";
 import {
@@ -34,6 +35,9 @@ export default async function AdminDashboard() {
           Admin
         </p>
         <h1 className="text-3xl font-semibold">Creator dashboard</h1>
+        <Link href="/performance/review" className="mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)] transition-colors hover:bg-[var(--bp-accent)]/10">
+          Review Performance Journal
+        </Link>
       </header>
 
       {/* Overview cards */}

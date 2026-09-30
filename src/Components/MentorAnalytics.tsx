@@ -12,6 +12,10 @@ import { GA_ID, FB_PIXEL_ID, pageview } from "../lib/track";
 export default function MentorAnalytics() {
   const pathname = usePathname();
   const enabled = Boolean(GA_ID || FB_PIXEL_ID);
+  const privateReview = pathname === "/performance/review" ||
+    pathname?.startsWith("/performance/review/") ||
+    pathname === "/mentor/performance/review" ||
+    pathname?.startsWith("/mentor/performance/review/");
   // Seeded with the initial path: the snippets below already counted it, so we
   // skip it here. Comparing by value also ignores React Strict Mode's dev
   // double-invoke, firing only on genuine navigations.
@@ -20,10 +24,10 @@ export default function MentorAnalytics() {
   useEffect(() => {
     if (!enabled || !pathname || pathname === lastPath.current) return;
     lastPath.current = pathname;
-    pageview(pathname);
-  }, [pathname, enabled]);
+    if (!privateReview) pageview(pathname);
+  }, [pathname, enabled, privateReview]);
 
-  if (!enabled) return null;
+  if (!enabled || privateReview) return null;
 
   return (
     <>

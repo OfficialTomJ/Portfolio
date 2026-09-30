@@ -25,14 +25,26 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
   const url = req.nextUrl.clone();
   const { pathname } = url;
+  const privateReview = pathname === "/performance/review" ||
+    pathname.startsWith("/performance/review/") ||
+    pathname === "/mentor/performance/review" ||
+    pathname.startsWith("/mentor/performance/review/");
+
+  function withPrivateHeaders(response: NextResponse) {
+    if (privateReview) {
+      response.headers.set("Cache-Control", "private, no-store");
+      response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    }
+    return response;
+  }
 
   if (isMentorHost(host) || DEV_AS_MENTOR || VERCEL_PREVIEW) {
     // API routes live at /api/* for both hosts, don't prefix them.
     if (pathname.startsWith("/api") || pathname.startsWith("/mentor")) {
-      return NextResponse.next();
+      return withPrivateHeaders(NextResponse.next());
     }
     url.pathname = pathname === "/" ? "/mentor" : `/mentor${pathname}`;
-    return NextResponse.rewrite(url);
+    return withPrivateHeaders(NextResponse.rewrite(url));
   }
 
   // Apex/other hosts: keep the mentor route group private.

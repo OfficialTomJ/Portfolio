@@ -10,6 +10,16 @@ const nextConfig = {
             { protocol: "https", hostname: "img.youtube.com" },
         ],
     },
+    async headers() {
+      const privateReviewHeaders = [
+        { key: "Cache-Control", value: "private, no-store" },
+        { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+      ];
+      return [
+        { source: "/performance/review/:path*", headers: privateReviewHeaders },
+        { source: "/mentor/performance/review/:path*", headers: privateReviewHeaders },
+      ];
+    },
     async redirects() {
     const redirects = [
       {

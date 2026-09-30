@@ -84,9 +84,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export default function PerformanceDashboard({
   dataset,
+  reviewMode = false,
+  pendingTradeIds = [],
 }: {
   dataset: PerformanceDataset;
+  reviewMode?: boolean;
+  pendingTradeIds?: string[];
 }) {
+  const pendingIds = new Set(pendingTradeIds);
   const [period, setPeriod] = useState<PeriodSelection>("30D");
   const asOfKey = sydneyDateKey(dataset.asOf);
   const inceptionKey = sydneyDateKey(dataset.inceptionAt);
@@ -121,12 +126,12 @@ export default function PerformanceDashboard({
   const selectPeriod = (nextPeriod: PeriodSelection) => {
     setPeriod(nextPeriod);
     setSelectedDate(null);
-    track("performance_period_change", { period: nextPeriod });
+    if (!reviewMode) track("performance_period_change", { period: nextPeriod });
   };
 
   const selectDate = (date: string | null) => {
     setSelectedDate(date);
-    if (date) track("performance_calendar_day_select", { period });
+    if (date && !reviewMode) track("performance_calendar_day_select", { period });
   };
 
   return (
@@ -239,7 +244,7 @@ export default function PerformanceDashboard({
         </div>
       </section>
 
-      <JournalUpdatesPrompt />
+      {!reviewMode && <JournalUpdatesPrompt />}
 
       <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
         <PerformanceCalendar
@@ -283,8 +288,8 @@ export default function PerformanceDashboard({
               {visibleTrades.map((item) => (
                 <Link
                   key={item.id}
-                  href={`/performance/trades/${item.id}`}
-                  onClick={() => track("performance_trade_open", { direction: item.direction.toLowerCase(), period })}
+                  href={reviewMode ? `/performance/review/trades/${item.id}` : `/performance/trades/${item.id}`}
+                  onClick={reviewMode ? undefined : () => track("performance_trade_open", { direction: item.direction.toLowerCase(), period })}
                   className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.07] px-4 py-4 transition-colors last:border-0 hover:bg-white/[0.025] sm:px-6"
                 >
                   <div className="min-w-0">
@@ -294,6 +299,11 @@ export default function PerformanceDashboard({
                         {item.direction.toUpperCase()} {item.direction === "Long" ? "↑" : "↓"}
                       </span>
                       <span className="text-xs text-zinc-500">{dateFormatter.format(new Date(item.closedAt))}</span>
+                      {reviewMode && pendingIds.has(item.id) && (
+                        <span className="rounded border border-[#ff6719]/30 bg-[#ff6719]/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-[#ffad83]">
+                          Pending review
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>

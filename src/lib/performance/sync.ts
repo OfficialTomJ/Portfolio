@@ -288,7 +288,7 @@ export async function attributeSameTradeScaleIn(symbol: string, expectedStopPric
       cycle.lastSeenAt.getTime() !== state.lastSuccessAt.getTime() ||
       cycle.direction !== positionDirection(position.side) ||
       cycle.positionIdx !== position.positionIdx ||
-      Math.abs((cycle.initialStopPrice ?? 0) - stopPrice) > 1e-6 ||
+      !cycle.initialStopPrice || cycle.initialStopPrice <= 0 ||
       Math.abs(cycle.quantity - numberValue(position.size)) > 1e-6 ||
       Math.abs(cycle.entryPrice - numberValue(position.avgPrice)) > 1e-6 ||
       !cycle.riskVersionId || !cycle.riskAmount || cycle.riskAmount <= 0 ||
@@ -322,7 +322,7 @@ export async function attributeSameTradeScaleIn(symbol: string, expectedStopPric
       sourceAccountId,
       status: "open",
       lastSeenAt: state.lastSuccessAt,
-      initialStopPrice: stopPrice,
+      initialStopPrice: cycle.initialStopPrice,
       publicationHold: true,
       publicationHoldReason: "overlapping_entries",
       sameTradeAttribution: { $exists: false },

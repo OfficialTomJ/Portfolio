@@ -8,7 +8,7 @@ The editor opens from data already loaded by the authenticated page. A backgroun
 
 Public pages offer period and multi-select trade type. Private pages add searchable multi-select strategies and an Unclassified type option. No selection means unrestricted, including unclassified trades. Types match ANY selected type; strategies match ANY selected strategy; the two groups combine with AND. Each trade is counted once even if it matches several strategies. Removable chips wrap on mobile. Clearing filters preserves the period, while changing filters clears a selected calendar day. The default remains rolling 30 days.
 
-Filters apply to actual results, statistics, trade lists and the public calendar. Active positions follow classification filters but do not contribute to closed results. ASR comparison uses the same reviewed trades and closing dates for actual and expected curves, with independent curve toggles and a private validity filter. Review coverage remains explicit. Expected R and validity are both required for a completed ASR; zero R and invalid are valid assessments.
+Filters apply to actual results, statistics, trade lists and the public calendar. Active positions follow classification filters but do not contribute to closed results. The private chart defaults to All actual results, including closed trades awaiting publication or ASR review, within the selected period and classification filters. ASR comparison is opt-in and uses the same reviewed trades and closing dates for actual and expected curves, with independent curve toggles and a private validity filter. Review coverage remains explicit. Expected R and validity are both required for a completed ASR; zero R and invalid are valid assessments.
 
 ## Storage and privacy
 

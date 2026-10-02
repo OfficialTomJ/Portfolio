@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import TradeDetailView from "@/Components/performance/TradeDetailView";
+import PrivateTradeReview from "@/Components/performance/PrivateTradeReview";
 import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
-import { getAdminPerformanceTrade } from "@/lib/performance/admin-data";
+import { getAdminPerformanceSnapshot, getAdminPerformanceTrade } from "@/lib/performance/admin-data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { getTagCatalogue, getTradeAnnotations } from "@/lib/performance/annotations";
+import { nextUnreviewedTradeId } from "@/lib/performance/review-workspace";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -25,10 +26,12 @@ export default async function PrivateTradePage({ params }: Props) {
     notFound();
   }
   if (!result) notFound();
-  const [market, annotations, tags] = await Promise.all([
+  const [market, annotations, tags, snapshot] = await Promise.all([
     getHistoricalCandles(result.trade, "4h", 24),
     getTradeAnnotations([id]),
     getTagCatalogue(),
+    getAdminPerformanceSnapshot(),
   ]);
-  return <TradeDetailView trade={result.trade} market={market} reviewStatus={result.status} annotation={annotations[id]} tagCatalogue={tags} />;
+  const nextTradeId = snapshot ? nextUnreviewedTradeId(id, snapshot.dataset.trades, snapshot.annotations) : null;
+  return <PrivateTradeReview trade={result.trade} market={market} status={result.status} annotation={annotations[id]} tags={tags} nextTradeId={nextTradeId} />;
 }

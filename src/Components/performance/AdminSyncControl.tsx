@@ -56,9 +56,7 @@ export default function AdminSyncControl({ lastSyncAt }: { lastSyncAt: string })
           {syncing ? "Syncing…" : "Sync now"}
         </button>
       </div>
-      <p aria-live="polite" className="text-xs text-zinc-500">
-        {message || "Fetches the latest account data. Does not approve results."}
-      </p>
+      {message && <p role="status" className="text-xs text-zinc-400">{message}</p>}
     </div>
   );
 }

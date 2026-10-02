@@ -12,7 +12,8 @@ import {
 } from "@/lib/performance/metrics";
 import type { PerformanceDataset, PerformanceRange, TradeTag } from "@/lib/performance/types";
 import type { AdminPendingReview, AdminActivePosition } from "@/lib/performance/admin-selection";
-import type { TradeAnnotation } from "@/lib/performance/annotations-model";
+import { matchesTradeFilters, type TradeTypeFilter, type TradeAnnotation } from "@/lib/performance/annotations-model";
+import MultiSelectFilter from "./MultiSelectFilter";
 import AsrComparison from "./AsrComparison";
 import AdminTradeManager from "./AdminTradeManager";
 import { track } from "@/lib/track";
@@ -103,8 +104,11 @@ export default function PerformanceDashboard({
 }) {
   const pendingById = new Map(pendingReviews.map((review) => [review.id, review.fingerprint]));
   const [period, setPeriod] = useState<PeriodSelection>("30D");
-  const [tagFilter, setTagFilter] = useState("all");
-  const tags = tagCatalogue ?? [...new Map(dataset.trades.flatMap((trade) => trade.tags ?? []).map((tag) => [tag.id, tag])).values()].sort((a, b) => a.name.localeCompare(b.name));
+  const [typeFilters, setTypeFilters] = useState<TradeTypeFilter[]>([]);
+  const [strategyFilters, setStrategyFilters] = useState<string[]>([]);
+  const tags = reviewMode ? tagCatalogue ?? [] : [];
+  const typeOptions = [{ id: "DAY", name: "DAY" }, { id: "SWING", name: "SWING" }, ...(reviewMode ? [{ id: "UNCLASSIFIED", name: "Unclassified" }] : [])];
+  const filterChips = [...typeFilters.map(id => ({ id, name: id === "UNCLASSIFIED" ? "Unclassified" : id, type: true })), ...(reviewMode ? strategyFilters.map(id => ({ id, name: tags.find(tag => tag.id === id)?.name ?? "Strategy", type: false })) : [])];
   const [publicationNotice, setPublicationNotice] = useState("");
   const [publishingTradeId, setPublishingTradeId] = useState<string | null>(null);
   const asOfKey = sydneyDateKey(dataset.asOf);
@@ -128,7 +132,7 @@ export default function PerformanceDashboard({
   const customRange = selectedMonthKey
     ? calendarMonthRange(selectedMonthKey, dataset.asOf)
     : manualCustomRange;
-  const taggedDataset = { ...dataset, trades: dataset.trades.filter((trade) => tagFilter === "all" || (tagFilter === "untagged" ? !trade.tags?.length : trade.tags?.some((tag) => tag.id === tagFilter))) };
+  const taggedDataset = { ...dataset, trades: dataset.trades.filter(trade => matchesTradeFilters(reviewMode ? annotations[trade.id]?.tradeType : trade.tradeType, reviewMode ? annotations[trade.id]?.strategyIds ?? [] : [], typeFilters, reviewMode ? strategyFilters : [])) };
   const view = buildPerformanceView(taggedDataset, range, year, customRange);
   const { stats } = view;
   const visibleTrades = selectedDate
@@ -188,10 +192,8 @@ export default function PerformanceDashboard({
                   </optgroup>
                 </select>
               </label>
-              <label className="min-w-0 min-[480px]:w-44">
-                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Tag</span>
-                <select aria-label="Trade tag" value={tagFilter} onChange={(event) => { setTagFilter(event.target.value); setSelectedDate(null); }} className="h-10 w-full rounded-lg border border-white/10 bg-black px-3 text-sm text-zinc-200 outline-none focus:border-[#ff6719]/50"><option value="all">All trades</option><option value="untagged">Untagged</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select>
-              </label>
+              <MultiSelectFilter label="Trade type" options={typeOptions} selected={typeFilters} onChange={ids => { setTypeFilters(ids as TradeTypeFilter[]); setSelectedDate(null); }} />
+              {reviewMode && <MultiSelectFilter label="Strategies" options={tags} selected={strategyFilters} searchable onChange={ids => { setStrategyFilters(ids); setSelectedDate(null); }} />}
               {range === "YEAR" && (
                 <label className="min-[480px]:w-32">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Year</span>
@@ -207,6 +209,8 @@ export default function PerformanceDashboard({
               )}
             </div>
           </div>
+
+          {!!filterChips.length && <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Selected filters">{filterChips.map(chip => <button key={`${chip.type}-${chip.id}`} type="button" aria-label={`Remove ${chip.name} filter`} onClick={() => { if(chip.type)setTypeFilters(previous => previous.filter(id => id !== chip.id));else setStrategyFilters(previous => previous.filter(id => id !== chip.id));setSelectedDate(null); }} className="max-w-full break-words rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]">{chip.name} ×</button>)}<button type="button" onClick={() => { setTypeFilters([]);setStrategyFilters([]);setSelectedDate(null); }} className="px-2 py-1.5 text-xs text-zinc-400">Clear filters</button></div>}
 
           {period === "CUSTOM" && (
             <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/[0.07] pt-4 min-[480px]:grid-cols-2 sm:max-w-md sm:ml-auto">
@@ -267,7 +271,7 @@ export default function PerformanceDashboard({
 
       {reviewMode ? <>
         <AsrComparison view={view} annotations={annotations} />
-        <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} annotations={annotations} tags={tags} tagFilter={tagFilter} />
+        <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} annotations={annotations} tags={tags} typeFilters={typeFilters} strategyFilters={strategyFilters} />
       </> : <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
         <PerformanceCalendar
           key={`${period}-${year}-${customRange.start}-${customRange.end}`}
@@ -334,7 +338,7 @@ export default function PerformanceDashboard({
                             </span>
                           )}
                         </div>
-                        {!!item.tags?.length && <div className="mt-2 flex flex-wrap gap-1.5">{item.tags.map((tag) => <span key={tag.id} className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-400">{tag.name}</span>)}</div>}
+                        {item.tradeType && <span className="mt-2 inline-block rounded border border-white/10 px-2 py-1 text-xs text-zinc-400">{item.tradeType}</span>}
                       </div>
                       <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
                         {signedR(item.resultR)}

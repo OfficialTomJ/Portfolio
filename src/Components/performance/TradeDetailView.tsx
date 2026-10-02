@@ -82,7 +82,7 @@ export default function TradeDetailView({
             <p className="mt-3 break-words text-sm leading-6 text-zinc-400">
               {trade.direction} position · {duration(trade.openedAt, trade.closedAt)} · Closed {fullDate.format(new Date(trade.closedAt))}
             </p>
-            {!!trade.tags?.length && <div className="mt-3 flex flex-wrap gap-2">{trade.tags.map((tag) => <span key={tag.id} className="rounded border border-white/15 px-2 py-1 text-xs text-zinc-300">{tag.name}</span>)}</div>}
+            {trade.tradeType && <span className="mt-3 inline-block rounded border border-white/15 px-2.5 py-1 text-xs text-zinc-300">{trade.tradeType}</span>}
           </div>
           <div className="sm:text-right">
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-600">Net result</p>

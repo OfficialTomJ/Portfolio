@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { asrStatus, buildAsrComparison, EMPTY_ANNOTATION, normalizeTagName, parseAnnotation, type TradeAnnotation } from "./annotations-model";
+import { asrStatus, buildAsrComparison, EMPTY_ANNOTATION, normalizeTagName, parseAnnotation, type TradeAnnotation, matchesTradeFilters, classifyLegacyTags } from "./annotations-model";
 import type { PerformanceTrade } from "./types";
 import { performanceReviewFingerprint } from "./review";
 
@@ -34,7 +34,7 @@ test("metadata validation accepts drafts, deduplicates tags, and rejects unautho
   assert.throws(() => parseAnnotation({ ...complete }, false), /after/);
   assert.throws(() => parseAnnotation({ ...EMPTY_ANNOTATION, asrComments: "review" }, false), /after/);
   const id = "tag-11111111111111111111";
-  assert.deepEqual(parseAnnotation({ ...EMPTY_ANNOTATION, tagIds: [id, id] }, true).tagIds, [id]);
+  assert.deepEqual(parseAnnotation({ ...EMPTY_ANNOTATION, strategyIds: [id, id] }, true).strategyIds, [id]);
 });
 
 test("tag normalization rejects control characters and markup", () => {
@@ -44,5 +44,29 @@ test("tag normalization rejects control characters and markup", () => {
 
 test("manual metadata does not change publication fingerprints", () => {
   const fingerprint = performanceReviewFingerprint(trade, [], "risk-v1", 1000);
-  assert.equal(performanceReviewFingerprint({ ...trade, description: "Public notes", tags: [{ id: "tag-11111111111111111111", name: "Swing" }] }, [], "risk-v1", 1000), fingerprint);
+  assert.equal(performanceReviewFingerprint({ ...trade, description: "Public notes", tradeType: "SWING" }, [], "risk-v1", 1000), fingerprint);
+});
+
+test("filters use OR within groups and AND across groups without duplicating trades", () => {
+  assert.equal(matchesTradeFilters("DAY", ["acb"], ["DAY"], ["acb", "ibo"]), true);
+  assert.equal(matchesTradeFilters("DAY", ["ibo"], ["DAY"], ["acb", "ibo"]), true);
+  assert.equal(matchesTradeFilters("SWING", ["acb"], ["DAY"], ["acb", "ibo"]), false);
+  assert.equal(matchesTradeFilters("DAY", ["other"], ["DAY"], ["acb", "ibo"]), false);
+  assert.equal(matchesTradeFilters(null, [], [], []), true);
+  assert.equal(matchesTradeFilters(null, [], ["DAY", "SWING"], []), false);
+  assert.equal(matchesTradeFilters(null, [], ["UNCLASSIFIED"], []), true);
+  const rows = [{ type: "DAY" as const, strategies: ["acb", "ibo"] }];
+  assert.equal(rows.filter(row => matchesTradeFilters(row.type, row.strategies, ["DAY"], ["acb", "ibo"])).length, 1);
+});
+
+test("trade type is fixed and legacy or public strategy fields are rejected", () => {
+  assert.throws(() => parseAnnotation({ ...EMPTY_ANNOTATION, tradeType: "IBO" }, true), /Day/);
+  assert.throws(() => parseAnnotation({ ...EMPTY_ANNOTATION, tagIds: [] }, true), /Unknown/);
+  assert.equal(parseAnnotation({ ...EMPTY_ANNOTATION, tradeType: "DAY" }, false).tradeType, "DAY");
+});
+
+test("legacy migration classifies known types only, keeps unknown tags private, and flags conflicts", () => {
+  const tags = [{ id: "day", name: " Day " }, { id: "swing", name: "Swing Trade" }, { id: "acb", name: "ACB" }];
+  assert.deepEqual(classifyLegacyTags(["day", "acb", "acb", "unknown"], tags), { tradeType: "DAY", strategyIds: ["acb", "unknown"], conflict: false });
+  assert.deepEqual(classifyLegacyTags(["day", "swing", "acb"], tags), { tradeType: null, strategyIds: ["acb"], conflict: true });
 });

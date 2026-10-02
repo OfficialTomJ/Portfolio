@@ -84,17 +84,17 @@ function TradeEditor({ trade, initialAnnotation, initialTags, onClose }: {
   };
   const toggleTag = (id: string) => {
     edited.current = true;
-    setAnnotation((previous) => ({ ...previous, tagIds: previous.tagIds.includes(id) ? previous.tagIds.filter((tag) => tag !== id) : [...previous.tagIds, id].sort() }));
+    setAnnotation((previous) => ({ ...previous, strategyIds: previous.strategyIds.includes(id) ? previous.strategyIds.filter((tag) => tag !== id) : [...previous.strategyIds, id].sort() }));
   };
   async function createTag() {
     if (!query.trim() || creating) return;
     edited.current = true;
     setCreating(true); setError("");
     try {
-      const response = await fetch("/api/performance/admin/tags", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: query }) });
+      const response = await fetch("/api/performance/admin/strategies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: query }) });
       const result = await response.json(); if (!response.ok) throw new Error(result.error);
       setTags((previous) => [...previous.filter((tag) => tag.id !== result.tag.id), result.tag].sort((a, b) => a.name.localeCompare(b.name)));
-      setAnnotation((previous) => ({ ...previous, tagIds: [...new Set([...previous.tagIds, result.tag.id])].sort() })); setQuery("");
+      setAnnotation((previous) => ({ ...previous, strategyIds: [...new Set([...previous.strategyIds, result.tag.id])].sort() })); setQuery("");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not create tag"); }
     finally { setCreating(false); }
   }
@@ -119,17 +119,18 @@ function TradeEditor({ trade, initialAnnotation, initialTags, onClose }: {
         {loading ? <p className="py-8 text-sm text-zinc-400">{error || "Loading trade…"}</p> : <>
           <section className="space-y-4">
             <h3 className="text-sm font-medium">Public information</h3>
-            <div><label htmlFor="tag-query" className="text-sm text-zinc-300">Tags</label>
-              <div className="mt-2 flex flex-wrap gap-2">{annotation.tagIds.map((id) => <button key={id} type="button" onClick={() => toggleTag(id)} className="rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]" aria-label={`Remove ${tags.find((tag) => tag.id === id)?.name} tag`}>{tags.find((tag) => tag.id === id)?.name} ×</button>)}</div>
-              <input id="tag-query" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={40} placeholder="Find or create a tag" className={field} />
-              <div className="mt-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{tags.filter((tag) => tag.name.toLowerCase().includes(query.trim().toLowerCase())).map((tag) => <button key={tag.id} type="button" aria-pressed={annotation.tagIds.includes(tag.id)} onClick={() => toggleTag(tag.id)} disabled={!annotation.tagIds.includes(tag.id) && annotation.tagIds.length >= 12} className={`rounded-lg border px-3 py-2 text-xs ${annotation.tagIds.includes(tag.id) ? "border-[#ff6719]/40 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{annotation.tagIds.includes(tag.id) ? "✓ " : "+ "}{tag.name}</button>)}</div>
-              {query.trim() && !tags.some((tag) => tag.name.toLowerCase() === query.trim().toLowerCase()) && <button type="button" onClick={createTag} disabled={creating || annotation.tagIds.length >= 12} className="mt-3 text-sm text-[#ff8b52]">{creating ? "Creating…" : `Create “${query.trim()}”`}</button>}
-              {!tags.length && !query && <p className="mt-2 text-xs text-zinc-500">Create your first tag, such as Day or Swing.</p>}
-            </div>
+            <label className="block text-sm text-zinc-300">Trade type<select aria-label="Trade type" value={annotation.tradeType ?? ""} onChange={event => { edited.current = true; setAnnotation(previous => ({ ...previous, tradeType: event.target.value === "DAY" ? "DAY" : event.target.value === "SWING" ? "SWING" : null })); }} className={field}><option value="">Not set</option><option value="DAY">DAY</option><option value="SWING">SWING</option></select><span className="mt-1 block text-xs text-zinc-500">Public once the trade is published.</span></label>
             <label className="block text-sm text-zinc-300">Description<textarea aria-label="Description" rows={3} value={annotation.description} onChange={(event) => update("description", event.target.value)} maxLength={5000} placeholder="Your public write-up for this trade" className={field} /><span className="mt-1 block text-xs text-zinc-500">Visible on the trade page once published.</span></label>
           </section>
           <section className="space-y-4 border-t border-white/10 pt-5">
             <h3 className="text-sm font-medium">Private review <span className="ml-2 text-xs font-normal text-zinc-500">Only you</span></h3>
+            <div><label htmlFor="tag-query" className="text-sm text-zinc-300">Strategies</label>
+              <div className="mt-2 flex flex-wrap gap-2">{annotation.strategyIds.map((id) => <button key={id} type="button" onClick={() => toggleTag(id)} className="rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]" aria-label={`Remove ${tags.find((tag) => tag.id === id)?.name} strategy`}>{tags.find((tag) => tag.id === id)?.name} ×</button>)}</div>
+              <input id="tag-query" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={40} placeholder="Find or create a strategy" className={field} />
+              <div className="mt-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{tags.filter((tag) => tag.name.toLowerCase().includes(query.trim().toLowerCase())).map((tag) => <button key={tag.id} type="button" aria-pressed={annotation.strategyIds.includes(tag.id)} onClick={() => toggleTag(tag.id)} disabled={!annotation.strategyIds.includes(tag.id) && annotation.strategyIds.length >= 12} className={`rounded-lg border px-3 py-2 text-xs ${annotation.strategyIds.includes(tag.id) ? "border-[#ff6719]/40 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{annotation.strategyIds.includes(tag.id) ? "✓ " : "+ "}{tag.name}</button>)}</div>
+              {query.trim() && !tags.some((tag) => tag.name.toLowerCase() === query.trim().toLowerCase()) && <button type="button" onClick={createTag} disabled={creating || annotation.strategyIds.length >= 12} className="mt-3 text-sm text-[#ff8b52]">{creating ? "Creating…" : `Create “${query.trim()}”`}</button>}
+              {!tags.length && !query && <p className="mt-2 text-xs text-zinc-500">Create your first private strategy, such as ACB or IBO.</p>}
+            </div>
             <label className="block text-sm text-zinc-300">Private notes<textarea aria-label="Private notes" rows={3} value={annotation.privateNotes} onChange={(event) => update("privateNotes", event.target.value)} maxLength={10000} placeholder="Working notes and reminders" className={field} /></label>
             <div className="border-t border-white/10 pt-4"><h4 className="text-sm font-medium">ASR · Advanced Self Review</h4><p className="mt-1 text-xs leading-5 text-zinc-500">{closed ? "Assess the result achievable with perfect management of your intended strategy." : "Available after this trade closes."}</p></div>
             <fieldset disabled={!closed} className="space-y-4 disabled:opacity-40">

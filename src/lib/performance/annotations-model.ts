@@ -1,9 +1,10 @@
 import { calculateStats, equitySeries } from "./metrics";
-import type { PerformanceTrade } from "./types";
+import type { PerformanceTrade, TradeType, TradeTag } from "./types";
 
 export interface TradeAnnotation {
   revision: number;
-  tagIds: string[];
+  tradeType: TradeType | null;
+  strategyIds: string[];
   description: string;
   privateNotes: string;
   asrComments: string;
@@ -12,7 +13,7 @@ export interface TradeAnnotation {
 }
 
 export const EMPTY_ANNOTATION: TradeAnnotation = {
-  revision: 0, tagIds: [], description: "", privateNotes: "", asrComments: "", expectedR: null, valid: null,
+  revision: 0, tradeType: null, strategyIds: [], description: "", privateNotes: "", asrComments: "", expectedR: null, valid: null,
 };
 export const TRADE_ID_PATTERN = /^trade-[a-f0-9]{20}$/;
 export const TAG_ID_PATTERN = /^tag-[a-f0-9]{20}$/;
@@ -30,7 +31,8 @@ export function parseAnnotation(value: unknown, closed: boolean): TradeAnnotatio
   const allowed = Object.keys(EMPTY_ANNOTATION);
   if (Object.keys(v).some((key) => !allowed.includes(key))) throw new Error("Unknown edit field");
   if (!Number.isSafeInteger(v.revision) || (v.revision as number) < 0) throw new Error("Invalid revision");
-  if (!Array.isArray(v.tagIds) || v.tagIds.length > 12 || v.tagIds.some((id) => typeof id !== "string" || !TAG_ID_PATTERN.test(id))) throw new Error("Choose up to 12 tags");
+  if (v.tradeType !== null && v.tradeType !== "DAY" && v.tradeType !== "SWING") throw new Error("Choose Day, Swing, or not set");
+  if (!Array.isArray(v.strategyIds) || v.strategyIds.length > 12 || v.strategyIds.some((id) => typeof id !== "string" || !TAG_ID_PATTERN.test(id))) throw new Error("Choose up to 12 strategies");
   const text = (key: string, limit: number) => {
     if (typeof v[key] !== "string" || (v[key] as string).length > limit) throw new Error(`Invalid ${key}`);
     return (v[key] as string).trim();
@@ -38,12 +40,32 @@ export function parseAnnotation(value: unknown, closed: boolean): TradeAnnotatio
   if (v.expectedR !== null && (typeof v.expectedR !== "number" || !Number.isFinite(v.expectedR) || Math.abs(v.expectedR) > 100)) throw new Error("Expected R must be between -100 and 100");
   if (v.valid !== null && typeof v.valid !== "boolean") throw new Error("Choose valid, invalid, or not reviewed");
   const annotation: TradeAnnotation = {
-    revision: v.revision as number, tagIds: [...new Set(v.tagIds as string[])].sort(),
+    revision: v.revision as number, tradeType: v.tradeType as TradeType | null, strategyIds: [...new Set(v.strategyIds as string[])].sort(),
     description: text("description", 5000), privateNotes: text("privateNotes", 10000),
     asrComments: text("asrComments", 10000), expectedR: v.expectedR as number | null, valid: v.valid as boolean | null,
   };
   if (!closed && (annotation.expectedR !== null || annotation.valid !== null || annotation.asrComments)) throw new Error("ASR is available after the trade closes");
   return annotation;
+}
+
+export type TradeTypeFilter = TradeType | "UNCLASSIFIED";
+export function matchesTradeFilters(type: TradeType | null | undefined, strategies: string[], types: TradeTypeFilter[], selectedStrategies: string[]): boolean {
+  return (!types.length || types.includes(type ?? "UNCLASSIFIED")) &&
+    (!selectedStrategies.length || strategies.some((id) => selectedStrategies.includes(id)));
+}
+
+/** Unknown legacy tags become private; conflicting Day/Swing labels remain unset. */
+export function classifyLegacyTags(ids: string[], catalogue: TradeTag[]) {
+  const byId = new Map(catalogue.map((tag) => [tag.id, tag.name.normalize("NFKC").trim().toUpperCase()]));
+  const types = new Set<TradeType>();
+  const strategyIds: string[] = [];
+  for (const id of [...new Set(ids)]) {
+    const name = byId.get(id);
+    if (name === "DAY" || name === "DAY TRADE") types.add("DAY");
+    else if (name === "SWING" || name === "SWING TRADE") types.add("SWING");
+    else strategyIds.push(id);
+  }
+  return { tradeType: types.size === 1 ? [...types][0] : null, strategyIds: strategyIds.sort(), conflict: types.size > 1 };
 }
 
 export function asrStatus(annotation?: TradeAnnotation): "Not reviewed" | "Incomplete" | "Reviewed" {

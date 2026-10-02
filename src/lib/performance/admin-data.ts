@@ -103,6 +103,7 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
 export async function getAdminPerformanceTrade(id: string): Promise<{
   trade: PerformanceTrade;
   status: "published" | "pending_review";
+  fingerprint?: string;
 } | null> {
   if (!/^trade-[a-f0-9]+$/.test(id)) return null;
   const publicResult = await getLivePerformanceTrade(id);
@@ -120,5 +121,5 @@ export async function getAdminPerformanceTrade(id: string): Promise<{
       excludedFromJournal: { $ne: true },
     }, { projection: { reviewCandidate: 1, reviewFingerprint: 1, status: 1 } });
   const trade = cycle && validCandidate(cycle);
-  return trade ? { trade: (await enrichPublicTrades([trade]))[0], status: "pending_review" } : null;
+  return trade ? { trade: (await enrichPublicTrades([trade]))[0], status: "pending_review", fingerprint: cycle!.reviewFingerprint } : null;
 }

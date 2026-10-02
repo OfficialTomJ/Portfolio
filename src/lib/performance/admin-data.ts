@@ -6,6 +6,10 @@ import { getLivePerformanceDataset, getLivePerformanceTrade } from "./data";
 import { PERFORMANCE_COLLECTIONS } from "./sync";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
 import type { PerformanceDataset, PerformanceTrade } from "./types";
+import type { TradeTag } from "./types";
+import type { TradeAnnotation } from "./annotations-model";
+import { getTagCatalogue, getTradeAnnotations } from "./annotations";
+import { enrichPublicTrades } from "./public-metadata";
 export type { AdminActivePosition } from "./admin-selection";
 
 interface SyncStateView {
@@ -32,6 +36,8 @@ export interface AdminPerformanceSnapshot {
   pendingReviews: AdminPendingReview[];
   activePositions: AdminActivePosition[];
   lastSyncAt: string;
+  annotations: Record<string, TradeAnnotation>;
+  tags: TradeTag[];
 }
 
 async function getCurrentAccountScope() {
@@ -86,7 +92,12 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
     } }).toArray(),
   ]);
 
-  return assembleAdminReview(publicResult.dataset, pendingCycles, openCycles, scope.lastSyncAt);
+  const snapshot = assembleAdminReview(publicResult.dataset, pendingCycles, openCycles, scope.lastSyncAt);
+  const [annotations, tags, trades] = await Promise.all([
+    getTradeAnnotations([...snapshot.dataset.trades.map((trade) => trade.id), ...snapshot.activePositions.map((trade) => trade.id)]),
+    getTagCatalogue(), enrichPublicTrades(snapshot.dataset.trades),
+  ]);
+  return { ...snapshot, dataset: { ...snapshot.dataset, trades }, annotations, tags };
 }
 
 export async function getAdminPerformanceTrade(id: string): Promise<{
@@ -109,5 +120,5 @@ export async function getAdminPerformanceTrade(id: string): Promise<{
       excludedFromJournal: { $ne: true },
     }, { projection: { reviewCandidate: 1, reviewFingerprint: 1, status: 1 } });
   const trade = cycle && validCandidate(cycle);
-  return trade ? { trade, status: "pending_review" } : null;
+  return trade ? { trade: (await enrichPublicTrades([trade]))[0], status: "pending_review" } : null;
 }

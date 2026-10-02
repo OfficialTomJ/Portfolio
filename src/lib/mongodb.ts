@@ -26,7 +26,13 @@ function getClient(): MongoClient {
   return global._blueprintMongoClient;
 }
 
+/** Shared client for atomic admin metadata writes. */
+export function getMongoClient(): MongoClient { return getClient(); }
+
 /** Returns the Blueprint database (name from MONGODB_DB, defaults to dev). */
 export function getDb(): Db {
+  if (process.env.VERCEL_ENV === "preview" && dbName !== "blueprint_dev") {
+    throw new Error("Preview deployments must use the development database");
+  }
   return getClient().db(dbName);
 }

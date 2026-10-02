@@ -10,7 +10,11 @@ export interface PerformanceTrade {
   resultR: number;
   entryPrice: number;
   exitPrice: number;
+  tags?: TradeTag[];
+  description?: string;
 }
+
+export interface TradeTag { id: string; name: string }
 
 export interface PerformanceDataset {
   id: string;

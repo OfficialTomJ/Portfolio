@@ -25,7 +25,11 @@ export function performanceReviewFingerprint(
   })).sort((a, b) => `${a.orderId}:${a.updatedTime}`.localeCompare(`${b.orderId}:${b.updatedTime}`));
 
   return createHash("sha256")
-    .update(JSON.stringify({ trade, source, riskVersionId, riskAmount }))
+    .update(JSON.stringify({ trade: {
+      id: trade.id, symbol: trade.symbol, direction: trade.direction,
+      openedAt: trade.openedAt, closedAt: trade.closedAt,
+      entryPrice: trade.entryPrice, exitPrice: trade.exitPrice, resultR: trade.resultR,
+    }, source, riskVersionId, riskAmount }))
     .digest("hex");
 }
 

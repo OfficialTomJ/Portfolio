@@ -10,8 +10,11 @@ import {
   signedR,
   sydneyDateKey,
 } from "@/lib/performance/metrics";
-import type { PerformanceDataset, PerformanceRange } from "@/lib/performance/types";
-import type { AdminPendingReview } from "@/lib/performance/admin-selection";
+import type { PerformanceDataset, PerformanceRange, TradeTag } from "@/lib/performance/types";
+import type { AdminPendingReview, AdminActivePosition } from "@/lib/performance/admin-selection";
+import type { TradeAnnotation } from "@/lib/performance/annotations-model";
+import AsrComparison from "./AsrComparison";
+import AdminTradeManager from "./AdminTradeManager";
 import { track } from "@/lib/track";
 import AdminPublishButton from "./AdminPublishButton";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
@@ -87,13 +90,21 @@ export default function PerformanceDashboard({
   dataset,
   reviewMode = false,
   pendingReviews = [],
+  annotations = {},
+  activePositions = [],
+  tagCatalogue,
 }: {
   dataset: PerformanceDataset;
   reviewMode?: boolean;
   pendingReviews?: AdminPendingReview[];
+  annotations?: Record<string, TradeAnnotation>;
+  activePositions?: AdminActivePosition[];
+  tagCatalogue?: TradeTag[];
 }) {
   const pendingById = new Map(pendingReviews.map((review) => [review.id, review.fingerprint]));
   const [period, setPeriod] = useState<PeriodSelection>("30D");
+  const [tagFilter, setTagFilter] = useState("all");
+  const tags = tagCatalogue ?? [...new Map(dataset.trades.flatMap((trade) => trade.tags ?? []).map((tag) => [tag.id, tag])).values()].sort((a, b) => a.name.localeCompare(b.name));
   const [publicationNotice, setPublicationNotice] = useState("");
   const [publishingTradeId, setPublishingTradeId] = useState<string | null>(null);
   const asOfKey = sydneyDateKey(dataset.asOf);
@@ -117,7 +128,8 @@ export default function PerformanceDashboard({
   const customRange = selectedMonthKey
     ? calendarMonthRange(selectedMonthKey, dataset.asOf)
     : manualCustomRange;
-  const view = buildPerformanceView(dataset, range, year, customRange);
+  const taggedDataset = { ...dataset, trades: dataset.trades.filter((trade) => tagFilter === "all" || (tagFilter === "untagged" ? !trade.tags?.length : trade.tags?.some((tag) => tag.id === tagFilter))) };
+  const view = buildPerformanceView(taggedDataset, range, year, customRange);
   const { stats } = view;
   const visibleTrades = selectedDate
     ? view.trades.filter((item) => sydneyDateKey(item.closedAt) === selectedDate)
@@ -152,7 +164,7 @@ export default function PerformanceDashboard({
               </p>
             </div>
 
-            <div className="flex min-w-0 flex-col gap-3 min-[480px]:flex-row min-[480px]:items-end">
+            <div className="flex min-w-0 flex-col flex-wrap gap-3 min-[480px]:flex-row min-[480px]:items-end">
               <label className="min-w-0 min-[480px]:w-52">
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Period</span>
                 <select
@@ -175,6 +187,10 @@ export default function PerformanceDashboard({
                     {CALENDAR_RANGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </optgroup>
                 </select>
+              </label>
+              <label className="min-w-0 min-[480px]:w-44">
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Tag</span>
+                <select aria-label="Trade tag" value={tagFilter} onChange={(event) => { setTagFilter(event.target.value); setSelectedDate(null); }} className="h-10 w-full rounded-lg border border-white/10 bg-black px-3 text-sm text-zinc-200 outline-none focus:border-[#ff6719]/50"><option value="all">All trades</option><option value="untagged">Untagged</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select>
               </label>
               {range === "YEAR" && (
                 <label className="min-[480px]:w-32">
@@ -238,18 +254,21 @@ export default function PerformanceDashboard({
           <Stat label="Profit factor" value={decimal(stats.profitFactor)} />
         </div>
 
-        <div className="border-t border-white/[0.08] p-4 sm:p-6">
+        {!reviewMode && <div className="border-t border-white/[0.08] p-4 sm:p-6">
           <div className="mb-2 flex items-end justify-between gap-4">
             <h2 className="text-lg font-medium text-zinc-100">Cumulative R</h2>
             <p className="text-xs text-zinc-500">Rebased to 0R</p>
           </div>
           <PerformanceEquityChart points={view.equity} />
-        </div>
+        </div>}
       </section>
 
       {!reviewMode && <JournalUpdatesPrompt />}
 
-      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
+      {reviewMode ? <>
+        <AsrComparison view={view} annotations={annotations} />
+        <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} annotations={annotations} tags={tags} tagFilter={tagFilter} />
+      </> : <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
         <PerformanceCalendar
           key={`${period}-${year}-${customRange.start}-${customRange.end}`}
           trades={view.trades}
@@ -315,6 +334,7 @@ export default function PerformanceDashboard({
                             </span>
                           )}
                         </div>
+                        {!!item.tags?.length && <div className="mt-2 flex flex-wrap gap-1.5">{item.tags.map((tag) => <span key={tag.id} className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-400">{tag.name}</span>)}</div>}
                       </div>
                       <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
                         {signedR(item.resultR)}
@@ -335,7 +355,7 @@ export default function PerformanceDashboard({
             </div>
           )}
         </section>
-      </div>
+      </div>}
     </div>
   );
 }

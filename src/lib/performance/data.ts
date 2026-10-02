@@ -3,6 +3,7 @@ import "server-only";
 import { getDb } from "@/lib/mongodb";
 import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync";
 import { excludedTradeIds } from "./publication";
+import { enrichPublicTrades } from "./public-metadata";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
 import type {
   PerformanceDatasetLoadResult,
@@ -82,10 +83,10 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
     const inceptionAt = state.firstSyncAt;
 
     const excludedIds = excludedTradeIds(excludedCycles);
-    const trades = documents
+    const trades = await enrichPublicTrades(documents
       .filter((document) => !excludedIds.has(document._id))
       .map(toPublicTrade)
-      .filter(isPerformanceTrade);
+      .filter(isPerformanceTrade));
 
     return {
       status: "available",
@@ -124,7 +125,7 @@ export async function getLivePerformanceTrade(id: string): Promise<PerformanceTr
       ? toPublicTrade(document)
       : null;
     return trade
-      ? { status: "available", trade }
+      ? { status: "available", trade: (await enrichPublicTrades([trade]))[0] }
       : { status: "not-found", trade: null };
   } catch (error) {
     console.error("[performance/data] failed to load connected trade", error);

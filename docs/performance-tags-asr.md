@@ -2,6 +2,8 @@
 
 The private journal at `/performance/review` provides trade management, reusable tags, public descriptions, private notes, and ASR. Edit trade opens the same editor from the list or a private trade detail. Active positions accept tags, descriptions, and notes; ASR becomes editable after closure. Saving never records publication approval.
 
+The editor opens with the annotation and catalogue already loaded by the authenticated page. It refreshes in the background and replaces untouched fields only, never an in-progress draft. Private editor data is not persisted in browser storage or a shared cache. Saves still check the original revision and return a conflict if another edit has intervened.
+
 ASR contains private comments, optional expected R on the trade's locked 1R basis, and a nullable valid/invalid assessment. Both expected R and validity are required for a completed review. Zero expected R and an invalid assessment are valid completed inputs. The private comparison pairs actual and expected results from the same completed reviews, with independent visibility controls and a shared scale. Period, tag, and validity filters operate on both curves. Actual source results remain immutable. The public journal defaults to 30 rolling days and filters published actual results by tag.
 
 ## Storage and privacy

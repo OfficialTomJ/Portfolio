@@ -9,24 +9,36 @@ import { signedR } from "@/lib/performance/metrics";
 export interface EditableTradeSummary { id: string; symbol: string; direction: TradeDirection; resultR?: number }
 const field = "mt-2 w-full rounded-lg border border-white/15 bg-black px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-[#ff6719]/70";
 
-export default function TradeEditorButton({ trade, className = "" }: { trade: EditableTradeSummary; className?: string }) {
+export default function TradeEditorButton({ trade, initialAnnotation, initialTags = [], className = "" }: {
+  trade: EditableTradeSummary;
+  initialAnnotation?: TradeAnnotation;
+  initialTags?: TradeTag[];
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   return <>
     <button type="button" onClick={() => setOpen(true)} className={`rounded-lg border border-white/15 px-3 py-2 text-sm text-zinc-200 transition hover:border-[#ff6719]/50 hover:text-white ${className}`} aria-label={`Edit ${trade.symbol} trade`}>Edit trade</button>
-    {open && <TradeEditor trade={trade} onClose={() => setOpen(false)} />}
+    {open && <TradeEditor trade={trade} initialAnnotation={initialAnnotation} initialTags={initialTags} onClose={() => setOpen(false)} />}
   </>;
 }
 
-function TradeEditor({ trade, onClose }: { trade: EditableTradeSummary; onClose: () => void }) {
+function TradeEditor({ trade, initialAnnotation, initialTags, onClose }: {
+  trade: EditableTradeSummary;
+  initialAnnotation?: TradeAnnotation;
+  initialTags: TradeTag[];
+  onClose: () => void;
+}) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [annotation, setAnnotation] = useState<TradeAnnotation>({ ...EMPTY_ANNOTATION });
-  const [original, setOriginal] = useState("");
-  const [expected, setExpected] = useState("");
-  const [tags, setTags] = useState<TradeTag[]>([]);
+  const seeded = useRef(initialAnnotation !== undefined);
+  const edited = useRef(false);
+  const [annotation, setAnnotation] = useState<TradeAnnotation>(initialAnnotation ?? { ...EMPTY_ANNOTATION });
+  const [original, setOriginal] = useState(initialAnnotation ? JSON.stringify(initialAnnotation) : "");
+  const [expected, setExpected] = useState(initialAnnotation?.expectedR == null ? "" : String(initialAnnotation.expectedR));
+  const [tags, setTags] = useState<TradeTag[]>(initialTags);
   const [query, setQuery] = useState("");
-  const [closed, setClosed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [closed, setClosed] = useState(trade.resultR !== undefined);
+  const [loading, setLoading] = useState(initialAnnotation === undefined);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -41,16 +53,42 @@ function TradeEditor({ trade, onClose }: { trade: EditableTradeSummary; onClose:
     const controller = new AbortController();
     fetch(`/api/performance/admin/trades/${trade.id}/metadata`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Could not load editor"); return body; })
-      .then((body) => { setAnnotation(body.annotation); setExpected(body.annotation.expectedR == null ? "" : String(body.annotation.expectedR)); setOriginal(JSON.stringify(body.annotation)); setTags(body.tags); setClosed(body.closed); setLoading(false); })
-      .catch((e) => { if (e.name !== "AbortError") setError("Could not load this trade. Close and try again."); });
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        // Refresh untouched forms only. Never replace a draft already being edited.
+        if (!edited.current) {
+          setAnnotation(body.annotation);
+          setExpected(body.annotation.expectedR == null ? "" : String(body.annotation.expectedR));
+          setOriginal(JSON.stringify(body.annotation));
+        }
+        setTags((previous) => edited.current
+          ? [...new Map([...previous, ...body.tags].map((tag: TradeTag) => [tag.id, tag])).values()]
+          : body.tags);
+        setClosed(body.closed);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError" && !controller.signal.aborted) {
+          setError(seeded.current
+            ? "Could not check for newer edits. Saving will still verify this version."
+            : "Could not load this trade. Close and try again.");
+        }
+      });
     return () => { controller.abort(); document.body.style.overflow = overflow; element?.close(); };
   }, [trade.id]);
 
   const close = () => { if (!saving && !creating && (!dirty || window.confirm("Discard your unsaved changes?"))) onClose(); };
-  const update = (key: "description" | "privateNotes" | "asrComments", value: string) => setAnnotation((previous) => ({ ...previous, [key]: value }));
-  const toggleTag = (id: string) => setAnnotation((previous) => ({ ...previous, tagIds: previous.tagIds.includes(id) ? previous.tagIds.filter((tag) => tag !== id) : [...previous.tagIds, id].sort() }));
+  const update = (key: "description" | "privateNotes" | "asrComments", value: string) => {
+    edited.current = true;
+    setAnnotation((previous) => ({ ...previous, [key]: value }));
+  };
+  const toggleTag = (id: string) => {
+    edited.current = true;
+    setAnnotation((previous) => ({ ...previous, tagIds: previous.tagIds.includes(id) ? previous.tagIds.filter((tag) => tag !== id) : [...previous.tagIds, id].sort() }));
+  };
   async function createTag() {
     if (!query.trim() || creating) return;
+    edited.current = true;
     setCreating(true); setError("");
     try {
       const response = await fetch("/api/performance/admin/tags", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: query }) });
@@ -96,8 +134,8 @@ function TradeEditor({ trade, onClose }: { trade: EditableTradeSummary; onClose:
             <div className="border-t border-white/10 pt-4"><h4 className="text-sm font-medium">ASR · Advanced Self Review</h4><p className="mt-1 text-xs leading-5 text-zinc-500">{closed ? "Assess the result achievable with perfect management of your intended strategy." : "Available after this trade closes."}</p></div>
             <fieldset disabled={!closed} className="space-y-4 disabled:opacity-40">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm text-zinc-300">Expected R<input aria-label="Expected R" type="number" inputMode="decimal" step="any" min={-100} max={100} value={expected} onChange={(event) => setExpected(event.target.value)} placeholder="e.g. 2.5" className={field} /><span className="mt-1 block text-xs text-zinc-500">Same 1R basis as the actual result.</span></label>
-                <label className="block text-sm text-zinc-300">Trade validity<select aria-label="Trade validity" value={annotation.valid === null ? "unset" : annotation.valid ? "valid" : "invalid"} onChange={(event) => setAnnotation((previous) => ({ ...previous, valid: event.target.value === "unset" ? null : event.target.value === "valid" }))} className={field}><option value="unset">Not reviewed</option><option value="valid">Valid trade</option><option value="invalid">Invalid trade</option></select></label>
+                <label className="block text-sm text-zinc-300">Expected R<input aria-label="Expected R" type="number" inputMode="decimal" step="any" min={-100} max={100} value={expected} onChange={(event) => { edited.current = true; setExpected(event.target.value); }} placeholder="e.g. 2.5" className={field} /><span className="mt-1 block text-xs text-zinc-500">Same 1R basis as the actual result.</span></label>
+                <label className="block text-sm text-zinc-300">Trade validity<select aria-label="Trade validity" value={annotation.valid === null ? "unset" : annotation.valid ? "valid" : "invalid"} onChange={(event) => { edited.current = true; setAnnotation((previous) => ({ ...previous, valid: event.target.value === "unset" ? null : event.target.value === "valid" })); }} className={field}><option value="unset">Not reviewed</option><option value="valid">Valid trade</option><option value="invalid">Invalid trade</option></select></label>
               </div>
               <label className="block text-sm text-zinc-300">ASR comments<textarea aria-label="ASR comments" rows={4} value={annotation.asrComments} onChange={(event) => update("asrComments", event.target.value)} maxLength={10000} placeholder="Your assessment of the setup and management" className={field} /></label>
             </fieldset>

@@ -4,7 +4,7 @@ import TradeDetailView from "@/Components/performance/TradeDetailView";
 import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
 import { getAdminPerformanceTrade } from "@/lib/performance/admin-data";
 import { getHistoricalCandles } from "@/lib/performance/market";
-import { getTradeAnnotations } from "@/lib/performance/annotations";
+import { getTagCatalogue, getTradeAnnotations } from "@/lib/performance/annotations";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -25,7 +25,10 @@ export default async function PrivateTradePage({ params }: Props) {
     notFound();
   }
   if (!result) notFound();
-  const market = await getHistoricalCandles(result.trade, "4h", 24);
-  const annotations = await getTradeAnnotations([id]);
-  return <TradeDetailView trade={result.trade} market={market} reviewStatus={result.status} annotation={annotations[id]} />;
+  const [market, annotations, tags] = await Promise.all([
+    getHistoricalCandles(result.trade, "4h", 24),
+    getTradeAnnotations([id]),
+    getTagCatalogue(),
+  ]);
+  return <TradeDetailView trade={result.trade} market={market} reviewStatus={result.status} annotation={annotations[id]} tagCatalogue={tags} />;
 }

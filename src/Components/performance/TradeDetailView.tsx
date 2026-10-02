@@ -3,7 +3,7 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
 import TradePriceChart from "./TradePriceChart";
 import { signedR } from "@/lib/performance/metrics";
-import type { MarketCandles, PerformanceTrade } from "@/lib/performance/types";
+import type { MarketCandles, PerformanceTrade, TradeTag } from "@/lib/performance/types";
 import type { TradeAnnotation } from "@/lib/performance/annotations-model";
 import AdminTradeReview from "./AdminTradeReview";
 
@@ -45,11 +45,13 @@ export default function TradeDetailView({
   market,
   reviewStatus,
   annotation,
+  tagCatalogue = [],
 }: {
   trade: PerformanceTrade;
   market: MarketCandles | null;
   reviewStatus?: "published" | "pending_review";
   annotation?: TradeAnnotation;
+  tagCatalogue?: TradeTag[];
 }) {
   const privateReview = !!reviewStatus;
   const pending = reviewStatus === "pending_review";
@@ -114,7 +116,7 @@ export default function TradeDetailView({
           </div>
         </section>
 
-        {privateReview && annotation && <AdminTradeReview trade={trade} annotation={annotation} />}
+        {privateReview && annotation && <AdminTradeReview trade={trade} annotation={annotation} tags={tagCatalogue} />}
         {trade.description && <section className="mt-6 rounded-2xl border border-white/10 bg-[#07090d] p-5 sm:p-6"><h2 className="text-base font-medium">Trade notes{privateReview && <span className="ml-2 text-xs font-normal text-zinc-500">Public description</span>}</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-zinc-400">{trade.description}</p></section>}
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">

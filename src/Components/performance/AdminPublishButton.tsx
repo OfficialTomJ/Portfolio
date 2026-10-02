@@ -58,9 +58,9 @@ export default function AdminPublishButton({ trade, fingerprint, onMessage, anot
 
   if (published) return <span className={`inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 px-3 text-sm text-zinc-500 ${className}`}>Published</span>;
   return <>
-    <button type="button" onClick={() => { setError(""); setOpen(true); }} disabled={disabled || busy || anotherPublicationInProgress || recheck}
-      aria-label={`${action} ${trade.symbol} ${trade.direction} result`}
-      className={`min-h-11 rounded-lg border border-[#ff6719]/30 bg-[#ff6719]/[0.08] px-3 py-2.5 text-sm text-[#ffad83] hover:bg-[#ff6719]/[0.18] focus-visible:outline focus-visible:outline-[#ff6719] disabled:opacity-40 ${className}`}>{recheck ? "Refresh to verify" : action}</button>
+    <button type="button" onClick={() => { if (recheck) window.location.reload(); else { setError(""); setOpen(true); } }} disabled={disabled || busy || anotherPublicationInProgress}
+      aria-label={recheck ? `Refresh publication status for ${trade.symbol}` : `${action} ${trade.symbol} ${trade.direction} result`}
+      className={`min-h-11 rounded-lg border border-[#ff6719]/30 bg-[#ff6719]/[0.08] px-3 py-2.5 text-sm text-[#ffad83] hover:bg-[#ff6719]/[0.18] focus-visible:outline focus-visible:outline-[#ff6719] disabled:opacity-40 ${className}`}>{recheck ? "Refresh status" : action}</button>
     {open && <PublicationDialog trade={trade} tradeType={tradeType} description={description} busy={busy} error={error} recheck={recheck}
       onClose={() => { if (!locked.current) setOpen(false); }} onConfirm={publish} />}
   </>;
@@ -79,7 +79,7 @@ function PublicationDialog({ trade, tradeType, description, busy, error, recheck
     element?.showModal(); document.body.style.overflow = "hidden";
     return () => { element?.close(); document.body.style.overflow = overflow; };
   }, []);
-  return <dialog ref={dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}
+  return <dialog ref={dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) onClose(); }}
     className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-[#07090d] p-0 text-zinc-100 backdrop:bg-black/80">
     <div className="space-y-5 p-5 sm:p-6">
       <header><h2 id={id} className="text-xl font-medium">Publish this trade?</h2><p className="mt-2 text-sm leading-6 text-zinc-400">This result will appear in the public Performance Journal.</p></header>

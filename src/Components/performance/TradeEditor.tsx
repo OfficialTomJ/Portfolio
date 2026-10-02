@@ -151,5 +151,5 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
       <p className="mt-3 text-xs leading-5 text-zinc-500">Saving never publishes.{inline && nextTradeId ? " Next review includes all periods." : inline ? " End of review queue." : ""}</p>
     </footer>
   </form>;
-  return inline ? <section className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#07090d]">{form}</section> : <dialog ref={dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); close(); }} className="m-auto h-dvh max-h-none w-full max-w-none border border-white/15 bg-[#07090d] p-0 text-zinc-100 backdrop:bg-black/80 sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-2xl">{form}</dialog>;
+  return inline ? <section className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#07090d]">{form}</section> : <dialog ref={dialog} aria-labelledby={id} onCancel={event => { if (event.target !== event.currentTarget) return; event.preventDefault(); close(); }} className="m-auto h-dvh max-h-none w-full max-w-none border border-white/15 bg-[#07090d] p-0 text-zinc-100 backdrop:bg-black/80 sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-2xl">{form}</dialog>;
 }

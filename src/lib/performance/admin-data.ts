@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getDb } from "@/lib/mongodb";
-import { assembleAdminReview, type AdminActivePosition, type AdminPendingReview, type ReviewCycleCandidate } from "./admin-selection";
+import { assembleAdminReview, assembleReconciliation, type AdminReconciliationItem, type AdminActivePosition, type AdminPendingReview, type ReviewCycleCandidate } from "./admin-selection";
 import { getLivePerformanceDataset, getLivePerformanceTrade } from "./data";
 import { PERFORMANCE_COLLECTIONS } from "./sync";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
@@ -29,12 +29,18 @@ interface ReviewCycleView extends ReviewCycleCandidate {
   _id: string;
   environment: string;
   sourceAccountId: string;
+  closedAt?: Date;
+}
+
+interface ReconciliationCycleView extends Omit<ReviewCycleView, "status"> {
+  status: string;
 }
 
 export interface AdminPerformanceSnapshot {
   dataset: PerformanceDataset;
   pendingReviews: AdminPendingReview[];
   activePositions: AdminActivePosition[];
+  reconciliation: AdminReconciliationItem[];
   lastSyncAt: string;
   annotations: Record<string, TradeAnnotation>;
   tags: TradeTag[];
@@ -69,7 +75,7 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
   if (publicResult.status !== "available") return null;
 
   const cycles = getDb().collection<ReviewCycleView>(PERFORMANCE_COLLECTIONS.positionCycles);
-  const [pendingCycles, openCycles] = await Promise.all([
+  const [pendingCycles, openCycles, reconciliationCycles] = await Promise.all([
     cycles.find({
       environment: scope.environment,
       sourceAccountId: scope.sourceAccountId,
@@ -90,6 +96,13 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
       status: 1, symbol: 1, direction: 1, openedAt: 1, lastSeenAt: 1,
       entryPrice: 1, publicationHold: 1, excludedFromJournal: 1,
     } }).toArray(),
+    getDb().collection<ReconciliationCycleView>(PERFORMANCE_COLLECTIONS.positionCycles).find({
+      environment: scope.environment,
+      sourceAccountId: scope.sourceAccountId,
+      excludedFromJournal: { $ne: true },
+      $or: [{ publicationHold: true }, { status: { $in: ["awaiting_attribution", "awaiting_close", "unresolved"] } }],
+    }, { projection: { symbol: 1, direction: 1, openedAt: 1, closedAt: 1, lastSeenAt: 1,
+      status: 1, publicationHold: 1, excludedFromJournal: 1 } }).toArray(),
   ]);
 
   const snapshot = assembleAdminReview(publicResult.dataset, pendingCycles, openCycles, scope.lastSyncAt);
@@ -97,7 +110,7 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
     getTradeAnnotations([...snapshot.dataset.trades.map((trade) => trade.id), ...snapshot.activePositions.map((trade) => trade.id)]),
     getTagCatalogue(), enrichPublicTrades(snapshot.dataset.trades),
   ]);
-  return { ...snapshot, dataset: { ...snapshot.dataset, trades }, annotations, tags };
+  return { ...snapshot, reconciliation: assembleReconciliation(reconciliationCycles), dataset: { ...snapshot.dataset, trades }, annotations, tags };
 }
 
 export async function getAdminPerformanceTrade(id: string): Promise<{

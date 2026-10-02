@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+
 import { EMPTY_ANNOTATION } from "./annotations-model";
 import { filterReviewTrades, nextUnreviewedTradeId } from "./review-workspace";
 import type { PerformanceTrade } from "./types";
@@ -8,6 +9,10 @@ const base: PerformanceTrade = { id: "one", symbol: "ETHUSDT", direction: "Long"
 const trades = [base, { ...base, id: "two", closedAt: "2026-09-03T00:00:00Z" }, { ...base, id: "three", symbol: "BTCUSDT", closedAt: "2026-09-04T00:00:00Z" }];
 const annotations = { one: { ...EMPTY_ANNOTATION }, two: { ...EMPTY_ANNOTATION, expectedR: 0, valid: false }, three: { ...EMPTY_ANNOTATION, expectedR: 2 } };
 const pending = new Set(["two", "three"]);
+
+test("reconciliation never contributes records to closed result filters", () => {
+  assert.deepEqual(filterReviewTrades(trades, annotations, pending, "reconciliation", "all"), []);
+});
 
 test("ASR queue includes published unreviewed and pending incomplete trades", () => {
   assert.deepEqual(filterReviewTrades(trades, annotations, pending, "needs_asr", "all").map(t => t.id), ["one", "three"]);

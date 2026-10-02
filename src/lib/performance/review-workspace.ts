@@ -1,12 +1,12 @@
 import { asrStatus, type TradeAnnotation } from "./annotations-model";
 import type { PerformanceTrade } from "./types";
 
-export type ReviewTab = "needs_asr" | "reviewed" | "all" | "active";
+export type ReviewTab = "needs_asr" | "reviewed" | "all" | "active" | "reconciliation";
 export type PublicationFilter = "all" | "pending" | "published";
 
 /** Publication and ASR are independent. Incomplete drafts still need ASR. */
 export function filterReviewTrades(trades: PerformanceTrade[], annotations: Record<string, TradeAnnotation>, pendingIds: Set<string>, tab: ReviewTab, publication: PublicationFilter, search = "") {
-  if (tab === "active") return [];
+  if (tab === "active" || tab === "reconciliation") return [];
   const query = search.trim().toLowerCase();
   return trades.filter(trade => {
     const reviewed = asrStatus(annotations[trade.id]) === "Reviewed";

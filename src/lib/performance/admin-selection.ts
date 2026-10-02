@@ -30,6 +30,36 @@ export interface AdminPendingReview {
   fingerprint: string;
 }
 
+export interface AdminReconciliationItem {
+  id: string;
+  symbol: string;
+  direction: TradeDirection;
+  openedAt: string;
+  closedAt?: string;
+  lastSeenAt: string;
+  reason: string;
+}
+
+/** Private, read-only summaries only. Never add unresolved records to the results dataset. */
+export function assembleReconciliation(cycles: Array<{
+  _id: string; symbol: string; direction: TradeDirection; openedAt: Date;
+  closedAt?: Date; lastSeenAt: Date; status: string;
+  publicationHold?: boolean; excludedFromJournal?: boolean;
+}>): AdminReconciliationItem[] {
+  return cycles.filter(cycle => !cycle.excludedFromJournal && (
+    cycle.publicationHold || ["awaiting_attribution", "awaiting_close", "unresolved"].includes(cycle.status)
+  )).filter(cycle => cycle.openedAt instanceof Date && Number.isFinite(cycle.openedAt.getTime()) &&
+    cycle.lastSeenAt instanceof Date && Number.isFinite(cycle.lastSeenAt.getTime()))
+    .map(cycle => ({
+      id: publicTradeIdForCycle(cycle._id), symbol: cycle.symbol, direction: cycle.direction,
+      openedAt: cycle.openedAt.toISOString(), lastSeenAt: cycle.lastSeenAt.toISOString(),
+      ...(cycle.closedAt instanceof Date && Number.isFinite(cycle.closedAt.getTime()) ? { closedAt: cycle.closedAt.toISOString() } : {}),
+      reason: cycle.publicationHold || cycle.status === "awaiting_attribution"
+        ? "Entry attribution required" : cycle.status === "awaiting_close"
+          ? "Waiting for recorded closing data" : "Risk or closing data needs reconciliation",
+    })).sort((a, b) => Date.parse(b.closedAt ?? b.openedAt) - Date.parse(a.closedAt ?? a.openedAt) || a.id.localeCompare(b.id));
+}
+
 export function assembleAdminReview(
   publicDataset: PerformanceDataset,
   pendingCycles: ReviewCycleCandidate[],

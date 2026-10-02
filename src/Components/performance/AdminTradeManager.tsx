@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { AdminActivePosition, AdminPendingReview } from "@/lib/performance/admin-selection";
+import type { AdminActivePosition, AdminPendingReview, AdminReconciliationItem } from "@/lib/performance/admin-selection";
 import { asrStatus, matchesTradeFilters, type TradeTypeFilter, type TradeAnnotation } from "@/lib/performance/annotations-model";
 import { filterReviewTrades, type ReviewTab, type PublicationFilter } from "@/lib/performance/review-workspace";
 import { signedR } from "@/lib/performance/metrics";
@@ -11,11 +11,13 @@ import AdminPublishButton from "./AdminPublishButton";
 import TradeEditorButton from "./TradeEditor";
 
 const date = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
+const timestamp = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 // Fixed actions track prevents pending rows from shifting the shared result columns.
 const rowColumns = "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,1.1fr)_15rem]";
-export default function AdminTradeManager({ trades, pendingReviews, activePositions, annotations, tags, typeFilters, strategyFilters }: {
+export default function AdminTradeManager({ trades, pendingReviews, activePositions, reconciliation = [], annotations, tags, typeFilters, strategyFilters }: {
   trades: PerformanceTrade[]; pendingReviews: AdminPendingReview[]; activePositions: AdminActivePosition[];
   annotations: Record<string, TradeAnnotation>; tags: TradeTag[]; typeFilters: TradeTypeFilter[]; strategyFilters: string[];
+  reconciliation?: AdminReconciliationItem[];
 }) {
   const [tab, setTab] = useState<ReviewTab>("needs_asr");
   const [search, setSearch] = useState("");
@@ -26,18 +28,22 @@ export default function AdminTradeManager({ trades, pendingReviews, activePositi
   const pendingIds = new Set(pendingById.keys());
   const closedTrades = filterReviewTrades(trades, annotations, pendingIds, tab, publication, search);
   const active = activePositions.filter(trade => trade.symbol.toLowerCase().includes(search.trim().toLowerCase()) && matchesTradeFilters(annotations[trade.id]?.tradeType, annotations[trade.id]?.strategyIds ?? [], typeFilters, strategyFilters));
+  const held = reconciliation.filter(trade => trade.symbol.toLowerCase().includes(search.trim().toLowerCase()));
   const needs = filterReviewTrades(trades, annotations, pendingIds, "needs_asr", publication).length;
   const reviewed = filterReviewTrades(trades, annotations, pendingIds, "reviewed", publication).length;
   const all = filterReviewTrades(trades, annotations, pendingIds, "all", publication).length;
   return <section aria-label="Trade review queue" className="overflow-hidden rounded-2xl border border-white/10 bg-[#07090d]">
     <header className="space-y-4 border-b border-white/10 p-4 sm:p-5">
-      <div><h2 className="text-lg font-medium">Review trades</h2><p className="mt-1 text-xs leading-5 text-zinc-500">Closed trades follow the filters above. Publication and ASR are separate.</p></div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Review status">{[{ id: "needs_asr", name: `Needs ASR (${needs})` }, { id: "reviewed", name: `Reviewed (${reviewed})` }, { id: "all", name: `All closed (${all})` }, { id: "active", name: `Active (${active.length})` }].map(item => <button key={item.id} type="button" aria-pressed={tab === item.id} onClick={() => setTab(item.id as ReviewTab)} className={`min-h-10 rounded-lg border px-3 py-2 text-sm ${tab === item.id ? "border-[#ff6719]/35 bg-[#ff6719]/10 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{item.name}</button>)}</div>
-      <div className="flex flex-col gap-3 sm:flex-row"><input aria-label="Search trades" placeholder="Search asset…" value={search} onChange={event => setSearch(event.target.value)} className="h-10 min-w-0 flex-1 rounded-lg border border-white/15 bg-black px-3 text-sm" />{tab !== "active" && <select aria-label="Publication status" value={publication} onChange={event => setPublication(event.target.value as PublicationFilter)} className="h-10 min-w-0 rounded-lg border border-white/15 bg-black px-3 text-sm text-zinc-300 sm:w-48"><option value="all">All publication statuses</option><option value="pending">Unpublished</option><option value="published">Published</option></select>}</div>
+      <div><h2 className="text-lg font-medium">Review trades</h2><p className="mt-1 text-xs leading-5 text-zinc-500">{tab === "reconciliation" ? "Read-only · All history, regardless of filters above. Excluded from results until reconciled." : "Closed trades follow the filters above. Publication and ASR are separate."}</p></div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Review status">{[{ id: "needs_asr", name: `Needs ASR (${needs})` }, { id: "reviewed", name: `Reviewed (${reviewed})` }, { id: "all", name: `All closed (${all})` }, { id: "active", name: `Active (${active.length})` }, { id: "reconciliation", name: `Reconciliation (${reconciliation.length})` }].map(item => <button key={item.id} type="button" aria-pressed={tab === item.id} onClick={() => setTab(item.id as ReviewTab)} className={`min-h-10 rounded-lg border px-3 py-2 text-sm ${tab === item.id ? "border-[#ff6719]/35 bg-[#ff6719]/10 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{item.name}</button>)}</div>
+      <div className="flex flex-col gap-3 sm:flex-row"><input aria-label="Search trades" placeholder="Search asset…" value={search} onChange={event => setSearch(event.target.value)} className="h-10 min-w-0 flex-1 rounded-lg border border-white/15 bg-black px-3 text-sm" />{tab !== "active" && tab !== "reconciliation" && <select aria-label="Publication status" value={publication} onChange={event => setPublication(event.target.value as PublicationFilter)} className="h-10 min-w-0 rounded-lg border border-white/15 bg-black px-3 text-sm text-zinc-300 sm:w-48"><option value="all">All publication statuses</option><option value="pending">Unpublished</option><option value="published">Published</option></select>}</div>
     </header>
     {notice && <p role="status" className="border-b border-white/10 p-4 text-sm text-[#ffad83]">{notice}</p>}
     {tab !== "active" && closedTrades.length > 0 && <div aria-hidden="true" className={`hidden gap-4 border-b border-white/10 px-5 py-3 text-xs text-zinc-500 lg:grid ${rowColumns}`}><span>Trade</span><div className="grid grid-cols-3 gap-3 text-right"><span>Actual R</span><span>Expected R</span><span>Gap</span></div><span className="text-right">Actions</span></div>}
-    {tab === "active" ? <div>{active.length ? active.map(trade => <div key={trade.id} data-trade-id={trade.id} className="flex flex-col gap-3 border-b border-white/10 p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div className="min-w-0"><TradeName symbol={trade.symbol} direction={trade.direction} /><p className="mt-1 text-xs text-zinc-500">Opened {date.format(new Date(trade.openedAt))} GMT · Active, excluded from results</p><Classification annotation={annotations[trade.id]} tags={tags} /></div><TradeEditorButton trade={trade} initialAnnotation={annotations[trade.id]} initialTags={tags} className="self-start" /></div>) : <Empty active />}</div> : <div>{closedTrades.length ? closedTrades.map(trade => {
+    {tab === "reconciliation" ? <div>{held.length ? held.map(trade => <article key={trade.id} data-reconciliation-id={trade.id} className="grid min-w-0 gap-3 border-b border-white/10 p-4 last:border-0 sm:grid-cols-2 sm:p-5">
+      <div className="min-w-0"><TradeName symbol={trade.symbol} direction={trade.direction} /><p className="mt-1 break-words text-xs leading-5 text-zinc-500">Opened {timestamp.format(new Date(trade.openedAt))} GMT</p><p className="break-words text-xs leading-5 text-zinc-500">{trade.closedAt ? `Closed ${timestamp.format(new Date(trade.closedAt))} GMT` : "Close not yet confirmed"}</p></div>
+      <div className="min-w-0"><p className="break-words text-sm text-[#ffad83]">{trade.reason}</p><p className="mt-1 break-words text-xs leading-5 text-zinc-500">Recorded {timestamp.format(new Date(trade.lastSeenAt))} GMT</p><p className="mt-1 text-xs text-zinc-600">Read-only · Not included in results</p></div>
+    </article>) : <p className="px-4 py-12 text-center text-sm text-zinc-500">{reconciliation.length ? "No reconciliation records match this search." : "No trades need reconciliation."}</p>}</div> : tab === "active" ? <div>{active.length ? active.map(trade => <div key={trade.id} data-trade-id={trade.id} className="flex flex-col gap-3 border-b border-white/10 p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div className="min-w-0"><TradeName symbol={trade.symbol} direction={trade.direction} /><p className="mt-1 text-xs text-zinc-500">Opened {date.format(new Date(trade.openedAt))} GMT · Active, excluded from results</p><Classification annotation={annotations[trade.id]} tags={tags} /></div><TradeEditorButton trade={trade} initialAnnotation={annotations[trade.id]} initialTags={tags} className="self-start" /></div>) : <Empty active />}</div> : <div>{closedTrades.length ? closedTrades.map(trade => {
       const annotation = annotations[trade.id];
       const expected = annotation?.expectedR;
       const status = asrStatus(annotation);

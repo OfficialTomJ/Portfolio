@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assembleAdminReview, type ReviewCycleCandidate } from "./admin-selection";
+import { assembleAdminReview, assembleReconciliation, type ReviewCycleCandidate } from "./admin-selection";
 import type { PerformanceDataset, PerformanceTrade } from "./types";
 
 const lastSync = new Date("2026-09-30T10:00:00.000Z");
@@ -76,4 +76,23 @@ test("active cards only represent positions observed in the latest successful sy
   ], lastSync);
   assert.deepEqual(result.activePositions.map((position) => position.symbol), ["BTCUSDT", "SOLUSDT"]);
   assert.equal(result.dataset.trades.length, 1);
+});
+
+test("reconciliation is a safe read-only summary of held and unresolved records", () => {
+  const cycle = { ...baseCycle, _id: "held-cycle", status: "awaiting_attribution", closedAt: new Date(pending.closedAt), publicationHold: true };
+  const result = assembleReconciliation([
+    cycle,
+    { ...cycle, _id: "waiting-cycle", status: "awaiting_close", publicationHold: false },
+    { ...cycle, _id: "risk-cycle", status: "unresolved", publicationHold: false },
+    { ...cycle, _id: "active-held", status: "open", closedAt: undefined },
+    { ...cycle, _id: "excluded-cycle", excludedFromJournal: true },
+    { ...cycle, _id: "pending-cycle", status: "pending_review", publicationHold: false },
+    { ...cycle, _id: "invalid-cycle", openedAt: new Date("invalid") },
+  ]);
+  assert.equal(result.length, 4);
+  assert.equal(result.filter(item => item.reason === "Entry attribution required").length, 2);
+  assert.ok(result.some(item => item.reason === "Waiting for recorded closing data"));
+  assert.ok(result.some(item => item.reason === "Risk or closing data needs reconciliation"));
+  assert.ok(result.every(item => !Object.keys(item).some(key => ["reviewCandidate", "reviewFingerprint", "riskAmount", "resultR", "sourceAccountId"].includes(key))));
+  assert.equal(assembleAdminReview(dataset, [cycle as ReviewCycleCandidate], [], lastSync).dataset.trades.length, 1);
 });

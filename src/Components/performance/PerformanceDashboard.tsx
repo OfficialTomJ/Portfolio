@@ -10,8 +10,12 @@ import {
   signedR,
   sydneyDateKey,
 } from "@/lib/performance/metrics";
-import type { PerformanceDataset, PerformanceRange } from "@/lib/performance/types";
-import type { AdminPendingReview } from "@/lib/performance/admin-selection";
+import type { PerformanceDataset, PerformanceRange, TradeTag } from "@/lib/performance/types";
+import type { AdminPendingReview, AdminActivePosition } from "@/lib/performance/admin-selection";
+import { matchesTradeFilters, type TradeTypeFilter, type TradeAnnotation } from "@/lib/performance/annotations-model";
+import MultiSelectFilter from "./MultiSelectFilter";
+import AsrComparison from "./AsrComparison";
+import AdminTradeManager from "./AdminTradeManager";
 import { track } from "@/lib/track";
 import AdminPublishButton from "./AdminPublishButton";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
@@ -87,13 +91,24 @@ export default function PerformanceDashboard({
   dataset,
   reviewMode = false,
   pendingReviews = [],
+  annotations = {},
+  activePositions = [],
+  tagCatalogue,
 }: {
   dataset: PerformanceDataset;
   reviewMode?: boolean;
   pendingReviews?: AdminPendingReview[];
+  annotations?: Record<string, TradeAnnotation>;
+  activePositions?: AdminActivePosition[];
+  tagCatalogue?: TradeTag[];
 }) {
   const pendingById = new Map(pendingReviews.map((review) => [review.id, review.fingerprint]));
   const [period, setPeriod] = useState<PeriodSelection>("30D");
+  const [typeFilters, setTypeFilters] = useState<TradeTypeFilter[]>([]);
+  const [strategyFilters, setStrategyFilters] = useState<string[]>([]);
+  const tags = reviewMode ? tagCatalogue ?? [] : [];
+  const typeOptions = [{ id: "DAY", name: "DAY" }, { id: "SWING", name: "SWING" }, ...(reviewMode ? [{ id: "UNCLASSIFIED", name: "Unclassified" }] : [])];
+  const filterChips = [...typeFilters.map(id => ({ id, name: id === "UNCLASSIFIED" ? "Unclassified" : id, type: true })), ...(reviewMode ? strategyFilters.map(id => ({ id, name: tags.find(tag => tag.id === id)?.name ?? "Strategy", type: false })) : [])];
   const [publicationNotice, setPublicationNotice] = useState("");
   const [publishingTradeId, setPublishingTradeId] = useState<string | null>(null);
   const asOfKey = sydneyDateKey(dataset.asOf);
@@ -117,7 +132,8 @@ export default function PerformanceDashboard({
   const customRange = selectedMonthKey
     ? calendarMonthRange(selectedMonthKey, dataset.asOf)
     : manualCustomRange;
-  const view = buildPerformanceView(dataset, range, year, customRange);
+  const taggedDataset = { ...dataset, trades: dataset.trades.filter(trade => matchesTradeFilters(reviewMode ? annotations[trade.id]?.tradeType : trade.tradeType, reviewMode ? annotations[trade.id]?.strategyIds ?? [] : [], typeFilters, reviewMode ? strategyFilters : [])) };
+  const view = buildPerformanceView(taggedDataset, range, year, customRange);
   const { stats } = view;
   const visibleTrades = selectedDate
     ? view.trades.filter((item) => sydneyDateKey(item.closedAt) === selectedDate)
@@ -152,7 +168,7 @@ export default function PerformanceDashboard({
               </p>
             </div>
 
-            <div className="flex min-w-0 flex-col gap-3 min-[480px]:flex-row min-[480px]:items-end">
+            <div className="flex min-w-0 flex-col flex-wrap gap-3 min-[480px]:flex-row min-[480px]:items-end">
               <label className="min-w-0 min-[480px]:w-52">
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Period</span>
                 <select
@@ -176,6 +192,8 @@ export default function PerformanceDashboard({
                   </optgroup>
                 </select>
               </label>
+              <MultiSelectFilter label="Trade type" options={typeOptions} selected={typeFilters} onChange={ids => { setTypeFilters(ids as TradeTypeFilter[]); setSelectedDate(null); }} />
+              {reviewMode && <MultiSelectFilter label="Strategies" options={tags} selected={strategyFilters} searchable onChange={ids => { setStrategyFilters(ids); setSelectedDate(null); }} />}
               {range === "YEAR" && (
                 <label className="min-[480px]:w-32">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">Year</span>
@@ -191,6 +209,8 @@ export default function PerformanceDashboard({
               )}
             </div>
           </div>
+
+          {!!filterChips.length && <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Selected filters">{filterChips.map(chip => <button key={`${chip.type}-${chip.id}`} type="button" aria-label={`Remove ${chip.name} filter`} onClick={() => { if(chip.type)setTypeFilters(previous => previous.filter(id => id !== chip.id));else setStrategyFilters(previous => previous.filter(id => id !== chip.id));setSelectedDate(null); }} className="max-w-full break-words rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]">{chip.name} ×</button>)}<button type="button" onClick={() => { setTypeFilters([]);setStrategyFilters([]);setSelectedDate(null); }} className="px-2 py-1.5 text-xs text-zinc-400">Clear filters</button></div>}
 
           {period === "CUSTOM" && (
             <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/[0.07] pt-4 min-[480px]:grid-cols-2 sm:max-w-md sm:ml-auto">
@@ -238,18 +258,21 @@ export default function PerformanceDashboard({
           <Stat label="Profit factor" value={decimal(stats.profitFactor)} />
         </div>
 
-        <div className="border-t border-white/[0.08] p-4 sm:p-6">
+        {!reviewMode && <div className="border-t border-white/[0.08] p-4 sm:p-6">
           <div className="mb-2 flex items-end justify-between gap-4">
             <h2 className="text-lg font-medium text-zinc-100">Cumulative R</h2>
             <p className="text-xs text-zinc-500">Rebased to 0R</p>
           </div>
           <PerformanceEquityChart points={view.equity} />
-        </div>
+        </div>}
       </section>
 
       {!reviewMode && <JournalUpdatesPrompt />}
 
-      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
+      {reviewMode ? <>
+        <AsrComparison view={view} annotations={annotations} />
+        <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} annotations={annotations} tags={tags} typeFilters={typeFilters} strategyFilters={strategyFilters} />
+      </> : <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(19rem,.9fr)]">
         <PerformanceCalendar
           key={`${period}-${year}-${customRange.start}-${customRange.end}`}
           trades={view.trades}
@@ -315,6 +338,7 @@ export default function PerformanceDashboard({
                             </span>
                           )}
                         </div>
+                        {item.tradeType && <span className="mt-2 inline-block rounded border border-white/10 px-2 py-1 text-xs text-zinc-400">{item.tradeType}</span>}
                       </div>
                       <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
                         {signedR(item.resultR)}
@@ -335,7 +359,7 @@ export default function PerformanceDashboard({
             </div>
           )}
         </section>
-      </div>
+      </div>}
     </div>
   );
 }

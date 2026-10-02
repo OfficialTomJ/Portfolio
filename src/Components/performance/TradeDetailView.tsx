@@ -3,7 +3,9 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
 import TradePriceChart from "./TradePriceChart";
 import { signedR } from "@/lib/performance/metrics";
-import type { MarketCandles, PerformanceTrade } from "@/lib/performance/types";
+import type { MarketCandles, PerformanceTrade, TradeTag } from "@/lib/performance/types";
+import type { TradeAnnotation } from "@/lib/performance/annotations-model";
+import AdminTradeReview from "./AdminTradeReview";
 
 const fullDate = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney",
@@ -42,10 +44,14 @@ export default function TradeDetailView({
   trade,
   market,
   reviewStatus,
+  annotation,
+  tagCatalogue = [],
 }: {
   trade: PerformanceTrade;
   market: MarketCandles | null;
   reviewStatus?: "published" | "pending_review";
+  annotation?: TradeAnnotation;
+  tagCatalogue?: TradeTag[];
 }) {
   const privateReview = !!reviewStatus;
   const pending = reviewStatus === "pending_review";
@@ -76,6 +82,7 @@ export default function TradeDetailView({
             <p className="mt-3 break-words text-sm leading-6 text-zinc-400">
               {trade.direction} position · {duration(trade.openedAt, trade.closedAt)} · Closed {fullDate.format(new Date(trade.closedAt))}
             </p>
+            {trade.tradeType && <span className="mt-3 inline-block rounded border border-white/15 px-2.5 py-1 text-xs text-zinc-300">{trade.tradeType}</span>}
           </div>
           <div className="sm:text-right">
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-600">Net result</p>
@@ -108,6 +115,9 @@ export default function TradeDetailView({
             <Detail label="Exit" value={price(trade.exitPrice)} />
           </div>
         </section>
+
+        {privateReview && annotation && <AdminTradeReview trade={trade} annotation={annotation} tags={tagCatalogue} />}
+        {trade.description && <section className="mt-6 rounded-2xl border border-white/10 bg-[#07090d] p-5 sm:p-6"><h2 className="text-base font-medium">Trade notes{privateReview && <span className="ml-2 text-xs font-normal text-zinc-500">Public description</span>}</h2><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-zinc-400">{trade.description}</p></section>}
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/[0.09] bg-[#07090d] p-5 sm:p-6">

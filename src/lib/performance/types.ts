@@ -1,4 +1,5 @@
 export type TradeDirection = "Long" | "Short";
+export type TradeType = "DAY" | "SWING";
 export type PerformanceRange = "30D" | "60D" | "90D" | "6M" | "YTD" | "YEAR" | "CUSTOM";
 
 export interface PerformanceTrade {
@@ -10,7 +11,12 @@ export interface PerformanceTrade {
   resultR: number;
   entryPrice: number;
   exitPrice: number;
+  tradeType?: TradeType | null;
+  description?: string;
 }
+
+/** Private strategy catalogue entry. Never attach it to a public trade DTO. */
+export interface TradeTag { id: string; name: string }
 
 export interface PerformanceDataset {
   id: string;

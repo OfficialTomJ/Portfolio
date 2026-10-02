@@ -119,7 +119,7 @@ export function calculateStats(trades: PerformanceTrade[]): PerformanceStats {
   };
 }
 
-function equitySeries(trades: PerformanceTrade[], start: Date): EquityPoint[] {
+export function equitySeries(trades: PerformanceTrade[], start: Date): EquityPoint[] {
   const ordered = [...trades].sort((a, b) => Date.parse(a.closedAt) - Date.parse(b.closedAt));
   let running = 0;
   const firstClose = ordered[0] ? Date.parse(ordered[0].closedAt) : start.getTime() + 1000;

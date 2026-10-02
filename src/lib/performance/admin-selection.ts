@@ -1,7 +1,9 @@
 import { validatePublishedPerformanceTrade } from "./sync-validation";
 import type { PerformanceDataset, PerformanceTrade, TradeDirection } from "./types";
+import { publicTradeIdForCycle } from "./publication";
 
 export interface ReviewCycleCandidate {
+  _id?: string;
   status: "open" | "pending_review" | "excluded";
   symbol: string;
   direction: TradeDirection;
@@ -15,6 +17,7 @@ export interface ReviewCycleCandidate {
 }
 
 export interface AdminActivePosition {
+  id: string;
   symbol: string;
   direction: TradeDirection;
   openedAt: string;
@@ -43,6 +46,7 @@ export function assembleAdminReview(
     .filter((cycle) => (cycle.status === "open" || cycle.status === "excluded") && cycle.lastSeenAt instanceof Date && cycle.lastSeenAt.getTime() === lastSyncAt.getTime())
     .filter((cycle) => cycle.openedAt instanceof Date && Number.isFinite(cycle.entryPrice) && cycle.entryPrice > 0)
     .map((cycle) => ({
+      id: publicTradeIdForCycle(cycle._id ?? `${cycle.symbol}:${cycle.openedAt.toISOString()}`),
       symbol: cycle.symbol,
       direction: cycle.direction,
       openedAt: cycle.openedAt.toISOString(),

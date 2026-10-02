@@ -33,5 +33,7 @@ export default async function PrivateTradePage({ params }: Props) {
     getAdminPerformanceSnapshot(),
   ]);
   const nextTradeId = snapshot ? nextUnreviewedTradeId(id, snapshot.dataset.trades, snapshot.annotations) : null;
-  return <PrivateTradeReview trade={result.trade} market={market} status={result.status} annotation={annotations[id]} tags={tags} nextTradeId={nextTradeId} />;
+  const publication = result.status === "published" ? { status: "published" as const, trade: result.trade }
+    : { status: "unpublished" as const, trade: result.trade, fingerprint: result.fingerprint! };
+  return <PrivateTradeReview trade={result.trade} market={market} status={result.status} annotation={annotations[id]} tags={tags} nextTradeId={nextTradeId} publication={publication} />;
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPerformanceAdminSession, isSameOriginAdminRequest } from "@/lib/performance/admin-access";
 import { AnnotationConflictError, AnnotationInputError, AnnotationTargetError, getTagCatalogue, getTradeAnnotations, resolveAnnotationTarget, saveTradeAnnotation } from "@/lib/performance/annotations";
+import { getAdminPerformanceTrade } from "@/lib/performance/admin-data";
+import type { AdminPublication } from "@/lib/performance/admin-publication";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" };
@@ -11,8 +13,12 @@ export async function GET(_request: NextRequest, { params }: Context) {
   const { id } = await params;
   const target = await resolveAnnotationTarget(id);
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404, headers });
-  const [annotations, tags] = await Promise.all([getTradeAnnotations([id]), getTagCatalogue()]);
-  return NextResponse.json({ annotation: annotations[id], tags, closed: target.closed }, { headers });
+  const [annotations, tags, result] = await Promise.all([getTradeAnnotations([id]), getTagCatalogue(), target.closed ? getAdminPerformanceTrade(id) : null]);
+  if (target.closed && !result) return NextResponse.json({ error: "Trade is no longer available for review" }, { status: 404, headers });
+  const publication: AdminPublication = !result ? { status: "active" } : result.status === "published"
+    ? { status: "published", trade: result.trade }
+    : { status: "unpublished", trade: result.trade, fingerprint: result.fingerprint! };
+  return NextResponse.json({ annotation: annotations[id], tags, closed: target.closed, publication }, { headers });
 }
 
 export async function PUT(request: NextRequest, { params }: Context) {

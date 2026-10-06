@@ -1,0 +1,72 @@
+name: Discord community recovery
+run-name: Discord community recovery · ${{ github.event_name }}
+
+on:
+  schedule:
+    # Best-effort five-minute recovery, offset from the busiest minute.
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+concurrency:
+  group: discord-community-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    # Deliberately paused until the approved deployment and target are configured.
+    if: vars.DISCORD_RECOVERY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Process durable Discord and mailing-list jobs
+        env:
+          RECOVERY_URL: ${{ vars.DISCORD_RECOVERY_URL }}
+          RECOVERY_ENV: ${{ vars.DISCORD_RECOVERY_ENV }}
+          RECOVERY_GUILD: ${{ vars.DISCORD_RECOVERY_GUILD }}
+          RECOVERY_SECRET: ${{ secrets.DISCORD_RECOVERY_SECRET }}
+          PROTECTION_BYPASS: ${{ secrets.DISCORD_RECOVERY_PROTECTION_BYPASS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${RECOVERY_SECRET}" || ${#RECOVERY_SECRET} -lt 32 ]]; then
+            echo "::error::Configure the dedicated Discord recovery secret"
+            exit 1
+          fi
+          if [[ ! "${RECOVERY_URL}" =~ ^https://[a-zA-Z0-9.-]+/api/discord/process$ ]] ||
+             [[ ! "${RECOVERY_ENV}" =~ ^(test|production)$ ]] ||
+             [[ ! "${RECOVERY_GUILD}" =~ ^[0-9]{17,22}$ ]]; then
+            echo "::error::Configure the HTTPS recovery URL, environment, and guild"
+            exit 1
+          fi
+          response_file="$(mktemp)"
+          trap 'rm -f "${response_file}"' EXIT
+          headers=(--header "Authorization: Bearer ${RECOVERY_SECRET}"
+                   --header "x-community-environment: ${RECOVERY_ENV}"
+                   --header "x-community-guild: ${RECOVERY_GUILD}"
+                   --header "Accept: application/json")
+          if [[ -n "${PROTECTION_BYPASS}" ]]; then
+            headers+=(--header "x-vercel-protection-bypass: ${PROTECTION_BYPASS}")
+          fi
+          # Do not follow redirects: credentials must stay on the configured host.
+          # A later scheduled run handles transport failures without replaying a long invocation.
+          status="$(curl --silent --show-error --request POST \
+            --connect-timeout 10 --max-time 80 \
+            "${headers[@]}" --output "${response_file}" --write-out '%{http_code}' \
+            "${RECOVERY_URL}")"
+          if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
+            echo "::error::Discord recovery returned HTTP ${status}"
+            exit 1
+          fi
+          if ! jq -e --arg environment "${RECOVERY_ENV}" --arg guild "${RECOVERY_GUILD}" '
+            .ok == true and .environment == $environment and .guildId == $guild
+            and (.processed | type == "number") and (.jobs.attentionContacts | type == "number")
+          ' "${response_file}" >/dev/null; then
+            echo "::error::Recovery did not confirm the expected target and result"
+            exit 1
+          fi
+          jq '{processed, skipped, jobs}' "${response_file}"
+          if ! jq -e '.jobs.attentionContacts == 0' "${response_file}" >/dev/null; then
+            echo "::error::Discord recovery has jobs that require operator attention"
+            exit 1
+          fi

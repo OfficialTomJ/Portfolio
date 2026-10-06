@@ -1,0 +1,14 @@
+The Blueprint.
+
+Your Discord connection management code is 482913. It expires in 5 minutes. Keep this code private.
+
+This code allows managing or unlinking your Discord connection.
+
+Back to connection management: http://localhost:3000/discord/manage
+
+Unlinking will remove your verified access in the community. You’ll need to re-verify to continue accessing it.
+
+If you didn’t request this code, you can ignore this email. Your connection will not change unless you complete the request.
+
+Thomas Johnston · The Blueprint
+Privacy policy: https://mentor.thomas-johnston.com/privacy

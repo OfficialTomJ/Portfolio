@@ -122,7 +122,7 @@ export const COMPLIANCE_PAGE_SECTIONS: DisclosureSection[] = [
  * `progress`, `disclosures`, `certificates`, `events`) rather than writing to a
  * template. Also a draft pending review.
  */
-export const PRIVACY_UPDATED = "2026-08-15";
+export const PRIVACY_UPDATED = "2026-10-06";
 
 export const PRIVACY_SECTIONS: DisclosureSection[] = [
   {
@@ -142,8 +142,12 @@ export const PRIVACY_SECTIONS: DisclosureSection[] = [
     body: "The mentor site uses Google Analytics and the Meta Pixel, which set cookies and share usage data with those providers under their own privacy policies. These record how pages are used; they are not used to make decisions about you individually.",
   },
   {
+    heading: "Discord community verification",
+    body: "Community verification stores your email address, Discord user ID and display name, verification and email-list enrollment times, connection history, and role/list activation status separately from website accounts. It does not create a website account. Verification adds your email to the community list in Resend for updates and occasional educational content. Resend sends email codes and holds list subscription preferences; Discord receives role updates to control community access. You can unsubscribe from community emails without losing verified access. Discord authorization tokens are used to confirm your identity and are not stored. Browser verification sessions expire after 30 minutes; incomplete, already-verified enrollment work is retained until it can be saved or resolved. Hashed request counters help prevent abuse. Unlinking removes the verified role and retains connection history; to request deletion of community data, contact hi@thomas-johnston.com. A later website account with the same verified email can attach the existing connection.",
+  },
+  {
     heading: "Where it is stored, and who can see it",
-    body: "Data is held in MongoDB Atlas and the site is hosted on Vercel; both may process data outside Australia. Access is limited to the site operator. Information is not sold, and is not shared with third parties except the service providers named in this policy or where required by law.",
+    body: "Data is held in MongoDB Atlas and the site is hosted on Vercel. Community verification also uses Discord and Resend as described above. These providers may process data outside Australia. Access is limited to the site operator. Information is not sold, and is not shared with third parties except the service providers named in this policy or where required by law.",
   },
   {
     heading: "What is public",

@@ -41,7 +41,12 @@ portfolio-1705549282867-fec5995715b1.json
 /research/
 
 # local-only dev/admin scripts (seed, db reset, etc.)
-/scripts/
+/scripts/*
+# Public verification setup/recovery commands (keep other admin scripts private).
+!/scripts/community-check.ts
+!/scripts/community-process.ts
+!/scripts/community-grandfather.ts
+!/scripts/community-entrypoint.ts
 
 # vercel
 .vercel

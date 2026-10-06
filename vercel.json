@@ -21,6 +21,10 @@
     "src/app/api/performance/admin/review/[id]/publish/route.ts": {
       "regions": ["syd1"],
       "maxDuration": 60
+    },
+    "src/app/api/discord/process/route.ts": {
+      "regions": ["syd1"],
+      "maxDuration": 60
     }
   }
 }

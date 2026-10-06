@@ -1,0 +1,12 @@
+The Blueprint.
+
+Your community verification code is 482913. It expires in 5 minutes. Keep this code private.
+
+This verifies Tom for community access.
+
+Back to verification: http://localhost:3000/discord/verify
+
+If you didn’t request this code, you can ignore this email. Nothing will be linked or activated unless verification is completed.
+
+Thomas Johnston · The Blueprint
+Privacy policy: https://mentor.thomas-johnston.com/privacy

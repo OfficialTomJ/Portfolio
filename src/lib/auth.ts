@@ -28,6 +28,10 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
+    afterEmailVerification: async (user) => {
+      const { claimCommunityContact } = await import("./community/runtime");
+      await claimCommunityContact(user);
+    },
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail({
         to: user.email,

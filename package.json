@@ -18,6 +18,11 @@
     "performance:instagram": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-instagram-card.ts",
     "performance:images:backfill": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-backfill-social-images.ts",
     "performance:test": "tsx --test src/lib/performance/*.test.ts",
+    "community:test": "tsx --test src/lib/community/*.test.ts",
+    "community:test:mongo": "COMMUNITY_MONGO_TEST=1 tsx --test src/lib/community/*.test.ts",
+    "community:check": "tsx scripts/community-check.ts",
+    "community:grandfather": "tsx scripts/community-grandfather.ts",
+    "community:process": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx scripts/community-process.ts",
     "tjss:check": "tsx scripts/tjss-check.ts",
     "tjss:seed": "tsx scripts/seed-tjss.ts"
   },

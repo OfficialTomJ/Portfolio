@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const snapshot = await getAdminPerformanceSnapshot();
     if (!snapshot?.dataset.trades.some(trade => trade.id === current)) return NextResponse.json({ error: "Not found" }, { status: 404, headers });
     if (asrStatus(snapshot.annotations[current]) !== "Reviewed") return NextResponse.json({ error: "Complete the current ASR first" }, { status: 409, headers });
-    return NextResponse.json({ id: nextUnreviewedTradeId(current, snapshot.dataset.trades, snapshot.annotations) }, { headers });
+    return NextResponse.json({ id: nextUnreviewedTradeId(current, snapshot.dataset.trades, snapshot.annotations, new Set(snapshot.readOnlyClosedTrades.map(trade => trade.id))) }, { headers });
   } catch {
     return NextResponse.json({ error: "Could not load the next review" }, { status: 503, headers });
   }

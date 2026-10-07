@@ -10,6 +10,8 @@ import type { TradeTag } from "./types";
 import type { TradeAnnotation } from "./annotations-model";
 import { getTagCatalogue, getTradeAnnotations } from "./annotations";
 import { enrichPublicTrades } from "./public-metadata";
+import { assemblePrivateClosedLedger, type AdminReadOnlyClosedTrade, type PrivateClosedLedgerCycle } from "./admin-ledger";
+import type { ClosedPnlSlice } from "./normalize";
 export type { AdminActivePosition } from "./admin-selection";
 
 interface SyncStateView {
@@ -44,6 +46,7 @@ export interface AdminPerformanceSnapshot {
   lastSyncAt: string;
   annotations: Record<string, TradeAnnotation>;
   tags: TradeTag[];
+  readOnlyClosedTrades: AdminReadOnlyClosedTrade[];
 }
 
 async function getCurrentAccountScope() {
@@ -106,11 +109,21 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
   ]);
 
   const snapshot = assembleAdminReview(publicResult.dataset, pendingCycles, openCycles, scope.lastSyncAt);
+  const ledgerCycles = await getDb().collection<PrivateClosedLedgerCycle & { environment: string; sourceAccountId: string }>(PERFORMANCE_COLLECTIONS.positionCycles).find({
+    environment: scope.environment, sourceAccountId: scope.sourceAccountId,
+    status: { $ne: "open" }, $or: [{ excludedFromJournal: true }, { publicationHold: true }],
+  }, { projection: { symbol: 1, direction: 1, status: 1, openedAt: 1, entryPrice: 1, riskAmount: 1,
+    executionClosedAt: 1, closedAt: 1, excludedFromJournal: 1, publicationHold: 1 } }).toArray();
+  const ledgerSlices = ledgerCycles.length ? await getDb().collection<ClosedPnlSlice & { cycleId: string }>(PERFORMANCE_COLLECTIONS.closedPnl).find({
+    environment: scope.environment, sourceAccountId: scope.sourceAccountId, execType: "Trade", cycleId: { $in: ledgerCycles.map(cycle => cycle._id) },
+  }).toArray() : [];
+  const ledger = assemblePrivateClosedLedger(ledgerCycles, ledgerSlices, snapshot.dataset.trades);
+  const allTrades = [...snapshot.dataset.trades, ...ledger.trades];
   const [annotations, tags, trades] = await Promise.all([
-    getTradeAnnotations([...snapshot.dataset.trades.map((trade) => trade.id), ...snapshot.activePositions.map((trade) => trade.id)]),
-    getTagCatalogue(), enrichPublicTrades(snapshot.dataset.trades),
+    getTradeAnnotations([...allTrades.map((trade) => trade.id), ...snapshot.activePositions.map((trade) => trade.id)]),
+    getTagCatalogue(), enrichPublicTrades(allTrades),
   ]);
-  return { ...snapshot, reconciliation: assembleReconciliation(reconciliationCycles), dataset: { ...snapshot.dataset, trades }, annotations, tags };
+  return { ...snapshot, reconciliation: assembleReconciliation(reconciliationCycles), dataset: { ...snapshot.dataset, trades }, annotations, tags, readOnlyClosedTrades: ledger.readOnlyClosedTrades };
 }
 
 export async function getAdminPerformanceTrade(id: string): Promise<{

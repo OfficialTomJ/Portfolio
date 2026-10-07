@@ -12,6 +12,7 @@ import {
   type BybitPosition,
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
+import { reconstructClosedExecutionCycles, isWithinCycleBoundary } from "./execution-cycles";
 import {
   currentPositionOpeningOrderIds,
   hasMultipleOpeningOrdersInCycle,
@@ -92,6 +93,7 @@ interface PositionCycleDocument {
   sameTradeAttribution?: SameTradeEntryAttribution;
   resolutionIssue?: string;
   closedAt?: Date;
+  executionClosedAt?: Date;
   publishedTradeId?: string;
   reviewCandidate?: PerformanceTrade;
   reviewFingerprint?: string;
@@ -722,11 +724,55 @@ async function capturePositionCycles(
   return active;
 }
 
+async function recoverClosedCycles(
+  cycles: Collection<PositionCycleDocument>,
+  executions: Collection<PrivateExecutionDocument>,
+  orders: Collection<PrivateOrderDocument>,
+  closedPnl: Collection<PrivateClosedPnlDocument>,
+  environment: string,
+  sourceAccountId: string,
+  riskVersions: PerformanceRiskVersion[],
+  capturedAt: Date
+): Promise<Map<string, string>> {
+  const scope = { environment, sourceAccountId };
+  const [fills, orderRecords, pnlRecords, existingCycles] = await Promise.all([
+    executions.find({ ...scope, execType: "Trade" }).toArray(),
+    orders.find(scope).toArray(),
+    closedPnl.find({ ...scope, execType: "Trade" }).toArray(),
+    cycles.find(scope).toArray(),
+  ]);
+  const pnlByOrder = new Map(pnlRecords.map(record => [record.orderId, record]));
+  const recovered = reconstructClosedExecutionCycles(fills, new Map(orderRecords.map(order => [order.orderId, order.positionIdx])));
+  const closingOrderCycles = new Map<string, string>();
+  for (const boundary of recovered) {
+    const matches = existingCycles.filter(cycle => cycle.symbol === boundary.symbol && cycle.direction === boundary.direction &&
+      cycle.positionIdx === boundary.positionIdx && cycle.openedAt.getTime() === boundary.openedAt.getTime());
+    if (matches.length > 1) throw new Error("Duplicate cycle boundaries require reconciliation");
+    const existing = matches[0];
+    const records = boundary.closingOrderIds.map(orderId => pnlByOrder.get(orderId));
+    // Never construct a final result until every close slice is present.
+    if (records.some(record => !record)) continue;
+    const closedQuantity = records.reduce((sum, record) => sum + Number(record!.closedSize || record!.qty), 0);
+    if (Math.abs(closedQuantity - boundary.quantity) > 1e-6 * Math.max(1, boundary.quantity)) continue;
+    const id = existing?._id ?? [sourceAccountId, environment, "linear", boundary.symbol, boundary.positionIdx, boundary.openedAt.getTime()].join(":");
+    const locked = lockPerformanceRisk(existing, riskVersions, boundary.openedAt);
+    await cycles.updateOne({ _id: id }, {
+      $set: { executionClosedAt: boundary.closedAt },
+      $setOnInsert: { ...scope, symbol: boundary.symbol, direction: boundary.direction, positionIdx: boundary.positionIdx,
+        openedAt: boundary.openedAt, firstSeenAt: capturedAt, lastSeenAt: capturedAt, entryPrice: boundary.entryPrice,
+        quantity: boundary.quantity, leverage: null, status: "awaiting_close", ...(locked ?? {}) },
+    }, { upsert: true });
+    for (const orderId of boundary.closingOrderIds) closingOrderCycles.set(orderId, id);
+  }
+  return closingOrderCycles;
+}
+
 async function assignClosedPnlToCycles(
   cycles: PositionCycleDocument[],
   closedPnl: Collection<PrivateClosedPnlDocument>,
   environment: string,
-  sourceAccountId: string
+  sourceAccountId: string,
+  closingOrderCycles: Map<string, string>
 ) {
   const records = await closedPnl
     .find({ environment, sourceAccountId, execType: "Trade" })
@@ -737,14 +783,20 @@ async function assignClosedPnlToCycles(
   for (const record of records) {
     const closedAt = dateValue(record.updatedTime, record.lastSeenAt);
     const direction = closedPositionDirection(record.side);
-    const match = orderedCycles.find(
+    const exactId = closingOrderCycles.get(record.orderId);
+    const match = exactId ? orderedCycles.find(cycle => cycle._id === exactId) : orderedCycles.find(
       (cycle) =>
         cycle.symbol === record.symbol &&
         cycle.direction === direction &&
-        cycle.openedAt.getTime() <= closedAt.getTime()
+        isWithinCycleBoundary(cycle, closedAt)
     );
     if (match && record.cycleId !== match._id) {
       await closedPnl.updateOne({ _id: record._id }, { $set: { cycleId: match._id } });
+    } else if (!match && record.cycleId) {
+      const previous = orderedCycles.find(cycle => cycle._id === record.cycleId);
+      if (!previous || !isWithinCycleBoundary(previous, closedAt)) {
+        await closedPnl.updateOne({ _id: record._id }, { $unset: { cycleId: "" } });
+      }
     }
   }
 }
@@ -757,7 +809,8 @@ async function publishClosedCycles(
   environment: string,
   sourceAccountId: string,
   activeIds: Set<string>,
-  capturedAt: Date
+  capturedAt: Date,
+  closingOrderCycles: Map<string, string>
 ): Promise<{ published: number; unresolved: number }> {
   const candidates = await cycles
     .find({
@@ -768,7 +821,7 @@ async function publishClosedCycles(
     .sort({ openedAt: -1 })
     .toArray();
 
-  await assignClosedPnlToCycles(candidates, closedPnl, environment, sourceAccountId);
+  await assignClosedPnlToCycles(candidates, closedPnl, environment, sourceAccountId, closingOrderCycles);
 
   let publishedCount = 0;
   let unresolvedCount = 0;
@@ -1050,6 +1103,9 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
       snapshot.executions,
       capturedAt
     );
+    const closingOrderCycles = await recoverClosedCycles(
+      cycles, executions, orders, closedPnl, environment, sourceAccountId, riskVersions, capturedAt
+    );
     const normalized = await publishClosedCycles(
       cycles,
       executions,
@@ -1058,7 +1114,8 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
       environment,
       sourceAccountId,
       activeIds,
-      capturedAt
+      capturedAt,
+      closingOrderCycles
     );
 
     const result: PerformanceSyncResult = {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reconstructClosedExecutionCycles, isWithinCycleBoundary } from "./execution-cycles";
+import { reconstructClosedExecutionCycles, isWithinCycleBoundary, matchExistingExecutionCycle } from "./execution-cycles";
 import type { BybitExecution } from "./bybit";
 
 const start = Date.parse("2026-01-01T00:00:00Z");
@@ -55,4 +55,12 @@ test("a closed trade cannot absorb subsequent PnL through legacy fallback", () =
   assert.equal(isWithinCycleBoundary(cycle, new Date(start + 60000)), true);
   assert.equal(isWithinCycleBoundary(cycle, new Date(start + 120000)), false);
   assert.equal(isWithinCycleBoundary({ ...cycle, executionClosedAt: new Date(start + 30000) }, new Date(start + 60000)), false);
+});
+test("preserves a legacy ID with millisecond drift without merging a nearby separate idea", () => {
+  const cycles = recover([fill("s1", "Sell", 1, 0, 1), fill("c1", "Buy", 1, 1, 1, { execTime: String(start + 60100) }), fill("s2", "Sell", 1, 0, 1, { execTime: String(start + 60200) }), fill("c2", "Buy", 1, 1, 1, { execTime: String(start + 60300) })]);
+  const original = { ...cycles[0], _id: "original", openedAt: new Date(start + 60001), firstSeenAt: new Date(start) };
+  const duplicate = { ...cycles[0], _id: "new", firstSeenAt: new Date(start + 100000) };
+  assert.equal(matchExistingExecutionCycle(cycles[0], cycles, [duplicate, original])?._id, "original");
+  assert.equal(matchExistingExecutionCycle(cycles[1], cycles, [original]), undefined);
+  assert.equal(matchExistingExecutionCycle(cycles[0], cycles, [{ ...original, reconstructedCycleAliasOf: "other" }]), undefined);
 });

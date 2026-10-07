@@ -8,6 +8,7 @@ export interface PrivateClosedLedgerCycle {
   _id: string; symbol: string; direction: TradeDirection; status: string;
   openedAt: Date; entryPrice: number; riskAmount?: number;
   executionClosedAt?: Date; closedAt?: Date; excludedFromJournal?: boolean; publicationHold?: boolean;
+  reconstructedCycleAliasOf?: string;
 }
 
 /** Private actual PnL can include exceptions and held closes without granting publication. */
@@ -20,7 +21,7 @@ export function assemblePrivateClosedLedger(
   const trades: PerformanceTrade[] = [];
   const readOnlyClosedTrades: AdminReadOnlyClosedTrade[] = [];
   for (const cycle of cycles) {
-    if (cycle.status === "open" || (!cycle.excludedFromJournal && !cycle.publicationHold)) continue;
+    if (cycle.reconstructedCycleAliasOf || cycle.status === "open" || (!cycle.excludedFromJournal && !cycle.publicationHold)) continue;
     const end = cycle.executionClosedAt ?? cycle.closedAt;
     if (!end || !Number.isFinite(end.getTime())) continue;
     const id = publicTradeIdForCycle(cycle._id);

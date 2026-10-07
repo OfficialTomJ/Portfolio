@@ -111,7 +111,7 @@ export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSna
   const snapshot = assembleAdminReview(publicResult.dataset, pendingCycles, openCycles, scope.lastSyncAt);
   const ledgerCycles = await getDb().collection<PrivateClosedLedgerCycle & { environment: string; sourceAccountId: string }>(PERFORMANCE_COLLECTIONS.positionCycles).find({
     environment: scope.environment, sourceAccountId: scope.sourceAccountId,
-    status: { $ne: "open" }, $or: [{ excludedFromJournal: true }, { publicationHold: true }],
+    status: { $ne: "open" }, reconstructedCycleAliasOf: { $exists: false }, $or: [{ excludedFromJournal: true }, { publicationHold: true }],
   }, { projection: { symbol: 1, direction: 1, status: 1, openedAt: 1, entryPrice: 1, riskAmount: 1,
     executionClosedAt: 1, closedAt: 1, excludedFromJournal: 1, publicationHold: 1 } }).toArray();
   const ledgerSlices = ledgerCycles.length ? await getDb().collection<ClosedPnlSlice & { cycleId: string }>(PERFORMANCE_COLLECTIONS.closedPnl).find({

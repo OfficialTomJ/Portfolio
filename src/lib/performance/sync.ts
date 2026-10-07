@@ -12,7 +12,7 @@ import {
   type BybitPosition,
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
-import { reconstructClosedExecutionCycles, isWithinCycleBoundary } from "./execution-cycles";
+import { reconstructClosedExecutionCycles, isWithinCycleBoundary, matchExistingExecutionCycle } from "./execution-cycles";
 import {
   currentPositionOpeningOrderIds,
   hasMultipleOpeningOrdersInCycle,
@@ -94,6 +94,7 @@ interface PositionCycleDocument {
   resolutionIssue?: string;
   closedAt?: Date;
   executionClosedAt?: Date;
+  reconstructedCycleAliasOf?: string;
   publishedTradeId?: string;
   reviewCandidate?: PerformanceTrade;
   reviewFingerprint?: string;
@@ -745,10 +746,7 @@ async function recoverClosedCycles(
   const recovered = reconstructClosedExecutionCycles(fills, new Map(orderRecords.map(order => [order.orderId, order.positionIdx])));
   const closingOrderCycles = new Map<string, string>();
   for (const boundary of recovered) {
-    const matches = existingCycles.filter(cycle => cycle.symbol === boundary.symbol && cycle.direction === boundary.direction &&
-      cycle.positionIdx === boundary.positionIdx && cycle.openedAt.getTime() === boundary.openedAt.getTime());
-    if (matches.length > 1) throw new Error("Duplicate cycle boundaries require reconciliation");
-    const existing = matches[0];
+    const existing = matchExistingExecutionCycle(boundary, recovered, existingCycles);
     const records = boundary.closingOrderIds.map(orderId => pnlByOrder.get(orderId));
     // Never construct a final result until every close slice is present.
     if (records.some(record => !record)) continue;
@@ -816,6 +814,7 @@ async function publishClosedCycles(
     .find({
       environment,
       sourceAccountId,
+      reconstructedCycleAliasOf: { $exists: false },
       status: { $in: ["open", "awaiting_close", "awaiting_attribution", "unresolved", "pending_review", "published", "excluded"] },
     })
     .sort({ openedAt: -1 })

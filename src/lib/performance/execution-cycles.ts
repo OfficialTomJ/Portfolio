@@ -97,3 +97,16 @@ export function isWithinCycleBoundary(cycle: { openedAt: Date; closedAt?: Date; 
   const end = cycle.executionClosedAt ?? cycle.closedAt;
   return cycle.openedAt.getTime() <= closedAt.getTime() && (!end || closedAt.getTime() <= end.getTime());
 }
+
+/** Match timestamp drift only to the nearest real flat boundary, preserving older IDs. */
+export function matchExistingExecutionCycle<T extends {
+  _id: string; symbol: string; direction: TradeDirection; positionIdx: number;
+  openedAt: Date; firstSeenAt: Date; reconstructedCycleAliasOf?: string;
+}>(boundary: ClosedExecutionCycle, boundaries: ClosedExecutionCycle[], existing: T[]): T | undefined {
+  const stream = boundaries.filter(item => item.symbol === boundary.symbol && item.direction === boundary.direction && item.positionIdx === boundary.positionIdx);
+  return existing.filter(cycle => {
+    if (cycle.reconstructedCycleAliasOf || cycle.symbol !== boundary.symbol || cycle.direction !== boundary.direction || cycle.positionIdx !== boundary.positionIdx) return false;
+    const distance = Math.abs(cycle.openedAt.getTime() - boundary.openedAt.getTime());
+    return distance <= 1000 && stream.every(item => item === boundary || Math.abs(cycle.openedAt.getTime() - item.openedAt.getTime()) > distance);
+  }).sort((a, b) => a.firstSeenAt.getTime() - b.firstSeenAt.getTime() || a._id.localeCompare(b._id))[0];
+}

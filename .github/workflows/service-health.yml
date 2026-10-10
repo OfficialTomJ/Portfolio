@@ -1,0 +1,39 @@
+name: Service health monitoring
+
+on:
+  schedule:
+    - cron: "11,26,41,56 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: service-health-monitoring
+  cancel-in-progress: false
+
+jobs:
+  performance:
+    if: vars.SERVICE_HEALTH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Evaluate service outputs and report to Healthchecks
+        env:
+          MONGODB_URI: ${{ secrets.GH_ACTION }}
+          MONGODB_DB: blueprint_prod
+          BYBIT_ENV: ${{ vars.MONITOR_BYBIT_ENV || 'demo' }}
+          MONITOR_PERFORMANCE_ACCOUNT_ID: ${{ secrets.MONITOR_PERFORMANCE_ACCOUNT_ID }}
+          MONITOR_PERFORMANCE_ORIGIN: https://mentor.thomas-johnston.com
+          HEALTHCHECKS_PERFORMANCE_SYNC_URL: ${{ secrets.HEALTHCHECKS_PERFORMANCE_SYNC_URL }}
+          HEALTHCHECKS_PERFORMANCE_IMAGES_URL: ${{ secrets.HEALTHCHECKS_PERFORMANCE_IMAGES_URL }}
+          NODE_PATH: node_modules/next/dist/compiled
+          NODE_OPTIONS: --conditions=react-server
+        run: npx --no-install tsx src/lib/monitoring/cli.ts

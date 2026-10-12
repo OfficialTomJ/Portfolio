@@ -8,6 +8,7 @@ import type { PerformanceDataset, PerformanceRange, TradeTag } from "@/lib/perfo
 import AdminTradeManager from "./AdminTradeManager";
 import MultiSelectFilter from "./MultiSelectFilter";
 import PerformanceEquityChart from "./PerformanceEquityChart";
+import type { AdminReadOnlyClosedTrade } from "@/lib/performance/admin-ledger";
 
 type Period = PerformanceRange | `MONTH:${string}`;
 const date = new Intl.DateTimeFormat("en-GB", { timeZone: "Australia/Sydney", day: "numeric", month: "short", year: "numeric" });
@@ -20,10 +21,11 @@ function Metric({ label, value }: { label: string; value: string }) {
   return <div className="min-w-0"><p className="text-xs text-zinc-500">{label}</p><p className="mt-1.5 break-words text-xl font-medium tabular-nums text-zinc-100 sm:text-2xl">{value}</p></div>;
 }
 
-export default function PrivatePerformanceDashboard({ dataset, pendingReviews, activePositions, reconciliation, annotations, tags }: {
+export default function PrivatePerformanceDashboard({ dataset, pendingReviews, activePositions, reconciliation, annotations, tags, readOnlyClosedTrades = [] }: {
   dataset: PerformanceDataset; pendingReviews: AdminPendingReview[]; activePositions: AdminActivePosition[];
   annotations: Record<string, TradeAnnotation>; tags: TradeTag[];
   reconciliation: AdminReconciliationItem[];
+  readOnlyClosedTrades?: AdminReadOnlyClosedTrade[];
 }) {
   const [period, setPeriod] = useState<Period>("30D");
   const years = getAvailableYears(dataset);
@@ -41,9 +43,10 @@ export default function PrivatePerformanceDashboard({ dataset, pendingReviews, a
   const custom = monthKey ? calendarMonthRange(monthKey, dataset.asOf) : startKey <= endKey ? { start: startKey, end: endKey } : { start: endKey, end: startKey };
   const filtered = { ...dataset, trades: dataset.trades.filter(trade => matchesTradeFilters(annotations[trade.id]?.tradeType, annotations[trade.id]?.strategyIds ?? [], typeFilters, strategyFilters)) };
   const view = buildPerformanceView(filtered, monthKey ? "CUSTOM" : period as PerformanceRange, year, custom);
-  const comparison = buildAsrComparison(view.trades, annotations, view.startsAt, validity);
+  const readOnlyIds = new Set(readOnlyClosedTrades.map(trade => trade.id));
+  const comparison = buildAsrComparison(view.trades.filter(trade => !readOnlyIds.has(trade.id)), annotations, view.startsAt, validity);
   const stats = view.stats;
-  const needsAsr = dataset.trades.filter(trade => asrStatus(annotations[trade.id]) !== "Reviewed").length;
+  const needsAsr = dataset.trades.filter(trade => !readOnlyIds.has(trade.id) && asrStatus(annotations[trade.id]) !== "Reviewed").length;
   const chips = [...typeFilters.map(id => ({ id, name: types.find(type => type.id === id)!.name, type: true })), ...strategyFilters.map(id => ({ id, name: tags.find(tag => tag.id === id)?.name ?? "Strategy", type: false }))];
 
   return <div className="space-y-6">
@@ -81,9 +84,9 @@ export default function PrivatePerformanceDashboard({ dataset, pendingReviews, a
       <div className="border-t border-white/10 p-4 sm:p-5">
         <h3 className="mb-3 text-sm font-medium">{mode === "actual" ? "Cumulative R" : "Actual vs expected"}</h3>
         {mode === "actual" ? <PerformanceEquityChart key="actual" points={view.equity} /> : comparison.pairedCount ? <PerformanceEquityChart key="asr" points={comparison.actual} comparisonPoints={comparison.expected} /> : <div className="grid h-52 place-items-center text-center text-sm text-zinc-400">No completed ASRs in this selection.</div>}
-        <p className="mt-3 text-xs leading-5 text-zinc-500">{mode === "actual" ? `Actual results for all ${view.trades.length} closed trades in this selection, including unpublished and unreviewed trades.` : `Both curves use the same ${comparison.pairedCount} reviewed trades. Expected R is your assessment; gap = expected minus actual.`}</p>
+        <p className="mt-3 text-xs leading-5 text-zinc-500">{mode === "actual" ? `Recorded results for all ${view.trades.length} closed trades in this selection, including unpublished trades and private-only exceptions. Publication approval is separate.` : `Both curves use the same ${comparison.pairedCount} reviewed trades. Expected R is your assessment; gap = expected minus actual.`}</p>
       </div>
     </section>
-    <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} reconciliation={reconciliation} annotations={annotations} tags={tags} typeFilters={typeFilters} strategyFilters={strategyFilters} />
+    <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} reconciliation={reconciliation} annotations={annotations} tags={tags} typeFilters={typeFilters} strategyFilters={strategyFilters} readOnlyClosedTrades={readOnlyClosedTrades} />
   </div>;
 }

@@ -5,10 +5,11 @@ export type ReviewTab = "needs_asr" | "reviewed" | "all" | "active" | "reconcili
 export type PublicationFilter = "all" | "pending" | "published";
 
 /** Publication and ASR are independent. Incomplete drafts still need ASR. */
-export function filterReviewTrades(trades: PerformanceTrade[], annotations: Record<string, TradeAnnotation>, pendingIds: Set<string>, tab: ReviewTab, publication: PublicationFilter, search = "") {
+export function filterReviewTrades(trades: PerformanceTrade[], annotations: Record<string, TradeAnnotation>, pendingIds: Set<string>, tab: ReviewTab, publication: PublicationFilter, search = "", readOnlyIds: Set<string> = new Set()) {
   if (tab === "active" || tab === "reconciliation") return [];
   const query = search.trim().toLowerCase();
   return trades.filter(trade => {
+    if (readOnlyIds.has(trade.id)) return tab === "all" && publication !== "published" && trade.symbol.toLowerCase().includes(query);
     const reviewed = asrStatus(annotations[trade.id]) === "Reviewed";
     return (tab === "all" || (tab === "reviewed" ? reviewed : !reviewed)) &&
       (publication === "all" || pendingIds.has(trade.id) === (publication === "pending")) &&
@@ -17,7 +18,7 @@ export function filterReviewTrades(trades: PerformanceTrade[], annotations: Reco
 }
 
 /** Account-scoped closed trades only. No publication side effects or active results. */
-export function nextUnreviewedTradeId(currentId: string, trades: PerformanceTrade[], annotations: Record<string, TradeAnnotation>): string | null {
+export function nextUnreviewedTradeId(currentId: string, trades: PerformanceTrade[], annotations: Record<string, TradeAnnotation>, readOnlyIds: Set<string> = new Set()): string | null {
   return [...trades].sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt) || a.id.localeCompare(b.id))
-    .find(trade => trade.id !== currentId && asrStatus(annotations[trade.id]) !== "Reviewed")?.id ?? null;
+    .find(trade => trade.id !== currentId && !readOnlyIds.has(trade.id) && asrStatus(annotations[trade.id]) !== "Reviewed")?.id ?? null;
 }

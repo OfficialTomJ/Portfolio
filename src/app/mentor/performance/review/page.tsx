@@ -39,7 +39,7 @@ export default async function PerformanceReviewPage() {
 
       <div className="mx-auto max-w-7xl space-y-5 px-4 pt-5 sm:px-6 sm:pt-6">
         {snapshot ? (
-          <PrivatePerformanceDashboard dataset={snapshot.dataset} pendingReviews={snapshot.pendingReviews} annotations={snapshot.annotations} activePositions={snapshot.activePositions} reconciliation={snapshot.reconciliation} tags={snapshot.tags} />
+          <PrivatePerformanceDashboard dataset={snapshot.dataset} pendingReviews={snapshot.pendingReviews} annotations={snapshot.annotations} activePositions={snapshot.activePositions} reconciliation={snapshot.reconciliation} tags={snapshot.tags} readOnlyClosedTrades={snapshot.readOnlyClosedTrades} />
         ) : (
           <PerformanceUnavailable title="Private review is temporarily unavailable." />
         )}

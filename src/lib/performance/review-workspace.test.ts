@@ -35,3 +35,11 @@ test("next unreviewed excludes current and complete trades and has a stable endi
   assert.equal(nextUnreviewedTradeId("one", [trades[0], trades[1]], annotations), null);
   assert.equal(nextUnreviewedTradeId("none", [], {}), null);
 });
+test("private-only closes appear in all closed without becoming publishable or ASR work", () => {
+  const readOnly = new Set(["one"]);
+  assert.ok(filterReviewTrades(trades, annotations, pending, "all", "all", "", readOnly).some(t => t.id === "one"));
+  assert.ok(filterReviewTrades(trades, annotations, pending, "all", "pending", "", readOnly).some(t => t.id === "one"));
+  assert.ok(!filterReviewTrades(trades, annotations, pending, "all", "published", "", readOnly).some(t => t.id === "one"));
+  assert.ok(!filterReviewTrades(trades, annotations, pending, "needs_asr", "all", "", readOnly).some(t => t.id === "one"));
+  assert.equal(nextUnreviewedTradeId("three", trades, annotations, readOnly), null);
+});

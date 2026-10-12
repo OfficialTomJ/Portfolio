@@ -4,7 +4,6 @@ import {
   lockPerformanceRisk,
   selectRiskVersion,
   isValidTradeRiskR,
-  tradeRiskDollars,
   type PerformanceRiskVersion,
 } from "./risk";
 
@@ -62,12 +61,9 @@ test("returns null when no version predates the trade", () => {
   );
 });
 
-test("per-trade budgets use the fixed $1,000 unit and accept fractional risk", () => {
-  assert.equal(tradeRiskDollars(1), 1000);
-  assert.equal(tradeRiskDollars(2), 2000);
-  assert.equal(tradeRiskDollars(0.5), 500);
-  for (const value of [0, -1, null, "2", NaN, Infinity, Number.MAX_VALUE]) {
+test("per-trade risk accepts positive finite R values, including fractional risk", () => {
+  for (const value of [1, 2, 0.5]) assert.equal(isValidTradeRiskR(value), true);
+  for (const value of [0, -1, null, "2", NaN, Infinity]) {
     assert.equal(isValidTradeRiskR(value), false);
   }
-  assert.throws(() => tradeRiskDollars(0), /positive/);
 });

@@ -78,7 +78,7 @@ test("historical annotations default to 1R and risk can be edited before or afte
   assert.equal(parseAnnotation(legacy, false).riskR, 1);
   assert.equal(parseAnnotation({ ...EMPTY_ANNOTATION, riskR: 2 }, false).riskR, 2);
   assert.equal(parseAnnotation({ ...complete, riskR: 0.5 }, true).riskR, 0.5);
-  for (const riskR of [0, -2, null, "2", NaN, Infinity, Number.MAX_VALUE]) {
+  for (const riskR of [0, -2, null, "2", NaN, Infinity]) {
     assert.throws(() => parseAnnotation({ ...EMPTY_ANNOTATION, riskR }, true), /Risk/);
   }
 });

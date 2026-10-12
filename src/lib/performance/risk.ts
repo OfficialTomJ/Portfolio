@@ -1,15 +1,7 @@
-/** Fixed dollar unit used to express the journal's manually assigned risk budget. */
-export const PERFORMANCE_BASE_RISK_USD = 1000;
 export const DEFAULT_TRADE_RISK_R = 1;
 
 export function isValidTradeRiskR(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 &&
-    Number.isFinite(value * PERFORMANCE_BASE_RISK_USD);
-}
-
-export function tradeRiskDollars(riskR: number): number {
-  if (!isValidTradeRiskR(riskR)) throw new Error("Risk (R) must be a positive number");
-  return riskR * PERFORMANCE_BASE_RISK_USD;
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 export interface PerformanceRiskVersion {

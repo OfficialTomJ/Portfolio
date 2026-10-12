@@ -31,7 +31,7 @@ export async function migrateTradeTags(apply = false) {
           tradeType: current.tradeType === undefined ? classification.tradeType : current.tradeType,
           strategyIds: [...new Set([...(previous?.strategyIds ?? []), ...classification.strategyIds])].sort(), description: current.description ?? "" };
         await db.collection<PrivateReviewDocument>(REVIEW_COLLECTION).replaceOne({ _id: document._id }, {
-          revision: next.revision, strategyIds: next.strategyIds, privateNotes: next.privateNotes, asrComments: next.asrComments,
+          revision: next.revision, riskR: next.riskR, strategyIds: next.strategyIds, privateNotes: next.privateNotes, asrComments: next.asrComments,
           expectedR: next.expectedR, valid: next.valid, updatedAt: new Date(), updatedBy: "metadata-migration",
         }, { session, upsert: true });
         await db.collection<PublicMetadataDocument>(METADATA_COLLECTION).replaceOne({ _id: document._id }, { tradeType: next.tradeType, description: next.description }, { session });

@@ -70,3 +70,24 @@ test("legacy migration classifies known types only, keeps unknown tags private, 
   assert.deepEqual(classifyLegacyTags(["day", "acb", "acb", "unknown"], tags), { tradeType: "DAY", strategyIds: ["acb", "unknown"], conflict: false });
   assert.deepEqual(classifyLegacyTags(["day", "swing", "acb"], tags), { tradeType: null, strategyIds: ["acb"], conflict: true });
 });
+
+test("historical annotations default to 1R and risk can be edited before or after closure", () => {
+  const legacy: Partial<TradeAnnotation> = { ...EMPTY_ANNOTATION };
+  delete legacy.riskR;
+  assert.equal(parseAnnotation(legacy, true).riskR, 1);
+  assert.equal(parseAnnotation(legacy, false).riskR, 1);
+  assert.equal(parseAnnotation({ ...EMPTY_ANNOTATION, riskR: 2 }, false).riskR, 2);
+  assert.equal(parseAnnotation({ ...complete, riskR: 0.5 }, true).riskR, 0.5);
+  for (const riskR of [0, -2, null, "2", NaN, Infinity, Number.MAX_VALUE]) {
+    assert.throws(() => parseAnnotation({ ...EMPTY_ANNOTATION, riskR }, true), /Risk/);
+  }
+});
+
+test("a 2R budget preserves fixed-unit results and ASR gaps", () => {
+  const earned = { ...trade, resultR: 4 };
+  const annotation = parseAnnotation({ ...complete, riskR: 2, expectedR: 5 }, true);
+  const comparison = buildAsrComparison([earned], { [trade.id]: annotation }, new Date(trade.openedAt), "all");
+  assert.equal(comparison.actualR, 4);
+  assert.equal(comparison.expectedR, 5);
+  assert.equal(comparison.gap, 1);
+});

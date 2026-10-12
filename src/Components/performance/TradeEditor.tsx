@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { EMPTY_ANNOTATION, type TradeAnnotation } from "@/lib/performance/annotations-model";
 import type { TradeTag, TradeDirection } from "@/lib/performance/types";
 import { signedR } from "@/lib/performance/metrics";
+import { isValidTradeRiskR, tradeRiskDollars } from "@/lib/performance/risk";
 import type { AdminPublication } from "@/lib/performance/admin-publication";
 import AdminPublishButton from "./AdminPublishButton";
 
@@ -34,6 +35,7 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
   const [annotation, setAnnotation] = useState<TradeAnnotation>(initialAnnotation ?? { ...EMPTY_ANNOTATION });
   const [original, setOriginal] = useState(initialAnnotation ? JSON.stringify(initialAnnotation) : "");
   const [expected, setExpected] = useState(initialAnnotation?.expectedR == null ? "" : String(initialAnnotation.expectedR));
+  const [risk, setRisk] = useState(String(initialAnnotation?.riskR ?? EMPTY_ANNOTATION.riskR));
   const [tags, setTags] = useState<TradeTag[]>(initialTags);
   const [query, setQuery] = useState("");
   const [closed, setClosed] = useState(trade.resultR !== undefined);
@@ -45,14 +47,15 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [conflict, setConflict] = useState(false);
-  const payload = { ...annotation, expectedR: expected.trim() === "" ? null : Number(expected) };
+  const payload = { ...annotation, riskR: Number(risk), expectedR: expected.trim() === "" ? null : Number(expected) };
+  const validRisk = risk.trim() !== "" && isValidTradeRiskR(payload.riskR);
   const dirty = !loading && JSON.stringify(payload) !== original;
   const complete = closed && payload.expectedR !== null && Number.isFinite(payload.expectedR) && Math.abs(payload.expectedR) <= 100 && annotation.valid !== null;
 
   const applySaved = useCallback((next: TradeAnnotation) => {
     revision.current = next.revision;
     edited.current = false;
-    setAnnotation(next); setExpected(next.expectedR == null ? "" : String(next.expectedR)); setOriginal(JSON.stringify(next));
+    setAnnotation(next); setRisk(String(next.riskR)); setExpected(next.expectedR == null ? "" : String(next.expectedR)); setOriginal(JSON.stringify(next));
   }, []);
   useEffect(() => {
     const element = dialog.current;
@@ -106,6 +109,7 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
   }
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (saving || loading || creating || publishing) return;
+    if (!validRisk) { setError("Risk (R) must be a positive number"); return; }
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const next = submitter instanceof HTMLButtonElement && submitter.dataset.action === "next";
     if (next && !complete) return;
@@ -129,6 +133,12 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
     <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5"><div><h2 id={id} className="text-lg font-medium">{inline ? "Advanced Self Review" : `${trade.symbol.replace("USDT", " / USDT")} · ${trade.direction}`}</h2><p className="mt-1 text-xs text-zinc-500">{closed ? `Actual result ${signedR(trade.resultR!)}` : "Active position · ASR available after closure"}</p></div>{!inline && <button type="button" onClick={close} aria-label="Close editor" className="size-10 shrink-0 rounded-lg border border-white/10 text-xl text-zinc-400">×</button>}</header>
     <div className={`space-y-5 p-4 sm:p-5 ${inline ? "" : "min-h-0 flex-1 overflow-y-auto"}`}>
       {loading ? <p className="py-8 text-sm text-zinc-400">{error || "Loading trade…"}</p> : <>
+        <fieldset className="space-y-2"><legend className="text-sm font-medium text-zinc-300">Trade risk <span className="text-xs font-normal text-zinc-500">· Private</span></legend>
+          <label htmlFor={`${id}-risk`} className="block text-sm text-zinc-300">Risk (R)
+            <input id={`${id}-risk`} aria-label="Risk (R)" aria-describedby={`${id}-risk-help`} aria-invalid={!validRisk} type="number" inputMode="decimal" step="any" min={0} required value={risk} onChange={event => { edited.current = true; setMessage(""); setRisk(event.target.value); }} className={field} />
+          </label>
+          <p id={`${id}-risk-help`} className="text-xs leading-5 text-zinc-500">1R = $1,000. {validRisk ? `${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(tradeRiskDollars(payload.riskR))} at risk.` : "Enter a positive number."} Results and Expected R use the fixed $1,000 unit.</p>
+        </fieldset>
         {closed && <fieldset className="space-y-4"><legend className="sr-only">ASR assessment</legend><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm text-zinc-300">Trade validity<select aria-label="Trade validity" value={annotation.valid === null ? "unset" : annotation.valid ? "valid" : "invalid"} onChange={event => { edited.current = true; setMessage(""); setAnnotation(previous => ({ ...previous, valid: event.target.value === "unset" ? null : event.target.value === "valid" })); }} className={field}><option value="unset">Not reviewed</option><option value="valid">Valid trade</option><option value="invalid">Invalid trade</option></select></label><label className="block text-sm text-zinc-300">Expected R<input aria-label="Expected R" type="number" inputMode="decimal" step="any" min={-100} max={100} value={expected} onChange={event => { edited.current = true; setMessage(""); setExpected(event.target.value); }} placeholder="e.g. 2.5" className={field} /></label></div><p className="text-xs leading-5 text-zinc-500">Your assessment with perfect management, on the same 1R basis.</p>{payload.expectedR !== null && Number.isFinite(payload.expectedR) && <p className="text-xs text-zinc-400">Review gap <span className="ml-2 font-medium text-zinc-200">{signedR(payload.expectedR - trade.resultR!)}</span></p>}<label className="block text-sm text-zinc-300">ASR comments<textarea aria-label="ASR comments" rows={4} value={annotation.asrComments} onChange={event => update("asrComments", event.target.value)} maxLength={10000} placeholder="Setup, management and what you would do differently" className={field} /></label></fieldset>}
         <details open={!inline || !closed} className="border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm font-medium text-zinc-300">Classification</summary><div className="mt-4 space-y-4"><label className="block text-sm text-zinc-300">Trade type<select aria-label="Trade type" value={annotation.tradeType ?? ""} onChange={event => { edited.current = true; setMessage(""); setAnnotation(previous => ({ ...previous, tradeType: event.target.value === "DAY" ? "DAY" : event.target.value === "SWING" ? "SWING" : null })); }} className={field}><option value="">Not set</option><option value="DAY">DAY</option><option value="SWING">SWING</option></select><span className="mt-1 block text-xs text-zinc-500">Public once published.</span></label><div><label htmlFor={`${id}-query`} className="text-sm text-zinc-300">Strategies <span className="text-xs text-zinc-500">· Private</span></label><div className="mt-2 flex flex-wrap gap-2">{annotation.strategyIds.map(tagId => <button key={tagId} type="button" onClick={() => toggleTag(tagId)} className="max-w-full break-words rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]" aria-label={`Remove ${tags.find(tag => tag.id === tagId)?.name} strategy`}>{tags.find(tag => tag.id === tagId)?.name} ×</button>)}</div><input id={`${id}-query`} value={query} onChange={event => setQuery(event.target.value)} maxLength={40} placeholder="Find or create a strategy" className={field} /><div className="mt-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{tags.filter(tag => tag.name.toLowerCase().includes(query.trim().toLowerCase())).map(tag => <button key={tag.id} type="button" aria-pressed={annotation.strategyIds.includes(tag.id)} onClick={() => toggleTag(tag.id)} disabled={!annotation.strategyIds.includes(tag.id) && annotation.strategyIds.length >= 12} className={`max-w-full break-words rounded-lg border px-3 py-2 text-xs ${annotation.strategyIds.includes(tag.id) ? "border-[#ff6719]/40 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{annotation.strategyIds.includes(tag.id) ? "✓ " : "+ "}{tag.name}</button>)}</div>{query.trim() && !tags.some(tag => tag.name.toLowerCase() === query.trim().toLowerCase()) && <button type="button" onClick={createTag} disabled={creating || annotation.strategyIds.length >= 12} className="mt-3 max-w-full break-words text-sm text-[#ff8b52]">{creating ? "Creating…" : `Create “${query.trim()}”`}</button>}</div></div></details>
         <details open={!inline} className="border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm font-medium text-zinc-300">Private notes</summary><label className="mt-3 block"><span className="sr-only">Private notes</span><textarea aria-label="Private notes" rows={3} value={annotation.privateNotes} onChange={event => update("privateNotes", event.target.value)} maxLength={10000} placeholder="Working notes and reminders" className={field} /></label></details>

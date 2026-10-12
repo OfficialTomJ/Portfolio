@@ -1,8 +1,10 @@
 import { calculateStats, equitySeries } from "./metrics";
 import type { PerformanceTrade, TradeType, TradeTag } from "./types";
+import { DEFAULT_TRADE_RISK_R, isValidTradeRiskR } from "./risk";
 
 export interface TradeAnnotation {
   revision: number;
+  riskR: number;
   tradeType: TradeType | null;
   strategyIds: string[];
   description: string;
@@ -13,7 +15,7 @@ export interface TradeAnnotation {
 }
 
 export const EMPTY_ANNOTATION: TradeAnnotation = {
-  revision: 0, tradeType: null, strategyIds: [], description: "", privateNotes: "", asrComments: "", expectedR: null, valid: null,
+  revision: 0, riskR: DEFAULT_TRADE_RISK_R, tradeType: null, strategyIds: [], description: "", privateNotes: "", asrComments: "", expectedR: null, valid: null,
 };
 export const TRADE_ID_PATTERN = /^trade-[a-f0-9]{20}$/;
 export const TAG_ID_PATTERN = /^tag-[a-f0-9]{20}$/;
@@ -31,6 +33,8 @@ export function parseAnnotation(value: unknown, closed: boolean): TradeAnnotatio
   const allowed = Object.keys(EMPTY_ANNOTATION);
   if (Object.keys(v).some((key) => !allowed.includes(key))) throw new Error("Unknown edit field");
   if (!Number.isSafeInteger(v.revision) || (v.revision as number) < 0) throw new Error("Invalid revision");
+  const riskR = v.riskR === undefined ? DEFAULT_TRADE_RISK_R : v.riskR;
+  if (!isValidTradeRiskR(riskR)) throw new Error("Risk (R) must be a positive number");
   if (v.tradeType !== null && v.tradeType !== "DAY" && v.tradeType !== "SWING") throw new Error("Choose Day, Swing, or not set");
   if (!Array.isArray(v.strategyIds) || v.strategyIds.length > 12 || v.strategyIds.some((id) => typeof id !== "string" || !TAG_ID_PATTERN.test(id))) throw new Error("Choose up to 12 strategies");
   const text = (key: string, limit: number) => {
@@ -40,7 +44,7 @@ export function parseAnnotation(value: unknown, closed: boolean): TradeAnnotatio
   if (v.expectedR !== null && (typeof v.expectedR !== "number" || !Number.isFinite(v.expectedR) || Math.abs(v.expectedR) > 100)) throw new Error("Expected R must be between -100 and 100");
   if (v.valid !== null && typeof v.valid !== "boolean") throw new Error("Choose valid, invalid, or not reviewed");
   const annotation: TradeAnnotation = {
-    revision: v.revision as number, tradeType: v.tradeType as TradeType | null, strategyIds: [...new Set(v.strategyIds as string[])].sort(),
+    revision: v.revision as number, riskR, tradeType: v.tradeType as TradeType | null, strategyIds: [...new Set(v.strategyIds as string[])].sort(),
     description: text("description", 5000), privateNotes: text("privateNotes", 10000),
     asrComments: text("asrComments", 10000), expectedR: v.expectedR as number | null, valid: v.valid as boolean | null,
   };

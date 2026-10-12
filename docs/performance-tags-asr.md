@@ -1,6 +1,6 @@
 # Trade classification and Advanced Self Review
 
-The private journal at /performance/review manages pending, published and active trades. The editor has a single public trade type (DAY, SWING or unset), a public description, multiple private strategy tags, private notes and ASR. Active positions accept classification, strategies and notes; ASR becomes editable after closure. Saving never approves publication or changes actual source results.
+The private journal at /performance/review manages pending, published and active trades. The editor has a single public trade type (DAY, SWING or unset), a public description, multiple private strategy tags, private notes, per-trade Risk (R) and ASR. Active positions accept classification, strategies, notes and risk; ASR becomes editable after closure. Risk defaults to 1R for historical records; 1R always represents $1,000 and fractional positive budgets are supported. Changing the budget preserves actual and expected results on the fixed base unit. See [the risk upgrade plan](performance-trade-risk.md). Saving never approves publication or changes actual source results.
 
 The editor opens from data already loaded by the authenticated page. A background refresh replaces untouched fields only, never an in-progress draft. Private data is not persisted in browser storage or shared caches. Saves check the original revision and reject conflicting edits.
 
@@ -14,7 +14,7 @@ Filters apply to actual results, statistics, trade lists and the public calendar
 
 - performance_trade_metadata: public trade type and description, keyed by stable trade ID. No strategy IDs.
 - performance_strategy_catalogue: private reusable names, with deterministic IDs from normalized names.
-- performance_private_reviews: private strategy IDs, notes, ASR, revision, editor and timestamp.
+- performance_private_reviews: private strategy IDs, notes, riskR, ASR, revision, editor and timestamp.
 - performance_private_review_history: immutable before/after records for edits and migration.
 
 Public loaders project only trade type and description. They never read strategy catalogues, legacy tag catalogues or private reviews. Private names and IDs are excluded from public HTML/RSC, SEO metadata, sharing images, URLs and analytics events. Public descriptions are deliberately public and rendered as escaped plain text. Invalid ASR assessments do not suppress actual public results. Metadata writes are transactional and separate from ingestion, risk calculation and publication approval.

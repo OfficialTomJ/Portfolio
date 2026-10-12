@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   lockPerformanceRisk,
   selectRiskVersion,
+  isValidTradeRiskR,
+  tradeRiskDollars,
   type PerformanceRiskVersion,
 } from "./risk";
 
@@ -58,4 +60,14 @@ test("returns null when no version predates the trade", () => {
     lockPerformanceRisk(null, versions, new Date("2024-12-31T23:59:59.000Z")),
     null
   );
+});
+
+test("per-trade budgets use the fixed $1,000 unit and accept fractional risk", () => {
+  assert.equal(tradeRiskDollars(1), 1000);
+  assert.equal(tradeRiskDollars(2), 2000);
+  assert.equal(tradeRiskDollars(0.5), 500);
+  for (const value of [0, -1, null, "2", NaN, Infinity, Number.MAX_VALUE]) {
+    assert.equal(isValidTradeRiskR(value), false);
+  }
+  assert.throws(() => tradeRiskDollars(0), /positive/);
 });

@@ -99,6 +99,11 @@ test("two confirmed entry orders remain one cycle only while the exact entries a
   assert.equal(hasOverlappingPositionEntries(input), false);
   assert.equal(hasOverlappingPositionEntries({ ...input, executions: [first, addition, third] }), true);
   assert.equal(hasOverlappingPositionEntries({ ...input, position: position({ size: "15", stopLoss: "84" }) }), true);
+  assert.equal(hasOverlappingPositionEntries({
+    ...input,
+    position: position({ size: "15", stopLoss: "84" }),
+    sameTradeAttribution: { ...attribution, stopPrice: 84 },
+  }), false);
   assert.equal(hasOverlappingPositionEntries({ ...input, priorOpenCycles: [...input.priorOpenCycles, { id: "cycle-b", quantity: 2, entryPrice: 90 }] }), true);
   assert.equal(hasOverlappingPositionEntries({ ...input, sameTradeAttribution: { ...attribution, invalidatedAt: new Date() } }), true);
 });

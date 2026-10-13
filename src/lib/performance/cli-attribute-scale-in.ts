@@ -19,7 +19,7 @@ async function main() {
     _id: string;
     status: string;
     publicationHold?: boolean;
-    sameTradeAttribution?: { invalidatedAt?: Date };
+    sameTradeAttribution?: { stopPrice: number; invalidatedAt?: Date };
     initialStopPrice?: number;
   }>(PERFORMANCE_COLLECTIONS.positionCycles)
     .findOne({ _id: attribution.cycleId }, { projection: {
@@ -27,7 +27,8 @@ async function main() {
     } });
   if (cycle?.status !== "open" || cycle.publicationHold === true ||
       cycle.sameTradeAttribution?.invalidatedAt ||
-      cycle.initialStopPrice !== expectedStop) {
+      cycle.sameTradeAttribution?.stopPrice !== expectedStop ||
+      !cycle.initialStopPrice || cycle.initialStopPrice <= 0) {
     throw new Error("Attribution was recorded but the post-sync cycle is not clear for review");
   }
   console.log(JSON.stringify({

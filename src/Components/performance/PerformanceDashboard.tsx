@@ -263,7 +263,7 @@ export default function PerformanceDashboard({
             <h2 className="text-lg font-medium text-zinc-100">Cumulative R</h2>
             <p className="text-xs text-zinc-500">Rebased to 0R</p>
           </div>
-          <PerformanceEquityChart points={view.equity} />
+          <PerformanceEquityChart points={view.equity} riskEvents={view.riskEvents} riskContext={view.riskContext} />
         </div>}
       </section>
 

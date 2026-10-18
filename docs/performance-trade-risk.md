@@ -2,7 +2,7 @@
 
 ## Calculation contract
 
-The journal keeps its fixed base 1R unit. Each trade records a private `riskR` value: 1 means 1R risk, 2 means 2R risk, and fractional positive values are allowed. Actual result R continues to use the locked base unit, not the trade's risk budget. A trade risking 2R and returning +4R therefore keeps its +4R result. ASR expected R uses that same base unit. The editor and its helper code express risk only in R.
+The journal keeps the base 1R unit locked at each position entry. Prospective changes to that base unit are described in [risk phases](performance-risk-phases.md); they never rebase historical results. Each trade records a private `riskR` value: 1 means 1R risk, 2 means 2R risk, and fractional positive values are allowed. Actual result R continues to use the locked base unit, not the trade's risk budget. A trade risking 2R and returning +4R therefore keeps its +4R result. ASR expected R uses that same base unit. The editor and its helper code express risk only in R.
 
 ## Implementation plan
 

@@ -7,6 +7,7 @@ import type {
   TradeCandleSource,
 } from "./types";
 import { signedR } from "./metrics";
+import { riskEventIndex, riskEventTimeline } from "./risk-events";
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -237,7 +238,7 @@ export function performanceOpenGraphAlt(
   dataset: PerformanceDataset,
   view: PerformanceView
 ): string {
-  return `Performance Journal year-to-date result of ${signedR(view.stats.totalR)} across ${view.stats.tradeCount} closed trade${view.stats.tradeCount === 1 ? "" : "s"}, updated ${gmtDate.format(new Date(dataset.asOf))} GMT.`;
+  return `Performance Journal year-to-date result of ${signedR(view.stats.totalR)} across ${view.stats.tradeCount} closed trade${view.stats.tradeCount === 1 ? "" : "s"}, updated ${gmtDate.format(new Date(dataset.asOf))} GMT.${view.riskContext ? ` Risk reduced from ${shortDate.format(new Date(view.riskContext.effectiveAt))}. Cumulative R is not account return.` : ""}`;
 }
 
 export function PerformanceOpenGraphCard({
@@ -250,7 +251,8 @@ export function PerformanceOpenGraphCard({
   const values = view.equity.map((point) => point.value);
   const bounds = chartBounds(values);
   const plot = { left: 60, right: 654, top: 88, bottom: 384 };
-  const points = view.equity.map((point, index, items) => ({
+  const timeline = riskEventTimeline(view.equity, view.riskEvents);
+  const points = timeline.map((point, index, items) => ({
     x: plot.left + index * (plot.right - plot.left) / Math.max(1, items.length - 1),
     y: plot.top + (bounds.max - point.value) * (plot.bottom - plot.top) / (bounds.max - bounds.min),
   }));
@@ -313,10 +315,22 @@ export function PerformanceOpenGraphCard({
           <line x1="32" x2="684" y1={plot.top + bounds.max * (plot.bottom - plot.top) / (bounds.max - bounds.min)} y2={plot.top + bounds.max * (plot.bottom - plot.top) / (bounds.max - bounds.min)} stroke="rgba(255,255,255,0.18)" strokeDasharray="6 7" />
           {areaPath && <path d={areaPath} fill="url(#performance-area)" />}
           {linePath && <path d={linePath} fill="none" stroke="#ff6719" strokeWidth="4" strokeLinecap="round" />}
-          {points.map((point, index) => (
-            <circle key={`${point.x}-${point.y}`} cx={point.x} cy={point.y} r={index === points.length - 1 ? 7 : 6} fill="#ff8b52" stroke="#07090d" strokeWidth="3" />
+          {(view.riskEvents ?? []).map(event => {
+            const index = riskEventIndex(timeline, event);
+            if (index < 0) return null;
+            const x = points[index].x;
+            return <line key={event.id} x1={x} x2={x} y1={plot.top} y2={plot.bottom} stroke="#d4d4d8" strokeDasharray="5 5" />;
+          })}
+          {points.filter(point => view.equity.some(original => original.time === timeline[points.indexOf(point)].time)).map((point) => (
+            <circle key={`${point.x}-${point.y}`} cx={point.x} cy={point.y} r={point === points[points.length - 1] ? 7 : 6} fill="#ff8b52" stroke="#07090d" strokeWidth="3" />
           ))}
         </svg>
+        {(view.riskEvents ?? []).map(event => {
+          const index = riskEventIndex(timeline, event);
+          if (index < 0) return null;
+          return <div key={event.id} style={{ position: "absolute", display: "flex", left: Math.max(plot.left + 5, Math.min(points[index].x + 5, plot.right - 105)), top: plot.top + 3, color: "#d4d4d8", fontSize: 13 }}>Risk reduced</div>;
+        })}
+        {view.riskContext && <div style={{ position: "absolute", display: "flex", left: 32, bottom: 39, color: "#a1a1aa", fontSize: 11 }}>Risk reduced {shortDate.format(new Date(view.riskContext.effectiveAt))} · R is not account return</div>}
         {ticks.slice(0, -1).map((tick) => (
           <div key={tick.y} style={{ position: "absolute", display: "flex", right: 13, top: tick.y - 8, color: Math.abs(tick.value) < 0.005 ? "#a1a1aa" : "#71717a", fontSize: 12 }}>{tickLabel(tick.value)}</div>
         ))}

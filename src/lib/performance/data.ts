@@ -5,6 +5,7 @@ import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync"
 import { excludedTradeIds } from "./publication";
 import { enrichPublicTrades } from "./public-metadata";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
+import { publicRiskEvents } from "./risk-events";
 import type {
   PerformanceDatasetLoadResult,
   PerformanceTrade,
@@ -15,6 +16,7 @@ interface SyncStateView {
   _id: string;
   firstSyncAt: Date;
   lastSuccessAt: Date;
+  lastRunId?: string;
 }
 
 interface ExcludedCycleView {
@@ -81,6 +83,11 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
     }
     const asOf = state.lastSuccessAt;
     const inceptionAt = state.firstSyncAt;
+    const run = state.lastRunId ? await db.collection<{ _id: string; sourceAccountId: string }>(PERFORMANCE_COLLECTIONS.syncRuns)
+      .findOne({ _id: state.lastRunId, environment, status: "succeeded" }, { projection: { sourceAccountId: 1 } }) : null;
+    const notices = run?.sourceAccountId ? await db.collection<{ effectiveFrom: Date; publicNotice?: unknown }>(PERFORMANCE_COLLECTIONS.riskVersions)
+      .find({ environment, sourceAccountId: run.sourceAccountId, effectiveFrom: { $lte: asOf }, publicNotice: { $exists: true } },
+        { projection: { _id: 0, effectiveFrom: 1, publicNotice: 1 } }).toArray() : [];
 
     const excludedIds = excludedTradeIds(excludedCycles);
     const trades = await enrichPublicTrades(documents
@@ -97,6 +104,7 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
         inceptionAt: inceptionAt.toISOString(),
         asOf: asOf.toISOString(),
         trades,
+        riskEvents: publicRiskEvents(notices, asOf),
       },
     };
   } catch (error) {

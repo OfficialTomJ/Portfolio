@@ -38,6 +38,8 @@ import {
   type PerformanceSnapshotValidation,
 } from "./snapshot-archive";
 import type { PerformanceTrade, TradeDirection } from "./types";
+import { assertRiskChange, currentRiskAmount, type RiskChangeInput } from "./risk-change";
+import { RISK_REDUCTION_NOTICE, type RiskPublicNotice } from "./risk-events";
 import {
   PERFORMANCE_SOCIAL_IMAGE_COLLECTION,
   type PerformanceSocialImageDocument,
@@ -134,6 +136,7 @@ interface RiskVersionDocument {
   effectiveFrom: Date;
   createdAt: Date;
   reason: string;
+  publicNotice?: RiskPublicNotice;
 }
 
 export interface PublishedPerformanceTrade extends PerformanceTrade {
@@ -478,50 +481,60 @@ async function loadRiskVersions(
   return documents.map(riskDocumentToVersion);
 }
 
-export async function setPerformanceRiskVersion(input: {
-  riskAmount: number;
-  effectiveFrom: Date;
-  reason: string;
-}): Promise<PerformanceRiskVersion> {
-  if (!Number.isFinite(input.riskAmount) || input.riskAmount <= 0) {
-    throw new Error("Risk amount must be greater than zero");
-  }
-  if (Number.isNaN(input.effectiveFrom.getTime())) {
-    throw new Error("Risk effective date is invalid");
-  }
+export async function previewPerformanceRiskChange(input: RiskChangeInput) {
+  const snapshot = await fetchBybitSnapshot();
+  assertValidPerformanceSnapshot(snapshot);
+  const sourceAccountId = accountScopeId(snapshot.environment, snapshot.apiKey.userID);
+  const db = getDb();
+  const versions = await loadRiskVersions(db.collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions), snapshot.environment, sourceAccountId);
+  const latestCycle = await db.collection<PositionCycleDocument>(PERFORMANCE_COLLECTIONS.positionCycles)
+    .findOne({ environment: snapshot.environment, sourceAccountId }, { sort: { openedAt: -1 }, projection: { openedAt: 1 } });
+  const now = new Date(snapshot.serverTime || Date.now());
+  const previousAmount = currentRiskAmount(versions, now);
+  if (versions.some(v => v.effectiveFrom > now || v.effectiveFrom >= input.effectiveFrom)) throw new Error("A scheduled or conflicting risk version already exists; review it before another change");
+  assertRiskChange(input, { accountId: sourceAccountId, currentAmount: previousAmount, latestOpenedAt: latestCycle?.openedAt,
+    openPositionCount: snapshot.positions.length, now });
+  const lastVersion = Math.max(0, ...versions.map(v => v.version));
+  return { sourceAccountId, environment: snapshot.environment, previousAmount, riskAmount: input.riskAmount,
+    effectiveFrom: input.effectiveFrom.toISOString(), nextVersion: lastVersion + 1, publicNotice: !!input.publicNotice };
+}
 
-  await ensureIndexes();
+export async function setPerformanceRiskVersion(input: RiskChangeInput): Promise<PerformanceRiskVersion> {
+  if (!input.expectedAccountId || input.expectedCurrentAmount === undefined) throw new Error("Applying risk requires an expected account and current amount from the preview");
+  if (!Number.isFinite(input.effectiveFrom.getTime())) throw new Error("Risk effective date is invalid");
+  if (!Number.isFinite(input.riskAmount) || input.riskAmount <= 0) throw new Error("Risk amount must be greater than zero");
   const identity = await fetchBybitAccountIdentity();
-  const sourceAccountId = accountScopeId(identity.environment, identity.apiKey.userID);
+  if (accountScopeId(identity.environment, identity.apiKey.userID) !== input.expectedAccountId) throw new Error("Connected account does not match the expected account");
   const collection = getDb().collection<RiskVersionDocument>(PERFORMANCE_COLLECTIONS.riskVersions);
   const existing = await collection.findOne({
-    sourceAccountId,
+    sourceAccountId: input.expectedAccountId,
+    environment: process.env.BYBIT_ENV ?? "demo",
     effectiveFrom: input.effectiveFrom,
   });
 
   if (existing) {
-    if (existing.riskAmount !== input.riskAmount) {
+    if (existing.riskAmount !== input.riskAmount || !!existing.publicNotice !== !!input.publicNotice) {
       throw new Error("A different risk amount already exists for this effective date");
     }
     return riskDocumentToVersion(existing);
   }
 
-  const latest = await collection.findOne(
-    { sourceAccountId },
-    { sort: { version: -1 } }
-  );
-  const version = (latest?.version ?? 0) + 1;
+  const plan = await previewPerformanceRiskChange(input);
+  await ensureIndexes();
+  const { sourceAccountId, environment } = plan;
+  const version = plan.nextVersion;
   const id = `${sourceAccountId}:v${version}`;
   const document: RiskVersionDocument = {
     _id: id,
     sourceAccountId,
-    environment: identity.environment,
+    environment,
     version,
     riskAmount: input.riskAmount,
     currency: "USDT",
     effectiveFrom: input.effectiveFrom,
-    createdAt: new Date(identity.serverTime || Date.now()),
+    createdAt: new Date(),
     reason: input.reason.trim().slice(0, 200) || "Risk configuration update",
+    ...(input.publicNotice ? { publicNotice: { id: `risk-event-${createHash("sha256").update(`${id}:${input.effectiveFrom.toISOString()}`).digest("hex").slice(0, 20)}`, ...RISK_REDUCTION_NOTICE } } : {}),
   };
   await collection.insertOne(document);
   return riskDocumentToVersion(document);

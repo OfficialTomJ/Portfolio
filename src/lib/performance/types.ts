@@ -25,6 +25,14 @@ export interface PerformanceDataset {
   inceptionAt: string;
   asOf: string;
   trades: PerformanceTrade[];
+  riskEvents?: PublicRiskEvent[];
+}
+
+export interface PublicRiskEvent {
+  id: string;
+  effectiveAt: string;
+  title: string;
+  description: string;
 }
 
 export type PerformanceDatasetLoadResult =
@@ -74,6 +82,8 @@ export interface PerformanceView {
   startsAt: Date;
   endsAt: Date;
   isPartial: boolean;
+  riskEvents?: PublicRiskEvent[];
+  riskContext?: PublicRiskEvent;
 }
 
 export interface TradeCandle {

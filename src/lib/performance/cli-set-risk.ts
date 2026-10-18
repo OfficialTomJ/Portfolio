@@ -15,16 +15,28 @@ async function main() {
 
   if (!Number.isFinite(amount) || amount <= 0 || Number.isNaN(effectiveFrom.getTime())) {
     throw new Error(
-      "Usage: npm run performance:risk:set -- --amount <positive-number> --effective-from <ISO-date> [--reason description]"
+      "Usage: npm run performance:risk:set -- --amount <positive-number> --effective-from <ISO-date> [--reason description] [--public-notice] [--apply --expected-account <preview-account> --expected-current-amount <preview-amount>] (defaults to read-only preview)"
     );
   }
 
-  const { setPerformanceRiskVersion } = await import("./sync");
-  const version = await setPerformanceRiskVersion({
+  const apply = process.argv.includes("--apply");
+  if (apply && process.env.MONGODB_DB === "blueprint_prod" && !process.argv.includes("--confirm-production")) {
+    throw new Error("Production changes require --confirm-production; preview first");
+  }
+  const input = {
     riskAmount: amount,
     effectiveFrom,
     reason,
-  });
+    expectedAccountId: argument("--expected-account"),
+    expectedCurrentAmount: argument("--expected-current-amount") === undefined ? undefined : Number(argument("--expected-current-amount")),
+    publicNotice: process.argv.includes("--public-notice"),
+  };
+  const { previewPerformanceRiskChange, setPerformanceRiskVersion } = await import("./sync");
+  if (!apply) {
+    console.log(JSON.stringify({ dryRun: true, database: process.env.MONGODB_DB ?? "blueprint_dev", ...await previewPerformanceRiskChange(input) }, null, 2));
+    process.exit(0);
+  }
+  const version = await setPerformanceRiskVersion(input);
   console.log(JSON.stringify({
     ok: true,
     version: version.version,

@@ -171,5 +171,15 @@ export function buildPerformanceView(
     isPartial: hasCustomRange
       ? sydneyDateKey(dataset.inceptionAt) > customStart
       : Date.parse(dataset.inceptionAt) > startsAt.getTime(),
+    riskEvents: (dataset.riskEvents ?? []).filter(event => {
+      const at = Date.parse(event.effectiveAt);
+      return at <= asOf.getTime() && (hasCustomRange
+        ? sydneyDateKey(event.effectiveAt) >= customStart && sydneyDateKey(event.effectiveAt) <= customEnd
+        : at >= startsAt.getTime() && at <= endsAt.getTime());
+    }),
+    riskContext: [...(dataset.riskEvents ?? [])].filter(event => {
+      const at = Date.parse(event.effectiveAt);
+      return at <= asOf.getTime() && (hasCustomRange ? sydneyDateKey(event.effectiveAt) <= customEnd : at <= endsAt.getTime());
+    }).sort((a, b) => Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt))[0],
   };
 }

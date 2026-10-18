@@ -80,7 +80,7 @@ export default function PrivatePerformanceDashboard({ dataset, pendingReviews, a
       </div>}
       <div className="border-t border-white/10 p-4 sm:p-5">
         <h3 className="mb-3 text-sm font-medium">{mode === "actual" ? "Cumulative R" : "Actual vs expected"}</h3>
-        {mode === "actual" ? <PerformanceEquityChart key="actual" points={view.equity} /> : comparison.pairedCount ? <PerformanceEquityChart key="asr" points={comparison.actual} comparisonPoints={comparison.expected} /> : <div className="grid h-52 place-items-center text-center text-sm text-zinc-400">No completed ASRs in this selection.</div>}
+        {mode === "actual" ? <PerformanceEquityChart key="actual" points={view.equity} riskEvents={view.riskEvents} riskContext={view.riskContext} /> : comparison.pairedCount ? <PerformanceEquityChart key="asr" points={comparison.actual} comparisonPoints={comparison.expected} riskEvents={view.riskEvents} riskContext={view.riskContext} /> : <div className="grid h-52 place-items-center text-center text-sm text-zinc-400">No completed ASRs in this selection.</div>}
         <p className="mt-3 text-xs leading-5 text-zinc-500">{mode === "actual" ? `Actual results for all ${view.trades.length} closed trades in this selection, including unpublished and unreviewed trades.` : `Both curves use the same ${comparison.pairedCount} reviewed trades. Expected R is your assessment; gap = expected minus actual.`}</p>
       </div>
     </section>

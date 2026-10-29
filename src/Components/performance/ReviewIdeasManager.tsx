@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { EMPTY_IDEA_FIELDS, summariseIdea, type IdeaFields, type IdeaGroups, type IdeaMutation, type IdeasSnapshot, type IdeaTrade, type TradeIdea } from "@/lib/performance/ideas-model";
 import { signedR, sydneyDateKey } from "@/lib/performance/metrics";
 import type { MarketCandles } from "@/lib/performance/types";
@@ -96,7 +97,8 @@ function Metric({ label, value, tone = "text-zinc-100" }: { label: string; value
   return <div className="min-w-0"><dt className="text-[11px] text-zinc-500">{label}</dt><dd className={`mt-1 break-words text-lg font-medium tabular-nums ${tone}`}>{value}</dd></div>;
 }
 
-export default function AdminIdeasManager({ initial }: { initial: IdeasSnapshot }) {
+export default function ReviewIdeasManager({ initial }: { initial: IdeasSnapshot }) {
+  const router = useRouter();
   const [data, setData] = useState(initial);
   const [view, setView] = useState("unassigned");
   const [search, setSearch] = useState("");
@@ -146,6 +148,7 @@ export default function AdminIdeasManager({ initial }: { initial: IdeasSnapshot 
       if (!response.ok) { if (response.status === 409) setConflict(true); throw new Error(body.error ?? "Could not save"); }
       const groups: IdeaGroups = body;
       setData(previous => ({ ...previous, ...groups }));
+      router.refresh();
       setSelected([]);
       setMessage(command.action === "assign" ? command.ideaId ? `${command.tradeIds.length} ${command.tradeIds.length === 1 ? "trade assigned" : "trades assigned"}.` : "Selected trades unassigned." : command.action === "delete" ? "Empty idea deleted." : "Idea saved.");
       return groups;

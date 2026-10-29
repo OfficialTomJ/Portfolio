@@ -1,8 +1,11 @@
-# Admin trade ideas
+# Trade ideas in journal review
 
-Create ideas and categorise trades in the **Trade ideas** section of `/admin`.
+Create ideas and categorise trades from **Trade ideas** on `/performance/review`
+(`/performance/review?view=ideas`). **Trades & performance** keeps the existing
+ASR, publication, reconciliation and performance workflow on that same page.
+The creator dashboard at `/admin` has no idea manager or idea data loading.
 The former localhost experiment at `/performance/review/ideas` is removed; it
-has no redirect. Review pages do not expose idea-editing controls.
+has no redirect.
 
 ## Workflow
 
@@ -10,8 +13,9 @@ has no redirect. Review pages do not expose idea-editing controls.
   Only the name is required, so historical gaps do not require invented data.
 - Select historical trades and assign them to an existing or new idea.
   Each canonical trade has at most one idea; ideas can span symbols.
-- Use **Edit trade** on an admin history row to choose an idea or create one
-  within the existing trade editor. The idea and any trade edits commit in
+- Use **Edit trade** on a closed review-queue or idea-history row, or open the
+  full trade review, to choose an idea or create one under **Classification**.
+  Closed queue rows also show their assigned idea. The idea and any trade edits commit in
   one transaction when **Save changes** succeeds. Creation is deferred until
   that save; cancelling the panel creates no idea.
 - Search and filter by idea, assigned/unassigned status, symbol, strategy,
@@ -41,7 +45,7 @@ another tab's edit; the panel retains its draft and offers a reload.
 
 The page and APIs require the same verified, allowlisted admin session as
 private performance review. Mutation endpoints also require a matching
-browser origin. Admin pages and API responses are private/no-store and
+browser origin. Review pages and API responses are private/no-store and
 noindex. This feature does not use a development-only host gate.
 
 Idea details and assignment IDs are never added to public trade metadata,
@@ -68,7 +72,7 @@ This test uses disposable collection names and checks persistence, account
 separation, audit history, concurrent edits and rollback when an idea save
 joins a failing trade-editor transaction. It drops only its own collections.
 
-Browser acceptance should cover the admin panel's atomic save, create/cancel,
+Browser acceptance should cover the review panel's atomic save, create/cancel,
 batch assignment, moves, unassignment, idea editing/deletion, stale revisions,
 refresh persistence, mobile layouts, signed-out/non-admin rejection and public
 data isolation. Use a disposable database copy for successful metadata writes;

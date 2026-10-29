@@ -90,7 +90,7 @@ export function summariseIdea(trades: IdeaTrade[]) {
   };
 }
 
-/** Optional idea edit submitted only by the admin trade panel. */
+/** Optional private idea edit submitted with a trade review. */
 export const tradeIdeaEditSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("assign"), revision, ideaId: ideaId.nullable() }).strict(),
   z.object({ action: z.literal("create"), revision, fields: ideaFieldsSchema }).strict(),

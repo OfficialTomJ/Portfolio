@@ -73,3 +73,22 @@ batch assignment, moves, unassignment, idea editing/deletion, stale revisions,
 refresh persistence, mobile layouts, signed-out/non-admin rejection and public
 data isolation. Use a disposable database copy for successful metadata writes;
 do not change historical journal records to exercise the UI.
+
+## Closed-trade reconciliation
+
+Sync reconstructs complete one-way positions from stored execution fills,
+including positions that opened and closed between account snapshots. It
+requires every closing order and the full closed quantity in the exchange's
+PnL records. Partial exits and adds remain in the same continuous position;
+a full close followed by a re-entry creates a separate trade.
+
+Closing-order IDs determine PnL ownership. A later exit for the same symbol
+cannot extend an older reconciled trade. Existing canonical IDs, explicit
+exclusions, base-R locks and published records remain intact. Multiple
+opening orders still require owner attribution; missing fills, reversals,
+hedge-mode ambiguity and incomplete PnL fail closed rather than being guessed.
+
+A reconstruction does not approve publication or complete ASR. Run
+`execution-rounds.test.ts` with the performance suite to cover re-entries,
+partial closes, adds, duplicate fills, incomplete histories, alias handling
+and exact closing-order/quantity checks.

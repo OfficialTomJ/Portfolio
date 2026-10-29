@@ -15,14 +15,11 @@ interface ImportBatch {
 }
 
 export async function importBreakoutCsv(db: Db, client: MongoClient, input: {
-  bytes: Uint8Array; filename: string; historyFrom: string; userId: string; accountId: string;
+  bytes: Uint8Array; filename: string; userId: string; accountId: string;
 }): Promise<ImportSummary> {
   // Whole-file, fail-closed validation precedes even a session/index/write.
   const file = parseBreakoutCsv(input.bytes);
   if (input.accountId !== BREAKOUT_ACCOUNT_ID) throw new BreakoutInputError("Choose the configured Breakout account.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.historyFrom) || !Number.isFinite(Date.parse(`${input.historyFrom}T00:00:00Z`)) ||
-    new Date(`${input.historyFrom}T00:00:00Z`).toISOString().slice(0, 10) !== input.historyFrom ||
-    input.historyFrom < "2020-01-01" || input.historyFrom > file.firstEntry.slice(0, 10)) throw new BreakoutInputError("History start must be a valid UTC date on or before the first entry.");
   if (!input.filename.toLowerCase().endsWith(".csv") || input.filename.length > 160 || /[\p{Cc}\p{Cf}<>/\\]/u.test(input.filename)) throw new BreakoutInputError("Use an ordinary .csv filename.");
   // Initialize storage only after validation, so the transaction commits
   // documents in existing namespaces.
@@ -39,16 +36,18 @@ export async function importBreakoutCsv(db: Db, client: MongoClient, input: {
       const batches = db.collection<ImportBatch>(BREAKOUT_COLLECTIONS.batches);
       const records = db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows);
       const account = await accounts.findOne({ _id: BREAKOUT_ACCOUNT_ID }, { session });
-      const historyFrom = `${input.historyFrom}T00:00:00.000Z`;
-      if (account && account.historyFrom !== historyFrom) throw new BreakoutConflictError("The account's history start is locked. Ask for reconciliation to change it.");
+      const firstEntryDay = `${file.firstEntry.slice(0, 10)}T00:00:00.000Z`;
+      const historyFrom = account && account.historyFrom < firstEntryDay ? account.historyFrom : firstEntryDay;
       const prior = await batches.findOne({ _id: id }, { session });
       if (prior) { summary = { ...prior.summary, newRows: 0, duplicates: file.rows.length, readyToReview: 0, needsReconciliation: 0, reused: true }; return; }
       const now = new Date();
       // Writing the account in every transaction serializes imports, annotations
       // and publication. Concurrent scans cannot miss one another's new rows.
       await accounts.updateOne({ _id: BREAKOUT_ACCOUNT_ID }, { $inc: { importRevision: 1 }, $set: {
-        lastImportedAt: now, historyThrough: account && account.historyThrough > file.lastExit ? account.historyThrough : file.lastExit,
-      }, $setOnInsert: { firstImportedAt: now, historyFrom } }, { upsert: true, session });
+        lastImportedAt: now, historyFrom, historyThrough: account && account.historyThrough > file.lastExit ? account.historyThrough : file.lastExit,
+        // Backfilling older rows must not silently change the public Bybit boundary.
+        ...(account?.activatedAt ? { activatedFrom: account.activatedFrom ?? account.historyFrom } : {}),
+      }, $setOnInsert: { firstImportedAt: now } }, { upsert: true, session });
       const existing = await records.find({ accountId: BREAKOUT_ACCOUNT_ID }, { session }).limit(20_001).toArray();
       if (existing.length > 20_000) throw new BreakoutConflictError("Account history requires a larger import review. No changes were saved.");
       const known = new Map(existing.map(row => [row.key, row]));

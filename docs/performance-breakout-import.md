@@ -4,7 +4,7 @@ The private journal uses Breakout closed-position exports. Bybit account ingesti
 
 ## Upload and review
 
-Open `/performance/review` as the verified, allowlisted creator and choose **Upload Breakout CSV**. The initial release supports one explicit account, **Breakout account 1**. Confirm the UTC date that this account's history begins; it becomes locked on the first successful upload. Later date-range exports do not move it or remove earlier imports.
+Open `/performance/review` as the verified, allowlisted creator and choose **Upload Breakout CSV**. The initial release supports one explicit account, **Breakout account 1**. No history-start date is required. Recent-trades-only exports are supported: each row is compared with stored position identities, identical positions are skipped and new ones are added. Missing rows never remove earlier imports. Overlap between export date ranges does not itself make positions ambiguous.
 
 The supported columns are:
 
@@ -24,7 +24,9 @@ The CSV contains no intended risk or stop settings. Edit and save each new trade
 
 Uploading never publishes a trade or switches public sources. The private metrics preview uses the proposed Breakout period and keeps eligible earlier Bybit trades. **Bybit history** provides the original stored results and review notes, without counting the covered period twice.
 
-When ready, **Use Breakout as result source** explicitly switches the public period from the confirmed UTC history-start date. Its confirmation explains that covered Bybit results will be archived from public metrics, and that only approved Breakout trades appear publicly. The originals and annotations remain in their collections and private history; earlier Bybit results stay public. This is a declared source boundary, not a guessed trade-to-trade reconciliation. Legacy trades spanning the boundary remain in private history.
+When ready, **Use Breakout as result source** explicitly switches the public period from the earliest imported entry's UTC day. Its confirmation explains that covered Bybit results will be archived from public metrics, and that only approved Breakout trades appear publicly. The originals and annotations remain in their collections and private history; earlier Bybit results stay public. This is a source boundary based on imported evidence, not a guessed trade-to-trade reconciliation. Legacy trades spanning the boundary remain in private history.
+
+Later partial exports cannot move the recorded history start forward. Older backfills can extend private history backward automatically. If Breakout is already active, its public boundary remains pinned until **Use Breakout as result source** is confirmed for that earlier period; those earlier positions cannot publish before confirmation. Uploading therefore never silently removes more Bybit results from the public journal.
 
 After switching, publish clean reviewed positions individually. Publication checks the exact fingerprint and current source evidence in a transaction, including risk confirmation and any overlaps introduced by later uploads. Stale or held candidates fail closed. Source activation and publication serialize with uploads on the account revision. Metadata editing retains the existing revision-conflict checks and audit trail.
 

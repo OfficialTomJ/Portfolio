@@ -30,12 +30,11 @@ export async function readBreakoutUpload(request: Request) {
   let form: FormData;
   try { form = await new Response(bytes as BodyInit, { headers: { "content-type": type } }).formData(); }
   catch { throw new BreakoutInputError("Invalid upload form. No records were saved."); }
-  const expected = ["file", "accountId", "historyFrom"];
+  const expected = ["file", "accountId"];
   if ([...form.keys()].some(key => !expected.includes(key)) || expected.some(key => form.getAll(key).length !== 1)) throw new BreakoutInputError("Invalid upload fields.");
   const file = form.get("file");
   const accountId = form.get("accountId");
-  const historyFrom = form.get("historyFrom");
-  if (!(file instanceof File) || typeof accountId !== "string" || typeof historyFrom !== "string" ||
+  if (!(file instanceof File) || typeof accountId !== "string" ||
     file.size > MAX_CSV_BYTES || !["text/csv", "application/csv", "text/plain", "application/octet-stream", ""].includes(file.type)) throw new BreakoutInputError("Upload an original CSV smaller than 2 MB.");
-  return { bytes: new Uint8Array(await file.arrayBuffer()), filename: file.name, accountId, historyFrom };
+  return { bytes: new Uint8Array(await file.arrayBuffer()), filename: file.name, accountId };
 }

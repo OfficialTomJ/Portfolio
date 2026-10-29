@@ -30,7 +30,7 @@ export async function activateBreakoutSource(db: Db, client: MongoClient, revisi
       const account = await db.collection<BreakoutAccount>(BREAKOUT_COLLECTIONS.accounts).findOne({ _id: BREAKOUT_ACCOUNT_ID }, { session });
       if (!account || account.importRevision !== revision) throw new BreakoutConflictError("The imported history changed. Refresh before switching sources.");
       await db.collection<BreakoutAccount>(BREAKOUT_COLLECTIONS.accounts).updateOne({ _id: BREAKOUT_ACCOUNT_ID, importRevision: revision },
-        { $set: { activatedAt: account.activatedAt ?? new Date() }, $inc: { importRevision: 1 } }, { session });
+        { $set: { activatedAt: new Date(), activatedFrom: account.historyFrom }, $inc: { importRevision: 1 } }, { session });
     }, { timeoutMS: 30_000, maxCommitTimeMS: 10_000 });
   } finally { await session.endSession(); }
 }
@@ -47,6 +47,7 @@ export async function publishStoredTrade(db: Db, client: MongoClient, id: string
       let trade: PerformanceTrade;
       if (row) {
         if (!account?.activatedAt) throw new BreakoutConflictError("Confirm the Breakout source switch before publishing.");
+        if (row.trade.openedAt < (account.activatedFrom ?? account.historyFrom)) throw new BreakoutConflictError("Confirm the Breakout source switch for the earlier imported history before publishing.");
         if (row.status !== "pending_review" || !row.riskConfirmed || row.fingerprint !== fingerprint || breakoutFingerprint(row) !== fingerprint || validatePublishedPerformanceTrade(row.trade)) throw new BreakoutConflictError("Trade changed, needs risk confirmation, or requires reconciliation.");
         const all = await rows.find({ accountId: BREAKOUT_ACCOUNT_ID }, { session }).limit(20_001).toArray();
         if (all.length > 20_000 || breakoutConflicts(all).has(row.key) || all.some(other => other.identity === row.identity && other.key !== row.key)) throw new BreakoutConflictError("This position needs agent reconciliation.");

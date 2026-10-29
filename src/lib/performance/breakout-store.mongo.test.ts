@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MongoClient } from "mongodb";
 import { randomUUID } from "node:crypto";
-import { BREAKOUT_HEADERS, BREAKOUT_ACCOUNT_ID, parseBreakoutCsv, type BreakoutRecord } from "./breakout";
+import { BREAKOUT_HEADERS, BREAKOUT_ACCOUNT_ID, activeBreakoutHistoryFrom, parseBreakoutCsv, type BreakoutRecord } from "./breakout";
 import { BREAKOUT_COLLECTIONS, importBreakoutCsv, readBreakoutAccount } from "./breakout-store";
 import { activateBreakoutSource, publishStoredTrade } from "./journal";
 import { normalizeClosedCycle } from "./normalize";
@@ -24,7 +24,7 @@ test("transactional CSV import, rejection, idempotency, source switch and review
   await client.connect();
   const db = client.db(name);
   console.log(`Disposable import test database: ${name}`);
-  const input = (bytes: Uint8Array, filename = "positions.csv") => ({ bytes, filename, historyFrom: "2025-01-01", accountId: BREAKOUT_ACCOUNT_ID, userId: "test-admin" });
+  const input = (bytes: Uint8Array, filename = "positions.csv") => ({ bytes, filename, accountId: BREAKOUT_ACCOUNT_ID, userId: "test-admin" });
   const dump = async () => {
     const names = await db.listCollections({}, { nameOnly: true }).toArray();
     return JSON.stringify(await Promise.all(names.sort((a, b) => a.name.localeCompare(b.name)).map(async c => [c.name, await db.collection(c.name).find({}).sort({ _id: 1 }).toArray()])));
@@ -49,9 +49,10 @@ test("transactional CSV import, rejection, idempotency, source switch and review
     const reordered = await importBreakoutCsv(db, client, input(csv(row("2025-01-03"), row("2025-01-01"))));
     assert.equal(reordered.newRows, 0); assert.equal(reordered.duplicates, 2);
     assert.equal(await db.collection(BREAKOUT_COLLECTIONS.rows).countDocuments(), 2);
-    const beforeConflict = await dump();
-    await assert.rejects(importBreakoutCsv(db, client, { ...input(csv(row("2025-01-05"))), historyFrom: "2024-12-31" }), /history start is locked/);
-    assert.equal(await dump(), beforeConflict);
+    const recentOnly = await importBreakoutCsv(db, client, input(csv(row("2025-01-03"))));
+    assert.equal(recentOnly.newRows, 0); assert.equal(recentOnly.duplicates, 1);
+    assert.equal((await readBreakoutAccount(db))?.historyFrom, "2025-01-01T00:00:00.000Z");
+    assert.equal(await db.collection(BREAKOUT_COLLECTIONS.rows).countDocuments(), 2);
     const clean = (await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).findOne({ "values.entry_time": "2025-01-03T00:00:00.123456789Z" }))!;
     await assert.rejects(publishStoredTrade(db, client, clean._id, clean.fingerprint), /source switch/);
     const account = (await readBreakoutAccount(db))!;
@@ -120,6 +121,25 @@ test("transactional CSV import, rejection, idempotency, source switch and review
     await assert.rejects(publishStoredTrade(db, client, covered.id, covered.fingerprint), /covered/);
     assert.equal(await dump(), beforeLegacyRejection);
     assert.equal(parseBreakoutCsv(initial).rows.length, 2);
+    // Rolling exports can contain a mixture of already stored and new positions.
+    const rolling = await importBreakoutCsv(db, client, input(csv(row("2025-01-06"), row("2025-01-08"))));
+    assert.equal(rolling.newRows, 1); assert.equal(rolling.duplicates, 1);
+    assert.equal((await readBreakoutAccount(db))?.historyFrom, "2025-01-01T00:00:00.000Z");
+    // Older backfills extend private history without silently changing public results.
+    const beforeBackfillPublic = JSON.stringify(await db.collection("performance_published_trades").find({}).sort({ _id: 1 }).toArray());
+    await importBreakoutCsv(db, client, input(csv(row("2024-12-25"))));
+    const backfilled = (await readBreakoutAccount(db))!;
+    assert.equal(backfilled.historyFrom, "2024-12-25T00:00:00.000Z");
+    assert.equal(backfilled.historyThrough, "2025-01-08T01:00:00.123456789Z");
+    assert.equal(activeBreakoutHistoryFrom(backfilled), "2025-01-01T00:00:00.000Z");
+    assert.equal(JSON.stringify(await db.collection("performance_published_trades").find({}).sort({ _id: 1 }).toArray()), beforeBackfillPublic);
+    const earlier = (await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).findOne({ "values.entry_time": "2024-12-25T00:00:00.123456789Z" }))!;
+    await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).updateOne({ _id: earlier._id }, { $set: { riskConfirmed: true } });
+    await assert.rejects(publishStoredTrade(db, client, earlier._id, earlier.fingerprint), /source switch for the earlier/);
+    await activateBreakoutSource(db, client, backfilled.importRevision);
+    assert.equal(activeBreakoutHistoryFrom(await readBreakoutAccount(db)), backfilled.historyFrom);
+    await publishStoredTrade(db, client, earlier._id, earlier.fingerprint);
+    assert.equal(await db.collection("performance_published_trades").countDocuments(), 3);
   } finally {
     assert.match(db.databaseName, /^blueprint_breakout_test_[a-f0-9]+$/);
     try { await db.dropDatabase(); } finally { await client.close(); }

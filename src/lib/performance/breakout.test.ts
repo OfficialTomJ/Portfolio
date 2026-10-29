@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BREAKOUT_HEADERS, BreakoutInputError, breakoutConflicts, parseBreakoutCsv, isLegacyHistory, type BreakoutAccount } from "./breakout";
+import { BREAKOUT_HEADERS, BreakoutInputError, activeBreakoutHistoryFrom, breakoutConflicts, parseBreakoutCsv, isLegacyHistory, type BreakoutAccount } from "./breakout";
 import { readBoundedBody, readBreakoutUpload } from "./import-request";
 import { rejectBybitAccountAccess } from "./source-policy";
 
@@ -45,12 +45,26 @@ test("earlier history survives; boundary-spanning legacy results are not double-
   assert.equal(isLegacyHistory(trade, account), true);
   assert.equal(isLegacyHistory({ ...trade, closedAt: "2025-01-03T00:00:00Z" }, account), false);
   assert.equal(isLegacyHistory(trade, null), true);
+  assert.equal(activeBreakoutHistoryFrom(account), null);
+  const active = { ...account, activatedAt: new Date(), activatedFrom: account.historyFrom };
+  assert.equal(activeBreakoutHistoryFrom({ ...active, historyFrom: "2024-12-01T00:00:00.000Z" }), account.historyFrom);
+  assert.equal(activeBreakoutHistoryFrom({ ...account, activatedAt: new Date() }), account.historyFrom);
+});
+test("CSV upload needs no history date and rejects obsolete or duplicate fields", async () => {
+  const form = () => { const data = new FormData(); data.set("file", new File([csv()], "positions.csv", { type: "text/csv" })); data.set("accountId", "breakout-1"); return data; };
+  const input = await readBreakoutUpload(new Request("https://example.com", { method: "POST", body: form() }));
+  assert.equal(parseBreakoutCsv(input.bytes).rows.length, 1);
+  assert.equal("historyFrom" in input, false);
+  const obsolete = form(); obsolete.set("historyFrom", "2025-01-01");
+  await assert.rejects(readBreakoutUpload(new Request("https://example.com", { method: "POST", body: obsolete })), /fields/);
+  const duplicate = form(); duplicate.append("accountId", "breakout-1");
+  await assert.rejects(readBreakoutUpload(new Request("https://example.com", { method: "POST", body: duplicate })), /fields/);
 });
 test("stream limit works without Content-Length; invalid multipart and foreign files fail", async () => {
   await assert.rejects(readBoundedBody(new Request("https://example.com", { method: "POST", body: "too long" }), 2), BreakoutInputError);
   await assert.rejects(readBoundedBody(new Request("https://example.com", { method: "POST", headers: { "content-length": "1" }, body: "too long" }), 2), BreakoutInputError);
   await assert.rejects(readBreakoutUpload(new Request("https://example.com", { method: "POST", body: "x" })), BreakoutInputError);
-  const data = new FormData(); data.set("file",new File(["x"],"x.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})); data.set("accountId","breakout-1");data.set("historyFrom","2025-01-01");
+  const data = new FormData(); data.set("file",new File(["x"],"x.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})); data.set("accountId","breakout-1");
   await assert.rejects(readBreakoutUpload(new Request("https://example.com",{method:"POST",body:data})),BreakoutInputError);
 });
 test("retired Bybit account access cannot be enabled by credentials", () => {

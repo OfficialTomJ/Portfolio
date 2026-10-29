@@ -4,7 +4,7 @@ import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync"
 import { excludedTradeIds } from "./publication";
 import { enrichPublicTrades } from "./public-metadata";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
-import { isLegacyHistory } from "./breakout";
+import { activeBreakoutHistoryFrom, isLegacyHistory } from "./breakout";
 import { readBreakoutAccount } from "./breakout-store";
 import type { PerformanceDatasetLoadResult, PerformanceTrade, PerformanceTradeLoadResult } from "./types";
 
@@ -30,8 +30,9 @@ export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoa
     ]);
     if (!state?.firstSyncAt && !account) return { status: "unavailable", dataset: null };
     const excluded = excludedTradeIds(excludedCycles);
-    const activeAccount = account?.activatedAt ? account : null;
-    const selected = documents.filter(doc => !excluded.has(doc._id) && (doc.source === "breakout" ? !!activeAccount : isLegacyHistory(doc, activeAccount)));
+    const sourceFrom = activeBreakoutHistoryFrom(account);
+    const activeAccount = sourceFrom ? { historyFrom: sourceFrom } : null;
+    const selected = documents.filter(doc => !excluded.has(doc._id) && (doc.source === "breakout" ? !!sourceFrom && doc.openedAt >= sourceFrom : isLegacyHistory(doc, activeAccount)));
     const trades = await enrichPublicTrades(selected.map(toPublicTrade).filter((trade): trade is PerformanceTrade => !!trade));
     const inceptionAt = state?.firstSyncAt ?? new Date(account!.historyFrom);
     const asOf = new Date(Math.max(inceptionAt.getTime(), state?.lastSuccessAt?.getTime() ?? 0,

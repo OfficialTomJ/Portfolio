@@ -42,7 +42,7 @@ export default async function PerformanceReviewPage() {
       </header>
 
       <div className="mx-auto max-w-7xl space-y-5 px-4 pt-5 sm:px-6 sm:pt-6">
-        <AdminImportControl account={account ? { historyFrom: account.historyFrom, historyThrough: account.historyThrough, lastImportedAt: account.lastImportedAt.toISOString(), importRevision: account.importRevision, active: !!account.activatedAt } : null} imports={imports} />
+        <AdminImportControl account={account ? { historyFrom: account.historyFrom, historyThrough: account.historyThrough, lastImportedAt: account.lastImportedAt.toISOString(), importRevision: account.importRevision, active: !!account.activatedAt && (account.activatedFrom ?? account.historyFrom) === account.historyFrom } : null} imports={imports} />
         {snapshot ? (
           <div id="trade-review" className="space-y-5"><PrivatePerformanceDashboard dataset={snapshot.dataset} pendingReviews={snapshot.pendingReviews} annotations={snapshot.annotations} activePositions={snapshot.activePositions} reconciliation={snapshot.reconciliation} tags={snapshot.tags} /><BybitHistory trades={snapshot.bybitHistory} annotations={snapshot.annotations} /></div>
         ) : (

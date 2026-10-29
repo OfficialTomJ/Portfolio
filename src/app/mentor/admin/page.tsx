@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSession } from "../../../lib/session";
-import { isAdmin } from "../../../lib/admin";
+import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
+import { getIdeasSnapshot } from "@/lib/performance/ideas-data";
+import AdminIdeasManager from "@/Components/performance/AdminIdeasManager";
+import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import {
   getOverview,
   getSignupSeries,
@@ -11,12 +13,12 @@ import {
   type DayCount,
 } from "../../../lib/analytics";
 
-export const metadata = { title: "Admin, The Blueprint" };
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Admin, The Blueprint", robots: { index: false, follow: false } };
 
 // Private creator dashboard. Invisible (404) to anyone not in ADMIN_EMAILS.
 export default async function AdminDashboard() {
-  const session = await getSession();
-  if (!isAdmin(session)) notFound();
+  if (!await getPerformanceAdminSession()) notFound();
 
   const [overview, signups, certs, funnel, engagement] = await Promise.all([
     getOverview(),
@@ -26,10 +28,14 @@ export default async function AdminDashboard() {
     getEngagementTotals(),
   ]);
 
+  const ideas = await getIdeasSnapshot().catch(() => {
+    console.error("[admin/ideas] could not load ideas");
+    return null;
+  });
   const maxStarted = Math.max(1, ...funnel.map((f) => f.started));
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-10 space-y-10">
+    <main className="mx-auto max-w-7xl px-4 sm:px-6 py-10 space-y-10">
       <header>
         <p className="text-[var(--bp-accent)] text-sm font-medium uppercase tracking-widest mb-2">
           Admin
@@ -38,7 +44,13 @@ export default async function AdminDashboard() {
         <Link href="/performance/review" className="mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)] transition-colors hover:bg-[var(--bp-accent)]/10">
           Review Performance Journal
         </Link>
+        <a href="#trade-ideas" className="ml-3 mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)]">Manage trade ideas</a>
       </header>
+
+      <section id="trade-ideas" aria-labelledby="trade-ideas-title" className="scroll-mt-20 space-y-5">
+        <div><h2 id="trade-ideas-title" className="text-2xl font-semibold">Trade ideas</h2><p className="mt-2 text-sm text-[var(--bp-text-dim)]">Create your ideas and categorise every trade attempt here.</p></div>
+        {ideas ? <AdminIdeasManager initial={ideas} /> : <PerformanceUnavailable title="Trade ideas are unavailable. Check the journal database and account sync, then reload." />}
+      </section>
 
       {/* Overview cards */}
       <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">

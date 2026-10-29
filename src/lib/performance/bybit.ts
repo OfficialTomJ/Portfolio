@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHmac } from "crypto";
+import { rejectBybitAccountAccess } from "./source-policy";
 import {
   sanitizeBybitApiKeyInfo,
   type BybitApiKeyInfo,
@@ -120,6 +121,7 @@ export interface BybitSnapshot {
 }
 
 function getConfig() {
+  rejectBybitAccountAccess();
   const environment = (process.env.BYBIT_ENV ?? "").toLowerCase() as BybitEnvironment;
   const host = HOSTS[environment];
   const apiKey = process.env.BYBIT_API_KEY;

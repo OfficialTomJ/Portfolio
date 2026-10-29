@@ -1,4 +1,6 @@
 "use client";
+import { displayPerformanceSymbol } from "@/lib/performance/types";
+
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -40,8 +42,9 @@ export default function AdminPublishButton({ trade, fingerprint, onMessage, anot
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fingerprint }),
       });
-      const outcome = publicationOutcome(response.status, await response.json());
-      const message = outcome.message;
+      const payload = await response.json();
+      const outcome = publicationOutcome(response.status, payload);
+      const message = response.status === 409 && typeof payload.error === "string" ? payload.error : outcome.message;
       onMessage(message);
       if (outcome.kind === "published") {
         setPublished(true); setOpen(false); onPublished?.(); router.refresh();
@@ -84,7 +87,7 @@ function PublicationDialog({ trade, tradeType, description, busy, error, recheck
     <div className="space-y-5 p-5 sm:p-6">
       <header><h2 id={id} className="text-xl font-medium">Publish this trade?</h2><p className="mt-2 text-sm leading-6 text-zinc-400">This result will appear in the public Performance Journal.</p></header>
       <div className="rounded-xl border border-white/10 bg-black p-4">
-        <p className="break-words font-medium">{trade.symbol.replace("USDT", " / USDT")} <span className={`ml-2 text-xs ${trade.direction === "Long" ? "text-[#22c55e]" : "text-[#ef4444]"}`}>{trade.direction.toUpperCase()}</span></p>
+        <p className="break-words font-medium">{displayPerformanceSymbol(trade)} <span className={`ml-2 text-xs ${trade.direction === "Long" ? "text-[#22c55e]" : "text-[#ef4444]"}`}>{trade.direction.toUpperCase()}</span></p>
         <p className="mt-2 text-xs leading-5 text-zinc-500">Closed {date.format(new Date(trade.closedAt))} GMT</p>
         <p className="mt-3 text-2xl tabular-nums text-[#ff8b52]">{signedR(trade.resultR)}</p>
         {tradeType && <p className="mt-3 text-xs text-zinc-300">Trade type: {tradeType}</p>}

@@ -1,71 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
-import {
-  approvePerformanceReviewCandidate,
-  isPerformanceReviewPublished,
-  PerformanceReviewCandidateMismatchError,
-  PerformanceSyncAlreadyRunningError,
-  syncPerformanceJournal,
-} from "@/lib/performance/sync";
+import { after, NextRequest, NextResponse } from "next/server";
+import { getPerformanceAdminSession, isSameOriginAdminRequest } from "@/lib/performance/admin-access";
+import { getDb, getMongoClient } from "@/lib/mongodb";
+import { publishStoredTrade } from "@/lib/performance/journal";
+import { BreakoutConflictError } from "@/lib/performance/breakout-store";
+import { readBoundedBody } from "@/lib/performance/import-request";
+import { publishCurrentPerformanceSocialImages } from "@/lib/performance/social-image-publisher";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const PRIVATE_HEADERS = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" };
-
-export async function GET() {
-  return NextResponse.json({ error: "Not found" }, { status: 404, headers: PRIVATE_HEADERS });
-}
-
+const headers = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" };
+export async function GET() { return NextResponse.json({ error: "Not found" }, { status: 404, headers }); }
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await getPerformanceAdminSession()) {
-    return NextResponse.json({ error: "Not found" }, { status: 404, headers: PRIVATE_HEADERS });
-  }
-  if (request.headers.get("origin") !== request.nextUrl.origin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: PRIVATE_HEADERS });
-  }
-
+  if (!await getPerformanceAdminSession()) return NextResponse.json({ error: "Not found" }, { status: 404, headers });
+  if (!isSameOriginAdminRequest(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers });
   const { id } = await params;
   let fingerprint: unknown;
+  try { fingerprint = JSON.parse(new TextDecoder().decode(await readBoundedBody(request, 1024))).fingerprint; }
+  catch { return NextResponse.json({ error: "Invalid request" }, { status: 400, headers }); }
+  if (!/^trade-[a-f0-9]{20}$/.test(id) || typeof fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(fingerprint)) return NextResponse.json({ error: "Invalid request" }, { status: 400, headers });
   try {
-    fingerprint = (await request.json()).fingerprint;
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: PRIVATE_HEADERS });
-  }
-  if (!/^trade-[a-f0-9]+$/.test(id) || typeof fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(fingerprint)) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: PRIVATE_HEADERS });
-  }
-
-  try {
-    await approvePerformanceReviewCandidate(id, fingerprint);
+    await publishStoredTrade(getDb(), getMongoClient(), id, fingerprint);
+    after(async () => { try { await publishCurrentPerformanceSocialImages(); } catch { console.error("[performance/images] post-publication refresh failed"); } });
+    return NextResponse.json({ published: true, tradeId: id }, { headers });
   } catch (error) {
-    if (error instanceof PerformanceReviewCandidateMismatchError) {
-      return NextResponse.json({ error: "Review candidate changed" }, { status: 409, headers: PRIVATE_HEADERS });
-    }
-    console.error("[performance/admin/publish] approval failed", error);
-    return NextResponse.json({ error: "Approval failed" }, { status: 502, headers: PRIVATE_HEADERS });
-  }
-
-  try {
-    await syncPerformanceJournal();
-    if (!await isPerformanceReviewPublished(id)) {
-      return NextResponse.json(
-        { published: false, error: "The reviewed result changed or did not pass publication checks" },
-        { status: 409, headers: PRIVATE_HEADERS }
-      );
-    }
-    return NextResponse.json({ published: true, tradeId: id }, { headers: PRIVATE_HEADERS });
-  } catch (error) {
-    if (error instanceof PerformanceSyncAlreadyRunningError) {
-      return NextResponse.json(
-        { published: false, approvalRecorded: true, error: "A sync is already running" },
-        { status: 409, headers: PRIVATE_HEADERS }
-      );
-    }
-    console.error("[performance/admin/publish] publication sync failed", error);
-    return NextResponse.json(
-      { published: false, approvalRecorded: true, error: "Publication was not confirmed" },
-      { status: 502, headers: PRIVATE_HEADERS }
-    );
+    return NextResponse.json({ published: false, error: error instanceof BreakoutConflictError ? error.message : "Publication could not be confirmed. Refresh before retrying." },
+      { status: error instanceof BreakoutConflictError ? 409 : 503, headers });
   }
 }

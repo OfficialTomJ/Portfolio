@@ -25,7 +25,7 @@ export default function PrivatePerformanceDashboard({ dataset, pendingReviews, a
   annotations: Record<string, TradeAnnotation>; tags: TradeTag[];
   reconciliation: AdminReconciliationItem[];
 }) {
-  const [period, setPeriod] = useState<Period>("30D");
+  const [period, setPeriod] = useState<Period>("CUSTOM");
   const years = getAvailableYears(dataset);
   const [year, setYear] = useState(years[0] ?? Number(sydneyDateKey(dataset.asOf).slice(0, 4)));
   const [start, setStart] = useState(sydneyDateKey(dataset.inceptionAt));

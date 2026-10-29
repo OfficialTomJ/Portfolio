@@ -1,134 +1,52 @@
 import "server-only";
-
 import { getDb } from "@/lib/mongodb";
 import { PERFORMANCE_COLLECTIONS, type PublishedPerformanceTrade } from "./sync";
 import { excludedTradeIds } from "./publication";
 import { enrichPublicTrades } from "./public-metadata";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
-import type {
-  PerformanceDatasetLoadResult,
-  PerformanceTrade,
-  PerformanceTradeLoadResult,
-} from "./types";
+import { isLegacyHistory } from "./breakout";
+import { readBreakoutAccount } from "./breakout-store";
+import type { PerformanceDatasetLoadResult, PerformanceTrade, PerformanceTradeLoadResult } from "./types";
 
-interface SyncStateView {
-  _id: string;
-  firstSyncAt: Date;
-  lastSuccessAt: Date;
-}
+const PUBLIC_TRADE_PROJECTION = { _id: 1, id: 1, symbol: 1, direction: 1, openedAt: 1, closedAt: 1,
+  resultR: 1, entryPrice: 1, exitPrice: 1, source: 1, updatedAt: 1 } as const;
 
-interface ExcludedCycleView {
-  _id: string;
-}
-
-const PUBLIC_TRADE_PROJECTION = {
-  _id: 1,
-  id: 1,
-  symbol: 1,
-  direction: 1,
-  openedAt: 1,
-  closedAt: 1,
-  resultR: 1,
-  entryPrice: 1,
-  exitPrice: 1,
-} as const;
-
-function toPublicTrade(document: PublishedPerformanceTrade): PerformanceTrade | null {
-  const trade: PerformanceTrade = {
-    id: document.id,
-    symbol: document.symbol,
-    direction: document.direction,
-    openedAt: document.openedAt,
-    closedAt: document.closedAt,
-    resultR: document.resultR,
-    entryPrice: document.entryPrice,
-    exitPrice: document.exitPrice,
-  };
-  const validationIssue = validatePublishedPerformanceTrade(trade);
-  if (validationIssue) {
-    console.error(
-      `[performance/data] ignoring invalid published trade ${document._id}: ${validationIssue}`
-    );
-    return null;
-  }
-  return trade;
-}
-
-function isPerformanceTrade(trade: PerformanceTrade | null): trade is PerformanceTrade {
-  return trade !== null;
+export function toPublicTrade(document: PerformanceTrade): PerformanceTrade | null {
+  const trade: PerformanceTrade = { id: document.id, symbol: document.symbol, direction: document.direction,
+    openedAt: document.openedAt, closedAt: document.closedAt, resultR: document.resultR,
+    entryPrice: document.entryPrice, exitPrice: document.exitPrice,
+    ...(document.source === "breakout" ? { source: "breakout" as const } : {}) };
+  return validatePublishedPerformanceTrade(trade) ? null : trade;
 }
 
 export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoadResult> {
   try {
     const db = getDb();
-    const environment = process.env.BYBIT_ENV ?? "demo";
-    const [documents, state, excludedCycles] = await Promise.all([
-      db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
-        .find({}, { projection: PUBLIC_TRADE_PROJECTION })
-        .sort({ closedAt: -1 })
-        .toArray(),
-      db.collection<SyncStateView>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: environment }),
-      db.collection<ExcludedCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
-        .find(
-          { $or: [{ excludedFromJournal: true }, { publicationHold: true }] },
-          { projection: { _id: 1 } }
-        )
-        .toArray(),
+    const [documents, state, excludedCycles, account] = await Promise.all([
+      db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades).find({}, { projection: PUBLIC_TRADE_PROJECTION }).sort({ closedAt: -1 }).toArray(),
+      db.collection<{ _id: string; firstSyncAt: Date; lastSuccessAt: Date }>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: process.env.BYBIT_ENV ?? "demo" }),
+      db.collection<{ _id: string }>(PERFORMANCE_COLLECTIONS.positionCycles).find({ $or: [{ excludedFromJournal: true }, { publicationHold: true }] }, { projection: { _id: 1 } }).toArray(),
+      readBreakoutAccount(db),
     ]);
-    if (!state?.lastSuccessAt || !state.firstSyncAt) {
-      console.error(`[performance/data] no successful sync state for ${environment}`);
-      return { status: "unavailable", dataset: null };
-    }
-    const asOf = state.lastSuccessAt;
-    const inceptionAt = state.firstSyncAt;
-
-    const excludedIds = excludedTradeIds(excludedCycles);
-    const trades = await enrichPublicTrades(documents
-      .filter((document) => !excludedIds.has(document._id))
-      .map(toPublicTrade)
-      .filter(isPerformanceTrade));
-
-    return {
-      status: "available",
-      dataset: {
-        id: "live",
-        label: "Connected account",
-        description: trades.length ? "Published closed trades" : "No published closed trades yet",
-        inceptionAt: inceptionAt.toISOString(),
-        asOf: asOf.toISOString(),
-        trades,
-      },
-    };
-  } catch (error) {
-    console.error("[performance/data] failed to load connected dataset", error);
-    return {
-      status: "unavailable",
-      dataset: null,
-    };
+    if (!state?.firstSyncAt && !account) return { status: "unavailable", dataset: null };
+    const excluded = excludedTradeIds(excludedCycles);
+    const activeAccount = account?.activatedAt ? account : null;
+    const selected = documents.filter(doc => !excluded.has(doc._id) && (doc.source === "breakout" ? !!activeAccount : isLegacyHistory(doc, activeAccount)));
+    const trades = await enrichPublicTrades(selected.map(toPublicTrade).filter((trade): trade is PerformanceTrade => !!trade));
+    const inceptionAt = state?.firstSyncAt ?? new Date(account!.historyFrom);
+    const asOf = new Date(Math.max(inceptionAt.getTime(), state?.lastSuccessAt?.getTime() ?? 0,
+      account?.lastImportedAt.getTime() ?? 0, account?.activatedAt?.getTime() ?? 0, ...selected.map(doc => doc.updatedAt?.getTime() ?? 0)));
+    return { status: "available", dataset: { id: "live", label: activeAccount ? "Breakout and earlier history" : "Journal history",
+      description: "Published closed trades", inceptionAt: inceptionAt.toISOString(), asOf: asOf.toISOString(), trades } };
+  } catch {
+    console.error("[performance/data] stored journal unavailable");
+    return { status: "unavailable", dataset: null };
   }
 }
 
 export async function getLivePerformanceTrade(id: string): Promise<PerformanceTradeLoadResult> {
-  try {
-    const db = getDb();
-    const [document, excludedCycles] = await Promise.all([
-      db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades)
-        .findOne({ _id: id }, { projection: PUBLIC_TRADE_PROJECTION }),
-      db.collection<ExcludedCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
-        .find(
-          { $or: [{ excludedFromJournal: true }, { publicationHold: true }] },
-          { projection: { _id: 1 } }
-        )
-        .toArray(),
-    ]);
-    const trade = document && !excludedTradeIds(excludedCycles).has(id)
-      ? toPublicTrade(document)
-      : null;
-    return trade
-      ? { status: "available", trade: (await enrichPublicTrades([trade]))[0] }
-      : { status: "not-found", trade: null };
-  } catch (error) {
-    console.error("[performance/data] failed to load connected trade", error);
-    return { status: "unavailable", trade: null };
-  }
+  const result = await getLivePerformanceDataset();
+  if (result.status !== "available") return { status: "unavailable", trade: null };
+  const trade = result.dataset.trades.find(trade => trade.id === id);
+  return trade ? { status: "available", trade } : { status: "not-found", trade: null };
 }

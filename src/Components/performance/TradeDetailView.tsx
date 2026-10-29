@@ -1,3 +1,4 @@
+import { displayPerformanceSymbol } from "@/lib/performance/types";
 import Link from "next/link";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
@@ -74,10 +75,10 @@ export default function TradeDetailView({
               <span className={`rounded-full border px-3 py-1 font-semibold uppercase tracking-[0.14em] ${trade.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
                 {trade.direction} {trade.direction === "Long" ? "↑" : "↓"}
               </span>
-              <span className="text-zinc-600">Closed · Simulated prop trading</span>
+              <span className="text-zinc-600">{trade.source === "breakout" ? "Closed · Breakout prop trading" : "Closed · Bybit demo history"}</span>
             </div>
             <h1 className="mt-4 break-words text-4xl font-medium leading-tight tracking-[-0.04em] text-white sm:text-5xl">
-              {trade.symbol.replace("USDT", " / USDT")}
+              {displayPerformanceSymbol(trade)}
             </h1>
             <p className="mt-3 break-words text-sm leading-6 text-zinc-400">
               {trade.direction} position · {duration(trade.openedAt, trade.closedAt)} · Closed {fullDate.format(new Date(trade.closedAt))}
@@ -99,7 +100,7 @@ export default function TradeDetailView({
               <h2 className="mt-1 text-lg font-medium">{trade.direction} entry to exit</h2>
             </div>
             <p className="text-xs text-zinc-600">
-              {market ? `${market.source === "bybit" ? "Bybit" : "Binance"} prices · ` : ""}
+              {market ? `${market.source === "bybit" ? "Bybit" : "Binance"} ${trade.source === "breakout" ? "proxy candles · Breakout fills · " : "prices · "}` : ""}
               Drag or scroll to explore history
             </p>
           </div>

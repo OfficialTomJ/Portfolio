@@ -11,6 +11,7 @@ function fingerprint(value: unknown): string {
 function tradePayload(trade: PerformanceTrade) {
   return {
     id: trade.id,
+    ...(trade.source ? { source: trade.source } : {}),
     symbol: trade.symbol,
     direction: trade.direction,
     openedAt: trade.openedAt,

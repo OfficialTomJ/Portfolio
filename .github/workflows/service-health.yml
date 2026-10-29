@@ -29,10 +29,9 @@ jobs:
         env:
           MONGODB_URI: ${{ secrets.GH_ACTION }}
           MONGODB_DB: blueprint_prod
-          BYBIT_ENV: ${{ vars.MONITOR_BYBIT_ENV || 'demo' }}
-          MONITOR_PERFORMANCE_ACCOUNT_ID: ${{ secrets.MONITOR_PERFORMANCE_ACCOUNT_ID }}
           MONITOR_PERFORMANCE_ORIGIN: https://mentor.thomas-johnston.com
-          HEALTHCHECKS_PERFORMANCE_SYNC_URL: ${{ secrets.HEALTHCHECKS_PERFORMANCE_SYNC_URL }}
+          # Manual CSV uploads have no periodic source heartbeat. Keep image
+          # integrity/serving evaluation; do not fake retired Bybit success pings.
           HEALTHCHECKS_PERFORMANCE_IMAGES_URL: ${{ secrets.HEALTHCHECKS_PERFORMANCE_IMAGES_URL }}
           NODE_PATH: node_modules/next/dist/compiled
           NODE_OPTIONS: --conditions=react-server

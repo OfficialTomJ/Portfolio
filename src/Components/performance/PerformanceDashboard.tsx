@@ -1,4 +1,6 @@
 "use client";
+import { displayPerformanceSymbol } from "@/lib/performance/types";
+
 
 import Link from "next/link";
 import { useState } from "react";
@@ -326,7 +328,7 @@ export default function PerformanceDashboard({
                       className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 focus-visible:outline focus-visible:outline-[#ff6719] sm:px-6"
                     >
                       <div className="min-w-0">
-                        <p className="break-words font-medium leading-5 text-zinc-100">{item.symbol.replace("USDT", " / USDT")}</p>
+                        <p className="break-words font-medium leading-5 text-zinc-100">{displayPerformanceSymbol(item)}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] ${item.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
                             {item.direction.toUpperCase()} {item.direction === "Long" ? "↑" : "↓"}

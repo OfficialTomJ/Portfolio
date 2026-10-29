@@ -1,5 +1,13 @@
 # Performance Journal admin review
 
+Current source: [Breakout CSV imports](performance-breakout-import.md). The admin
+upload control replaces Sync now. Clean imported positions enter private review;
+overlaps/corrections stay in Reconciliation for a separately reviewed agent
+repair. No grouping or Bybit matching is inferred. Earlier eligible Bybit trades
+remain in the journal, and its original records/notes remain in private history.
+The Bybit-specific active-position and sync descriptions below document the
+retired ingestion workflow; closed-position CSVs cannot supply active positions.
+
 The public `/performance` route reads published closed trades only. The creator-only `/performance/review` route reads those same published results plus valid `pending_review` trade candidates for the account used by the latest successful sync. It recalculates the existing R metrics, calendar, and curve from that combined set. Attribution holds, excluded records, and unresolved records do not enter performance calculations.
 
 Pending trade links open `/performance/review/trades/[id]`, which shares the public trade breakdown component but has no public metadata or social-image generation. Review pages return 404 without a verified, allowlisted admin session; they are marked noindex and no-store. There is no public journal link to review pages. The existing creator dashboard links to them after its own admin gate.

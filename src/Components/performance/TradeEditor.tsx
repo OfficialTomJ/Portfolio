@@ -1,4 +1,5 @@
 "use client";
+import { displayPerformanceSymbol } from "@/lib/performance/types";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -130,7 +131,7 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
   }
 
   const form = <form onSubmit={save} aria-label={inline ? "Trade review editor" : "Edit trade"} className={inline ? "min-w-0" : "flex h-full max-h-[100dvh] flex-col sm:max-h-[90dvh]"}>
-    <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5"><div><h2 id={id} className="text-lg font-medium">{inline ? "Advanced Self Review" : `${trade.symbol.replace("USDT", " / USDT")} · ${trade.direction}`}</h2><p className="mt-1 text-xs text-zinc-500">{closed ? `Actual result ${signedR(trade.resultR!)}` : "Active position · ASR available after closure"}</p></div>{!inline && <button type="button" onClick={close} aria-label="Close editor" className="size-10 shrink-0 rounded-lg border border-white/10 text-xl text-zinc-400">×</button>}</header>
+    <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5"><div><h2 id={id} className="text-lg font-medium">{inline ? "Advanced Self Review" : `${displayPerformanceSymbol(trade)} · ${trade.direction}`}</h2><p className="mt-1 text-xs text-zinc-500">{closed ? `Actual result ${signedR(trade.resultR!)}` : "Active position · ASR available after closure"}</p></div>{!inline && <button type="button" onClick={close} aria-label="Close editor" className="size-10 shrink-0 rounded-lg border border-white/10 text-xl text-zinc-400">×</button>}</header>
     <div className={`space-y-5 p-4 sm:p-5 ${inline ? "" : "min-h-0 flex-1 overflow-y-auto"}`}>
       {loading ? <p className="py-8 text-sm text-zinc-400">{error || "Loading trade…"}</p> : <>
         <fieldset className="space-y-2"><legend className="text-sm font-medium text-zinc-300">Trade risk <span className="text-xs font-normal text-zinc-500">· Private</span></legend>

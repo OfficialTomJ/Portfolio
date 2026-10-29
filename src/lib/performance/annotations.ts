@@ -6,7 +6,9 @@ import { METADATA_COLLECTION, type PublicMetadataDocument } from "./public-metad
 import { PERFORMANCE_COLLECTIONS } from "./sync";
 import { publicTradeIdForCycle } from "./publication";
 import { getLivePerformanceTrade } from "./data";
-import type { TradeTag } from "./types";
+import type { PerformanceTrade, TradeTag } from "./types";
+import { BREAKOUT_ACCOUNT_ID, isLegacyHistory, type BreakoutRecord, type BreakoutAccount } from "./breakout";
+import { BREAKOUT_COLLECTIONS, readBreakoutAccount } from "./breakout-store";
 
 export const STRATEGY_COLLECTION = "performance_strategy_catalogue";
 export const REVIEW_COLLECTION = "performance_private_reviews";
@@ -18,7 +20,7 @@ export interface PrivateReviewDocument {
 }
 interface EditableCycle {
   _id: string; status: string; lastSeenAt: Date;
-  reviewCandidate?: { id: string }; publishedTradeId?: string;
+  reviewCandidate?: PerformanceTrade; publishedTradeId?: string;
 }
 export class AnnotationConflictError extends Error {}
 export class AnnotationTargetError extends Error {}
@@ -27,18 +29,22 @@ export class AnnotationInputError extends Error {}
 /** Resolve a known trade in the current account, including an active cycle's future trade ID. */
 export async function resolveAnnotationTarget(id: string): Promise<{ closed: boolean } | null> {
   if (!TRADE_ID_PATTERN.test(id)) return null;
+  const imported = await getDb().collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).findOne({ _id: id, accountId: BREAKOUT_ACCOUNT_ID });
+  if (imported) return ["pending_review", "published"].includes(imported.status) ? { closed: true } : null;
   if ((await getLivePerformanceTrade(id)).status === "available") return { closed: true };
   const db = getDb();
   const environment = process.env.BYBIT_ENV ?? "demo";
   const state = await db.collection<{ _id: string; lastRunId: string; lastSuccessAt: Date }>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: environment });
   if (!state) return null;
-  const run = await db.collection<{ _id: string; sourceAccountId: string }>(PERFORMANCE_COLLECTIONS.syncRuns).findOne({ _id: state.lastRunId });
+  const run = await db.collection<{ _id: string; sourceAccountId: string }>(PERFORMANCE_COLLECTIONS.syncRuns).findOne({ _id: state.lastRunId, environment, status: "succeeded" });
   if (!run?.sourceAccountId) return null;
   const cycles = await db.collection<EditableCycle>(PERFORMANCE_COLLECTIONS.positionCycles).find({
     environment, sourceAccountId: run.sourceAccountId,
     $or: [{ status: "pending_review", "reviewCandidate.id": id }, { status: { $in: ["open", "excluded"] }, lastSeenAt: state.lastSuccessAt }],
   }, { projection: { status: 1, lastSeenAt: 1, reviewCandidate: 1 } }).toArray();
-  const cycle = cycles.find((item) => publicTradeIdForCycle(item._id) === id);
+  const account = await readBreakoutAccount(db);
+  const cycle = cycles.find((item) => publicTradeIdForCycle(item._id) === id &&
+    (!account || item.reviewCandidate && isLegacyHistory(item.reviewCandidate, account)));
   return cycle ? { closed: cycle.status === "pending_review" } : null;
 }
 
@@ -96,6 +102,12 @@ export async function saveTradeAnnotation(id: string, value: unknown, userId: st
   let saved: TradeAnnotation = annotation;
   try {
     await session.withTransaction(async () => {
+      const imported = await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).findOne({ _id: id, accountId: BREAKOUT_ACCOUNT_ID }, { session });
+      if (imported) {
+        if (!["pending_review", "published"].includes(imported.status)) throw new AnnotationTargetError("This position now needs agent reconciliation.");
+        await db.collection<BreakoutAccount>(BREAKOUT_COLLECTIONS.accounts).updateOne({ _id: BREAKOUT_ACCOUNT_ID }, { $inc: { importRevision: 1 } }, { session });
+        await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).updateOne({ _id: id }, { $set: { riskConfirmed: true } }, { session });
+      }
       const reviews = db.collection<PrivateReviewDocument>(REVIEW_COLLECTION);
       const existing = await reviews.findOne({ _id: id }, { session });
       if ((existing?.revision ?? 0) !== annotation.revision) throw new AnnotationConflictError("This trade was edited elsewhere. Reopen the editor to load the latest changes.");

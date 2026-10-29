@@ -1,138 +1,63 @@
 import "server-only";
-
 import { getDb } from "@/lib/mongodb";
-import { assembleAdminReview, assembleReconciliation, type AdminReconciliationItem, type AdminActivePosition, type AdminPendingReview, type ReviewCycleCandidate } from "./admin-selection";
-import { getLivePerformanceDataset, getLivePerformanceTrade } from "./data";
-import { PERFORMANCE_COLLECTIONS } from "./sync";
-import { validatePublishedPerformanceTrade } from "./sync-validation";
-import type { PerformanceDataset, PerformanceTrade } from "./types";
-import type { TradeTag } from "./types";
-import type { TradeAnnotation } from "./annotations-model";
+import { assembleReconciliation, type AdminReconciliationItem, type AdminActivePosition, type AdminPendingReview } from "./admin-selection";
+import { getLivePerformanceDataset, getLivePerformanceTrade, toPublicTrade } from "./data";
 import { getTagCatalogue, getTradeAnnotations } from "./annotations";
 import { enrichPublicTrades } from "./public-metadata";
+import { isLegacyHistory } from "./breakout";
+import { storedLegacyScope, storedBreakoutRows, readBreakoutAccount, type StoredLegacyCycle } from "./journal";
+import type { PerformanceDataset, PerformanceTrade, TradeTag } from "./types";
+import type { TradeAnnotation } from "./annotations-model";
 export type { AdminActivePosition } from "./admin-selection";
 
-interface SyncStateView {
-  _id: string;
-  lastRunId: string;
-  lastSuccessAt: Date;
-}
-
-interface SyncRunView {
-  _id: string;
-  status: string;
-  environment: string;
-  sourceAccountId?: string;
-}
-
-interface ReviewCycleView extends ReviewCycleCandidate {
-  _id: string;
-  environment: string;
-  sourceAccountId: string;
-  closedAt?: Date;
-}
-
-interface ReconciliationCycleView extends Omit<ReviewCycleView, "status"> {
-  status: string;
-}
-
 export interface AdminPerformanceSnapshot {
-  dataset: PerformanceDataset;
-  pendingReviews: AdminPendingReview[];
-  activePositions: AdminActivePosition[];
-  reconciliation: AdminReconciliationItem[];
-  lastSyncAt: string;
-  annotations: Record<string, TradeAnnotation>;
-  tags: TradeTag[];
-}
-
-async function getCurrentAccountScope() {
-  const db = getDb();
-  const environment = process.env.BYBIT_ENV ?? "demo";
-  const state = await db.collection<SyncStateView>(PERFORMANCE_COLLECTIONS.syncState)
-    .findOne({ _id: environment });
-  if (!state?.lastRunId || !(state.lastSuccessAt instanceof Date)) return null;
-  const run = await db.collection<SyncRunView>(PERFORMANCE_COLLECTIONS.syncRuns)
-    .findOne(
-      { _id: state.lastRunId, status: "succeeded", environment },
-      { projection: { sourceAccountId: 1, environment: 1, status: 1 } }
-    );
-  if (!run?.sourceAccountId) return null;
-  return { environment, sourceAccountId: run.sourceAccountId, lastSyncAt: state.lastSuccessAt };
-}
-
-function validCandidate(cycle: Pick<ReviewCycleCandidate, "reviewCandidate" | "reviewFingerprint">): PerformanceTrade | null {
-  const trade = cycle.reviewCandidate;
-  return trade && typeof cycle.reviewFingerprint === "string" &&
-    /^[a-f0-9]{64}$/.test(cycle.reviewFingerprint) &&
-    !validatePublishedPerformanceTrade(trade) ? trade : null;
+  dataset: PerformanceDataset; pendingReviews: AdminPendingReview[]; activePositions: AdminActivePosition[];
+  reconciliation: AdminReconciliationItem[]; lastSyncAt: string; annotations: Record<string, TradeAnnotation>; tags: TradeTag[];
+  bybitHistory: PerformanceTrade[];
 }
 
 export async function getAdminPerformanceSnapshot(): Promise<AdminPerformanceSnapshot | null> {
-  const scope = await getCurrentAccountScope();
-  if (!scope) return null;
-  const publicResult = await getLivePerformanceDataset();
-  if (publicResult.status !== "available") return null;
-
-  const cycles = getDb().collection<ReviewCycleView>(PERFORMANCE_COLLECTIONS.positionCycles);
-  const [pendingCycles, openCycles, reconciliationCycles] = await Promise.all([
-    cycles.find({
-      environment: scope.environment,
-      sourceAccountId: scope.sourceAccountId,
-      status: "pending_review",
-      publicationHold: { $ne: true },
-      excludedFromJournal: { $ne: true },
-    }, { projection: {
-      status: 1, symbol: 1, direction: 1, openedAt: 1, lastSeenAt: 1,
-      entryPrice: 1, publicationHold: 1, excludedFromJournal: 1,
-      reviewFingerprint: 1, reviewCandidate: 1,
-    } }).toArray(),
-    cycles.find({
-      environment: scope.environment,
-      sourceAccountId: scope.sourceAccountId,
-      status: { $in: ["open", "excluded"] },
-      lastSeenAt: scope.lastSyncAt,
-    }, { projection: {
-      status: 1, symbol: 1, direction: 1, openedAt: 1, lastSeenAt: 1,
-      entryPrice: 1, publicationHold: 1, excludedFromJournal: 1,
-    } }).toArray(),
-    getDb().collection<ReconciliationCycleView>(PERFORMANCE_COLLECTIONS.positionCycles).find({
-      environment: scope.environment,
-      sourceAccountId: scope.sourceAccountId,
-      excludedFromJournal: { $ne: true },
-      $or: [{ publicationHold: true }, { status: { $in: ["awaiting_attribution", "awaiting_close", "unresolved"] } }],
-    }, { projection: { symbol: 1, direction: 1, openedAt: 1, closedAt: 1, lastSeenAt: 1,
-      status: 1, publicationHold: 1, excludedFromJournal: 1 } }).toArray(),
+  const db = getDb();
+  const [scope, account, imported, publicResult, published] = await Promise.all([
+    storedLegacyScope(db), readBreakoutAccount(db), storedBreakoutRows(db), getLivePerformanceDataset(),
+    db.collection<PerformanceTrade & { _id: string }>("performance_published_trades").find({ source: { $ne: "breakout" } }).toArray(),
   ]);
-
-  const snapshot = assembleAdminReview(publicResult.dataset, pendingCycles, openCycles, scope.lastSyncAt);
-  const [annotations, tags, trades] = await Promise.all([
-    getTradeAnnotations([...snapshot.dataset.trades.map((trade) => trade.id), ...snapshot.activePositions.map((trade) => trade.id)]),
-    getTagCatalogue(), enrichPublicTrades(snapshot.dataset.trades),
-  ]);
-  return { ...snapshot, reconciliation: assembleReconciliation(reconciliationCycles), dataset: { ...snapshot.dataset, trades }, annotations, tags };
+  const cycles = scope ? await db.collection<StoredLegacyCycle>("performance_private_position_cycles").find({ environment: scope.environment, sourceAccountId: scope.sourceAccountId }).toArray() : [];
+  const lastAt = account?.lastImportedAt ?? scope?.state.lastSuccessAt ?? new Date();
+  const publicDataset: PerformanceDataset = publicResult.status === "available" ? publicResult.dataset : {
+    id: "admin-review", label: "Private review", description: "No imports yet", inceptionAt: (scope?.state.firstSyncAt ?? lastAt).toISOString(), asOf: lastAt.toISOString(), trades: [],
+  };
+  const visiblePublished = publicDataset.trades.filter(trade => trade.source === "breakout" || isLegacyHistory(trade, account));
+  const publishedIds = new Set(visiblePublished.map(trade => trade.id));
+  const legacyPublishedIds = new Set(published.map(trade => trade.id));
+  const pendingCycles = cycles.filter(cycle => cycle.status === "pending_review" && !cycle.publicationHold && !cycle.excludedFromJournal &&
+    cycle.reviewCandidate && !publishedIds.has(cycle.reviewCandidate.id) && isLegacyHistory(cycle.reviewCandidate, account) &&
+    typeof cycle.reviewFingerprint === "string" && /^[a-f0-9]{64}$/.test(cycle.reviewFingerprint));
+  const legacyPending = pendingCycles.map(cycle => toPublicTrade(cycle.reviewCandidate!)).filter((trade): trade is PerformanceTrade => !!trade);
+  const clean = imported.filter(row => row.status === "pending_review");
+  const trades = await enrichPublicTrades([...visiblePublished, ...legacyPending, ...clean.map(row => row.trade)]);
+  const bybitHistory = [...new Map([...published.map(toPublicTrade).filter((trade): trade is PerformanceTrade => !!trade),
+    ...cycles.filter(cycle => cycle.status === "pending_review" && !cycle.excludedFromJournal && cycle.reviewCandidate && !legacyPublishedIds.has(cycle.reviewCandidate.id)).map(cycle => toPublicTrade(cycle.reviewCandidate!)).filter((trade): trade is PerformanceTrade => !!trade)]
+    .map(trade => [trade.id, trade])).values()].sort((a, b) => b.closedAt.localeCompare(a.closedAt));
+  const ids = [...new Set([...trades, ...bybitHistory].map(trade => trade.id))];
+  const [annotations, tags] = await Promise.all([getTradeAnnotations(ids), getTagCatalogue()]);
+  const reconciliation = [
+    ...imported.filter(row => row.status === "reconciliation").map(row => ({ id: row.trade.id, source: row.trade.source, symbol: row.trade.symbol,
+      direction: row.trade.direction, openedAt: row.trade.openedAt, closedAt: row.trade.closedAt, lastSeenAt: row.importedAt.toISOString(), reason: row.reason ?? "Agent reconciliation required" })),
+    ...assembleReconciliation(cycles.filter(cycle => !account || (cycle.reviewCandidate && isLegacyHistory(cycle.reviewCandidate, account)))),
+  ];
+  return { dataset: { ...publicDataset, id: "admin-review", asOf: lastAt.toISOString(), trades },
+    pendingReviews: [...pendingCycles.map(cycle => ({ id: cycle.reviewCandidate!.id, fingerprint: cycle.reviewFingerprint! })),
+      ...clean.map(row => ({ id: row.trade.id, fingerprint: row.fingerprint, riskConfirmed: row.riskConfirmed }))],
+    activePositions: [], reconciliation, lastSyncAt: lastAt.toISOString(), annotations, tags, bybitHistory };
 }
 
-export async function getAdminPerformanceTrade(id: string): Promise<{
-  trade: PerformanceTrade;
-  status: "published" | "pending_review";
-  fingerprint?: string;
-} | null> {
-  if (!/^trade-[a-f0-9]+$/.test(id)) return null;
-  const publicResult = await getLivePerformanceTrade(id);
-  if (publicResult.status === "available") return { trade: publicResult.trade, status: "published" };
-
-  const scope = await getCurrentAccountScope();
-  if (!scope) return null;
-  const cycle = await getDb().collection<ReviewCycleView>(PERFORMANCE_COLLECTIONS.positionCycles)
-    .findOne({
-      environment: scope.environment,
-      sourceAccountId: scope.sourceAccountId,
-      status: "pending_review",
-      "reviewCandidate.id": id,
-      publicationHold: { $ne: true },
-      excludedFromJournal: { $ne: true },
-    }, { projection: { reviewCandidate: 1, reviewFingerprint: 1, status: 1 } });
-  const trade = cycle && validCandidate(cycle);
-  return trade ? { trade: (await enrichPublicTrades([trade]))[0], status: "pending_review", fingerprint: cycle!.reviewFingerprint } : null;
+export async function getAdminPerformanceTrade(id: string): Promise<{ trade: PerformanceTrade; status: "published" | "pending_review"; fingerprint?: string } | null> {
+  if (!/^trade-[a-f0-9]{20}$/.test(id)) return null;
+  const pub = await getLivePerformanceTrade(id);
+  if (pub.status === "available") return { trade: pub.trade, status: "published" };
+  const snapshot = await getAdminPerformanceSnapshot();
+  const pending = snapshot?.pendingReviews.find(item => item.id === id);
+  const trade = snapshot?.dataset.trades.find(item => item.id === id);
+  return pending && trade ? { trade, status: "pending_review", fingerprint: pending.fingerprint } : null;
 }

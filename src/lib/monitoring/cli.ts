@@ -1,14 +1,13 @@
 import "server-only";
 import { getMongoClient } from "../mongodb";
-import { checkPerformanceImages, checkPerformanceSync } from "./performance";
+import { checkPerformanceImages } from "./performance";
 import { evaluateAndReport } from "./report";
 
 async function main() {
   if (process.env.MONGODB_DB !== "blueprint_prod") throw new Error("Production monitoring must select blueprint_prod explicitly");
   const dryRun = process.argv.includes("--dry-run");
-  if (!dryRun && !process.env.MONITOR_PERFORMANCE_ACCOUNT_ID) throw new Error("Monitoring account scope must be pinned");
+  console.log(JSON.stringify({ service: "performance-source", status: "retired", reason: "bybit_replaced_by_manual_csv_imports" }));
   const results = await Promise.allSettled([
-    evaluateAndReport("performance-sync", checkPerformanceSync, process.env.HEALTHCHECKS_PERFORMANCE_SYNC_URL, dryRun),
     evaluateAndReport("performance-images", () => checkPerformanceImages(process.env.MONITOR_PERFORMANCE_ORIGIN ?? "https://mentor.thomas-johnston.com"),
       process.env.HEALTHCHECKS_PERFORMANCE_IMAGES_URL, dryRun),
   ]);

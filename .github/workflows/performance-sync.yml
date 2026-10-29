@@ -2,11 +2,8 @@ name: Performance journal sync
 run-name: Performance journal sync · ${{ github.event_name }}
 
 on:
-  schedule:
-    # A committed cron change re-registers the scheduled-workflow actor. Keep
-    # the minutes away from the top of the hour, when GitHub documents higher
-    # schedule load and a greater chance of delayed or dropped events.
-    - cron: "9,24,39,54 * * * *"
+  # Bybit ingestion is retired. This workflow is disabled in GitHub; retained
+  # only as operational history. The application also rejects manual syncs.
   workflow_dispatch:
 
 permissions:

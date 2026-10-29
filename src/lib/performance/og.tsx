@@ -1,3 +1,4 @@
+import { displayPerformanceSymbol } from "@/lib/performance/types";
 import type { CSSProperties, ReactNode } from "react";
 import type {
   PerformanceDataset,
@@ -141,7 +142,7 @@ function TradeChart({ trade, candles }: { trade: PerformanceTrade; candles: Trad
 }
 
 export function tradeOpenGraphAlt(trade: PerformanceTrade): string {
-  return `${trade.symbol.replace("USDT", " / USDT")} ${trade.direction.toLowerCase()} trade, closed at ${signedR(trade.resultR)}, with entry and exit chart from ${shortDate.format(new Date(trade.openedAt))} to ${shortDate.format(new Date(trade.closedAt))}.`;
+  return `${displayPerformanceSymbol(trade)} ${trade.direction.toLowerCase()} trade, closed at ${signedR(trade.resultR)}, with entry and exit chart from ${shortDate.format(new Date(trade.openedAt))} to ${shortDate.format(new Date(trade.closedAt))}.`;
 }
 
 export function TradeOpenGraphCard({
@@ -169,7 +170,7 @@ export function TradeOpenGraphCard({
     <div style={rootStyle}>
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 5, background: ORANGE }} />
       <div style={{ position: "absolute", display: "flex", left: 60, top: 57, color: "#ff8b52", fontSize: 18, fontWeight: 700, letterSpacing: 3.6 }}>PERFORMANCE JOURNAL</div>
-      <div style={{ position: "absolute", display: "flex", left: 60, top: 108, fontSize: 54, fontWeight: 600, letterSpacing: -1.8 }}>{trade.symbol.replace("USDT", " / USDT")}</div>
+      <div style={{ position: "absolute", display: "flex", left: 60, top: 108, fontSize: 54, fontWeight: 600, letterSpacing: -1.8 }}>{displayPerformanceSymbol(trade)}</div>
       <div style={{ position: "absolute", display: "flex", left: 60, top: 184, padding: "9px 26px", borderRadius: 999, border: `1px solid ${directionColor}7a`, background: `${directionColor}1f`, color: directionColor, fontSize: 17, fontWeight: 700, letterSpacing: 2.3 }}>
         {trade.direction.toUpperCase()} {trade.direction === "Long" ? "↑" : "↓"}
       </div>
@@ -181,7 +182,7 @@ export function TradeOpenGraphCard({
 
       <TradeChart trade={trade} candles={candles} />
       <div style={{ position: "absolute", display: "flex", left: 446, top: 514, color: "#71717a", fontSize: 13, letterSpacing: 1.1 }}>
-        {source ? `${source.toUpperCase()} 1H` : "MARKET DATA UNAVAILABLE"}
+        {source ? `${source.toUpperCase()} 1H${trade.source === "breakout" ? " PROXY · BREAKOUT FILLS" : ""}` : "MARKET DATA UNAVAILABLE"}
       </div>
       <div style={{ position: "absolute", left: 60, right: 60, top: 560, height: 1, background: "rgba(255,255,255,0.08)" }} />
       <div style={{ position: "absolute", display: "flex", left: 60, top: 581, color: "#d4d4d8", fontSize: 17, fontWeight: 600 }}>THOMAS JOHNSTON</div>

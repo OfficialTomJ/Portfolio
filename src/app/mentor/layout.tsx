@@ -9,6 +9,7 @@ import MentorAnalytics from "../../Components/MentorAnalytics";
 const jost = Jost({ subsets: ["latin"] });
 
 export const metadata = {
+  robots: process.env.VERCEL_ENV === "preview" ? { index: false, follow: false } : undefined,
   title: "The Blueprint, Free Crypto Trading Course",
   description:
     "Learn to trade like a professional with Thomas Johnston's free Blueprint course.",

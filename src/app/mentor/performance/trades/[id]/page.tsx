@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import TradeDetailView from "@/Components/performance/TradeDetailView";
 import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
+import { getPublicIdeaViews } from "@/lib/performance/workspace-public";
+import { getLivePerformanceDataset } from "@/lib/performance/data";
 import { getLivePerformanceTrade } from "@/lib/performance/data";
 import { getHistoricalCandles } from "@/lib/performance/market";
 import { signedR } from "@/lib/performance/metrics";
@@ -64,5 +66,8 @@ export default async function TradePage({ params }: Props) {
   }
   const trade = result.trade;
   const market = await getHistoricalCandles(trade, "4h", 24);
-  return <TradeDetailView trade={trade} market={market} />;
+  const dataset=await getLivePerformanceDataset();
+  const ideas=dataset.status==="available"?await getPublicIdeaViews(dataset.dataset.trades):[];
+  const linked=ideas.filter(i=>i.trades.some(t=>t.id===trade.id));
+  return <>{linked.length>0&&<aside className="mx-auto max-w-7xl px-4 pt-5 sm:px-6"><p className="text-xs text-zinc-500">The idea behind this trade</p>{linked.map(i=><Link key={i.id} href={`/performance/ideas/${i.id}`} className="mt-2 inline-flex min-h-11 items-center text-sm text-[#ffad83]">{i.title} ↗</Link>)}</aside>}<TradeDetailView trade={trade} market={market} /></>;
 }

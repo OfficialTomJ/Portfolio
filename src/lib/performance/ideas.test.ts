@@ -1,12 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EMPTY_IDEA_FIELDS, ideaMutationSchema, tradeIdeaEditSchema, summariseIdea } from "./ideas-model";
-import { selectIdeaTrades, type IdeaCycleSource } from "./ideas-selection";
+import { selectIdeaTrades, selectJournalIdeaTrades, type IdeaCycleSource } from "./ideas-selection";
+import { BREAKOUT_HEADERS, parseBreakoutCsv, type BreakoutAccount, type BreakoutRecord } from "./breakout";
 import { publicTradeIdForCycle } from "./publication";
 import type { PerformanceTrade } from "./types";
 
 const cycle: IdeaCycleSource = { _id: "cycle", symbol: "BTCUSDT", direction: "Long", openedAt: new Date("2026-10-01T00:00:00Z"), closedAt: new Date("2026-10-02T00:00:00Z"), status: "published", entryPrice: 100, quantity: 10, riskAmount: 1000 };
 const trade: PerformanceTrade = { id: publicTradeIdForCycle(cycle._id), symbol: cycle.symbol, direction: cycle.direction, openedAt: cycle.openedAt.toISOString(), closedAt: cycle.closedAt!.toISOString(), entryPrice: 100, exitPrice: 110, resultR: 2 };
+
+test("idea history uses selected clean Breakout results, keeps Bybit archives and omits held positions", () => {
+  const row = parseBreakoutCsv(new TextEncoder().encode([BREAKOUT_HEADERS.join(","), "BTC/USD,long,1,100,110,2026-10-01T00:00:00Z,2026-10-02T00:00:00Z,10,1,9"].join("\n"))).rows[0];
+  const imported = { ...row, _id: row.trade.id, status: "pending_review" } as BreakoutRecord;
+  const legacy = selectIdeaTrades([cycle], [trade], []);
+  const selected = selectJournalIdeaTrades(legacy, [imported, { ...imported, status: "reconciliation", _id: "held" }], { historyFrom: "2026-09-30T00:00:00.000Z" } as BreakoutAccount);
+  assert.equal(selected.length, 2);
+  assert.equal(selected.find(t => t.id === trade.id)?.status, "archived_bybit");
+  assert.equal(selected.find(t => t.id === trade.id)?.resultR, null);
+  assert.equal(selected.find(t => t.id === imported._id)?.resultR, 0.009);
+  assert.equal(selectJournalIdeaTrades([], [imported], null)[0].id, imported._id, "Breakout-only accounts require no Bybit sync");
+});
 
 test("history uses scoped cycles, accepted journal results and valid pending candidates", () => {
   const pending = { ...cycle, _id: "pending", status: "pending_review", reviewFingerprint: "a".repeat(64), reviewCandidate: { ...trade, id: publicTradeIdForCycle("pending"), resultR: -0.5 } };

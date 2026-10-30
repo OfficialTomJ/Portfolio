@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash, randomUUID } from "crypto";
+import { rejectBybitAccountAccess } from "./source-policy";
 import type { Collection } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import {
@@ -142,7 +143,7 @@ interface RiskVersionDocument {
 
 export interface PublishedPerformanceTrade extends PerformanceTrade {
   _id: string;
-  source: "bybit";
+  source: "bybit" | "breakout";
   publishedAt: Date;
   updatedAt: Date;
 }
@@ -483,6 +484,7 @@ export async function setPerformanceRiskVersion(input: {
   effectiveFrom: Date;
   reason: string;
 }): Promise<PerformanceRiskVersion> {
+  rejectBybitAccountAccess();
   if (!Number.isFinite(input.riskAmount) || input.riskAmount <= 0) {
     throw new Error("Risk amount must be greater than zero");
   }
@@ -1017,6 +1019,8 @@ function safeError(error: unknown): string {
 }
 
 export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
+  rejectBybitAccountAccess();
+  /* Historical implementation retained for audit. The guard precedes all writes. */
   await ensureIndexes();
   const db = getDb();
   const runId = randomUUID();

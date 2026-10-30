@@ -2,6 +2,21 @@ import type { IdeaTrade } from "./ideas-model";
 import type { PerformanceTrade, TradeDirection } from "./types";
 import { publicTradeIdForCycle } from "./publication";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
+import { isLegacyHistory, type BreakoutAccount, type BreakoutRecord } from "./breakout";
+
+/** Preserve historical idea membership; never transfer assignments across sources. */
+export function selectJournalIdeaTrades(legacy: IdeaTrade[], imported: BreakoutRecord[], account: BreakoutAccount | null): IdeaTrade[] {
+  const history = legacy.map(row => isLegacyHistory(row, account) ? row : {
+    ...row, status: "archived_bybit", resultR: null, trade: null, exception: true,
+    warning: `Archived Bybit result: Breakout supplies this period. Original notes and idea assignments are preserved; this result is excluded from totals. ${row.warning}`.trim(),
+  });
+  const clean = imported.filter(row => ["pending_review", "published"].includes(row.status) && row._id === row.trade.id && !validatePublishedPerformanceTrade(row.trade));
+  return [...history, ...clean.map(row => ({ id: row.trade.id, symbol: row.values.instrument, direction: row.trade.direction,
+    openedAt: row.trade.openedAt, closedAt: row.trade.closedAt, resultR: row.trade.resultR, status: row.status,
+    exception: false, duplicateOf: null, warning: "", trade: row.trade,
+    tradeType: null, strategies: [], privateNotes: "", asrComments: "", description: "",
+  } satisfies IdeaTrade))].sort((a, b) => Date.parse(a.openedAt) - Date.parse(b.openedAt) || a.id.localeCompare(b.id));
+}
 
 export interface IdeaCycleSource {
   _id: string;

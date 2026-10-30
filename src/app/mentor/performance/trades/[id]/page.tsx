@@ -1,3 +1,4 @@
+import { displayPerformanceSymbol } from "@/lib/performance/types";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowLeftLong } from "react-icons/fa6";
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props) {
   const result = await getLivePerformanceTrade(id);
   if (result.status !== "available") return { title: "Trade unavailable, The Blueprint" };
   const item = result.trade;
-  const displaySymbol = item.symbol.replace("USDT", " / USDT");
+  const displaySymbol = displayPerformanceSymbol(item);
   const title = `${displaySymbol} ${item.direction}: ${signedR(item.resultR)} | Performance Journal`;
   const description = `Review a completed ${displaySymbol} ${item.direction.toLowerCase()} from ${metadataDate.format(new Date(item.openedAt))} to ${metadataDate.format(new Date(item.closedAt))}, with its entry-to-exit price chart and recorded ${signedR(item.resultR)} result.`;
   const canonical = `https://mentor.thomas-johnston.com/performance/trades/${encodeURIComponent(id)}`;

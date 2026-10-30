@@ -1,22 +1,21 @@
 import "server-only";
 import { getDb, getMongoClient } from "@/lib/mongodb";
 import { getTagCatalogue, getTradeAnnotations } from "./annotations";
-import { selectIdeaTrades, type IdeaCycleSource, type IdeaPnlSource } from "./ideas-selection";
+import { selectIdeaTrades, selectJournalIdeaTrades, type IdeaCycleSource, type IdeaPnlSource } from "./ideas-selection";
 import { IdeasRepository } from "./ideas-repository";
 import { PERFORMANCE_COLLECTIONS } from "./sync";
 import type { PerformanceTrade } from "./types";
 import { publicTradeIdForCycle } from "./publication";
+import { readBreakoutAccount, storedBreakoutRows, storedLegacyScope } from "./journal";
+import { BREAKOUT_ACCOUNT_ID } from "./breakout";
 
 export async function getIdeasContext() {
   const db = getDb();
-  const environment = process.env.BYBIT_ENV ?? "demo";
-  const state = await db.collection<{ _id: string; lastRunId: string; lastSuccessAt: Date }>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: environment });
-  if (!state || !(state.lastSuccessAt instanceof Date)) return null;
-  const run = await db.collection<{ _id: string; sourceAccountId?: string }>(PERFORMANCE_COLLECTIONS.syncRuns)
-    .findOne({ _id: state.lastRunId, environment, status: "succeeded" }, { projection: { sourceAccountId: 1 } });
-  if (!run?.sourceAccountId) return null;
-  const scope = { environment, sourceAccountId: run.sourceAccountId };
-  return { db, scope, lastSyncAt: state.lastSuccessAt.toISOString(), repository: new IdeasRepository(db, getMongoClient(), scope) };
+  const [legacy, account] = await Promise.all([storedLegacyScope(db), readBreakoutAccount(db)]);
+  if (!legacy && !account) return null;
+  // Keep the existing private ideas scope and assignments when legacy history exists.
+  const scope = legacy ? { environment: legacy.environment, sourceAccountId: legacy.sourceAccountId } : { environment: "breakout", sourceAccountId: BREAKOUT_ACCOUNT_ID };
+  return { db, scope, account, lastSyncAt: (account?.lastImportedAt ?? legacy!.state.lastSuccessAt).toISOString(), repository: new IdeasRepository(db, getMongoClient(), scope) };
 }
 
 export async function getIdeaHistory(context: NonNullable<Awaited<ReturnType<typeof getIdeasContext>>>) {
@@ -31,7 +30,9 @@ export async function getIdeaHistory(context: NonNullable<Awaited<ReturnType<typ
     } }).toArray(),
     db.collection<IdeaPnlSource>(PERFORMANCE_COLLECTIONS.closedPnl).find(scope, { projection: { cycleId: 1, closedPnl: 1, execType: 1 } }).toArray(),
   ]);
-  const trades = selectIdeaTrades(cycles, published, pnl);
+  const imported = await storedBreakoutRows(db);
+  if (imported.length > 20_000) throw new Error("Imported history requires an account review.");
+  const trades = selectJournalIdeaTrades(selectIdeaTrades(cycles, published, pnl), imported, context.account);
   const [annotations, tags] = await Promise.all([getTradeAnnotations(trades.map(t => t.id)), getTagCatalogue()]);
   return trades.map(t => ({ ...t,
     tradeType: annotations[t.id]?.tradeType ?? null,
@@ -44,5 +45,5 @@ export async function getIdeasSnapshot() {
   const context = await getIdeasContext();
   if (!context) return null;
   const [trades, groups] = await Promise.all([getIdeaHistory(context), context.repository.load()]);
-  return { ...groups, trades, lastSyncAt: context.lastSyncAt, environment: context.scope.environment };
+  return { ...groups, trades, lastSyncAt: context.lastSyncAt, environment: context.account ? "breakout" : context.scope.environment };
 }

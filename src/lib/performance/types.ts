@@ -4,6 +4,7 @@ export type PerformanceRange = "30D" | "60D" | "90D" | "6M" | "YTD" | "YEAR" | "
 
 export interface PerformanceTrade {
   id: string;
+  source?: "bybit" | "breakout";
   symbol: string;
   direction: TradeDirection;
   openedAt: string;
@@ -13,6 +14,10 @@ export interface PerformanceTrade {
   exitPrice: number;
   tradeType?: TradeType | null;
   description?: string;
+}
+
+export function displayPerformanceSymbol(trade: Pick<PerformanceTrade, "symbol" | "source">): string {
+  return trade.symbol.replace(/USDT$/, trade.source === "breakout" ? " / USD" : " / USDT");
 }
 
 /** Private strategy catalogue entry. Never attach it to a public trade DTO. */

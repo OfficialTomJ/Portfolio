@@ -36,6 +36,7 @@ function dataset(asOf: string, trades = [trade]): PerformanceDataset {
 test("trade image keys are deterministic and change with public trade facts", () => {
   assert.equal(tradeSocialImageKey(trade), tradeSocialImageKey({ ...trade }));
   assert.notEqual(tradeSocialImageKey(trade), tradeSocialImageKey({ ...trade, resultR: 1.21 }));
+  assert.notEqual(tradeSocialImageKey(trade), tradeSocialImageKey({ ...trade, source: "breakout" }));
 });
 
 test("journal keys ignore sync-only timestamps but change with published results", () => {

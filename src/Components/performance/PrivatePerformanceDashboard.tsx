@@ -27,7 +27,7 @@ export default function PrivatePerformanceDashboard({ dataset, pendingReviews, a
   reconciliation: AdminReconciliationItem[];
   ideaGroups: Pick<IdeaGroups, "ideas" | "assignments"> | null;
 }) {
-  const [period, setPeriod] = useState<Period>("30D");
+  const [period, setPeriod] = useState<Period>("CUSTOM");
   const years = getAvailableYears(dataset);
   const [year, setYear] = useState(years[0] ?? Number(sydneyDateKey(dataset.asOf).slice(0, 4)));
   const [start, setStart] = useState(sydneyDateKey(dataset.inceptionAt));

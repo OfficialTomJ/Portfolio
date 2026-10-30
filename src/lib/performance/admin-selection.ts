@@ -17,6 +17,7 @@ export interface ReviewCycleCandidate {
 }
 
 export interface AdminActivePosition {
+  source?: PerformanceTrade["source"];
   id: string;
   symbol: string;
   direction: TradeDirection;
@@ -28,9 +29,11 @@ export interface AdminActivePosition {
 export interface AdminPendingReview {
   id: string;
   fingerprint: string;
+  riskConfirmed?: boolean;
 }
 
 export interface AdminReconciliationItem {
+  source?: PerformanceTrade["source"];
   id: string;
   symbol: string;
   direction: TradeDirection;

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import AdminSyncControl from "@/Components/performance/AdminSyncControl";
+import AdminImportControl from "@/Components/performance/AdminImportControl";
+import BybitHistory from "@/Components/performance/BybitHistory";
+import { getDb } from "@/lib/mongodb";
+import { readBreakoutAccount, readImportHistory } from "@/lib/performance/breakout-store";
 import PrivatePerformanceDashboard from "@/Components/performance/PrivatePerformanceDashboard";
 import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import ReviewIdeasManager from "@/Components/performance/ReviewIdeasManager";
@@ -18,7 +21,7 @@ export const metadata: Metadata = {
 export default async function PerformanceReviewPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   if (!await getPerformanceAdminSession()) notFound();
   const showIdeas = (await searchParams).view === "ideas";
-  const [snapshot, ideas] = await Promise.all([
+  const [snapshot, ideas, account, imports] = await Promise.all([
     getAdminPerformanceSnapshot().catch(error => {
       console.error("[performance/review] failed to load private review", error);
       return null;
@@ -27,6 +30,8 @@ export default async function PerformanceReviewPage({ searchParams }: { searchPa
       console.error("[performance/review] failed to load trade ideas");
       return null;
     }),
+    readBreakoutAccount(getDb()).catch(() => null),
+    readImportHistory(getDb()).catch(() => []),
   ]);
 
   return (
@@ -38,7 +43,6 @@ export default async function PerformanceReviewPage({ searchParams }: { searchPa
             <h1 className="mt-2 break-words text-3xl font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl">Performance Journal</h1>
             <Link href="/performance" className="mt-2 inline-block text-xs text-zinc-500 underline-offset-4 hover:text-white hover:underline">View public journal</Link>
           </div>
-          {snapshot && <AdminSyncControl lastSyncAt={snapshot.lastSyncAt} />}
         </div>
       </header>
 
@@ -53,11 +57,11 @@ export default async function PerformanceReviewPage({ searchParams }: { searchPa
             <div><h2 id="trade-ideas-title" className="text-2xl font-semibold">Trade ideas</h2><p className="mt-2 text-sm text-zinc-400">Create ideas and categorise your trade attempts as part of your journal review.</p></div>
             {ideas ? <ReviewIdeasManager initial={ideas} /> : <PerformanceUnavailable title="Trade ideas are temporarily unavailable." />}
           </section>
-        ) : snapshot ? (
-          <PrivatePerformanceDashboard dataset={snapshot.dataset} pendingReviews={snapshot.pendingReviews} annotations={snapshot.annotations} activePositions={snapshot.activePositions} reconciliation={snapshot.reconciliation} tags={snapshot.tags} ideaGroups={ideas ? { ideas: ideas.ideas, assignments: ideas.assignments } : null} />
-        ) : (
-          <PerformanceUnavailable title="Private review is temporarily unavailable." />
-        )}
+        ) : <>
+          <AdminImportControl account={account ? { historyFrom: account.historyFrom, historyThrough: account.historyThrough, lastImportedAt: account.lastImportedAt.toISOString(), importRevision: account.importRevision, active: !!account.activatedAt && (account.activatedFrom ?? account.historyFrom) === account.historyFrom } : null} imports={imports} />
+          {snapshot ? <div id="trade-review" className="space-y-5"><PrivatePerformanceDashboard dataset={snapshot.dataset} pendingReviews={snapshot.pendingReviews} annotations={snapshot.annotations} activePositions={snapshot.activePositions} reconciliation={snapshot.reconciliation} tags={snapshot.tags} ideaGroups={ideas ? { ideas: ideas.ideas, assignments: ideas.assignments } : null} /><BybitHistory trades={snapshot.bybitHistory} annotations={snapshot.annotations} /></div>
+            : <PerformanceUnavailable title="Private review is temporarily unavailable." />}
+        </>}
       </div>
     </main>
   );

@@ -38,8 +38,11 @@ export async function checkPerformanceImages(origin: string, now = new Date()): 
   const journalDates = [new Date(dataset.inceptionAt), ...view.trades.map(trade => byId.get(trade.id))];
   const journalChangedAt = journalDates.every(date => date && Number.isFinite(date.getTime()))
     ? new Date(Math.max(...journalDates.map(date => date!.getTime()))) : undefined;
+  const sourceAccount = await getDb().collection<{ _id: string; activatedAt?: Date }>("performance_private_import_accounts").findOne({ _id: "breakout-1" });
+  const changedAt = sourceAccount?.activatedAt && journalChangedAt
+    ? new Date(Math.max(sourceAccount.activatedAt.getTime(), journalChangedAt.getTime())) : journalChangedAt;
   const required = [...dataset.trades.map(trade => ({ key: tradeSocialImageKey(trade), changedAt: byId.get(trade.id) })),
-    { key: journalKey, changedAt: journalChangedAt }];
+    { key: journalKey, changedAt }];
   const images = await getDb().collection<PerformanceSocialImageDocument>(PERFORMANCE_SOCIAL_IMAGE_COLLECTION)
     .find({ _id: { $in: required.map(image => image.key) } }).toArray();
   const valid = new Map<string, PerformanceSocialImageDocument>();

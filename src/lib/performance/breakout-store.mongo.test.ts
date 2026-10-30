@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { MongoClient } from "mongodb";
 import { randomUUID } from "node:crypto";
 import { BREAKOUT_HEADERS, BREAKOUT_ACCOUNT_ID, activeBreakoutHistoryFrom, parseBreakoutCsv, type BreakoutRecord } from "./breakout";
-import { BREAKOUT_COLLECTIONS, importBreakoutCsv, readBreakoutAccount } from "./breakout-store";
+import { BREAKOUT_COLLECTIONS, importBreakoutCsv as commitBreakoutCsv, previewBreakoutCsv, readBreakoutAccount } from "./breakout-store";
 import { activateBreakoutSource, publishStoredTrade } from "./journal";
 import { normalizeClosedCycle } from "./normalize";
 import { performanceReviewFingerprint } from "./review";
@@ -25,6 +25,10 @@ test("transactional CSV import, rejection, idempotency, source switch and review
   const db = client.db(name);
   console.log(`Disposable import test database: ${name}`);
   const input = (bytes: Uint8Array, filename = "positions.csv") => ({ bytes, filename, accountId: BREAKOUT_ACCOUNT_ID, userId: "test-admin" });
+  const importBreakoutCsv = async (target: typeof db, connection: MongoClient, data: ReturnType<typeof input>) => {
+    const preview = await previewBreakoutCsv(target, connection, data);
+    return commitBreakoutCsv(target, connection, { ...data, fileSha256: preview.fileSha256, revision: preview.revision, selectedKeys: preview.rows.map(row => row.key) });
+  };
   const dump = async () => {
     const names = await db.listCollections({}, { nameOnly: true }).toArray();
     return JSON.stringify(await Promise.all(names.sort((a, b) => a.name.localeCompare(b.name)).map(async c => [c.name, await db.collection(c.name).find({}).sort({ _id: 1 }).toArray()])));
@@ -140,6 +144,66 @@ test("transactional CSV import, rejection, idempotency, source switch and review
     assert.equal(activeBreakoutHistoryFrom(await readBreakoutAccount(db)), backfilled.historyFrom);
     await publishStoredTrade(db, client, earlier._id, earlier.fingerprint);
     assert.equal(await db.collection("performance_published_trades").countDocuments(), 3);
+  } finally {
+    assert.match(db.databaseName, /^blueprint_breakout_test_[a-f0-9]+$/);
+    try { await db.dropDatabase(); } finally { await client.close(); }
+  }
+});
+
+test("read-only preview, selected imports, durable unchecked conflict evidence and stale confirmation", { skip: process.env.BREAKOUT_MONGO_TEST !== "1", timeout: 120_000 }, async () => {
+  const client = new MongoClient(process.env.MONGODB_URI!, { serverSelectionTimeoutMS: 10_000 });
+  await client.connect();
+  const db = client.db(`blueprint_breakout_test_${randomUUID().replaceAll("-", "").slice(0, 12)}`);
+  const bytes = csv(row("2025-01-01"), row("2025-01-01", { entry_time: "2025-01-01T00:30:00Z" }), row("2025-01-03"), row("2025-01-05"));
+  const input = { bytes, filename: "positions.csv", accountId: BREAKOUT_ACCOUNT_ID, userId: "test-admin" };
+  const dump = async () => JSON.stringify(await Promise.all(Object.values(BREAKOUT_COLLECTIONS).map(async name => [name, await db.collection(name).find({}).sort({ _id: 1 }).toArray()])));
+  try {
+    const preview = await previewBreakoutCsv(db, client, input);
+    assert.equal(preview.clean, 2); assert.equal(preview.reconciliation, 2); assert.equal(preview.revision, 0);
+    assert.equal((await db.listCollections().toArray()).length, 0, "preview created storage");
+    const clean = preview.rows.filter(row => row.status === "new");
+    const held = preview.rows.filter(row => row.status === "reconciliation");
+    const confirm = (keys: string[], revision = preview.revision) => ({ ...input, fileSha256: preview.fileSha256, revision, selectedKeys: keys });
+    await assert.rejects(commitBreakoutCsv(db, client, confirm([])), /select positions/);
+    await assert.rejects(commitBreakoutCsv(db, client, confirm(["0".repeat(64)])), /does not belong/);
+    await assert.rejects(commitBreakoutCsv(db, client, { ...confirm([clean[0].key]), fileSha256: "0".repeat(64) }), /Preview/);
+    await assert.rejects(commitBreakoutCsv(db, client, { ...confirm([clean[0].key]), bytes: csv(row("2025-01-03"), row("2025-01-05", { net_pnl: "bad" })) }), /net_pnl/);
+    assert.equal((await db.listCollections().toArray()).length, 0, "invalid confirmation created storage");
+    const first = await commitBreakoutCsv(db, client, confirm([clean[0].key]));
+    assert.equal(first.newRows, 1); assert.equal(first.skippedRows, 3);
+    assert.equal(await db.collection(BREAKOUT_COLLECTIONS.rows).countDocuments(), 1);
+    assert.equal(await db.collection(BREAKOUT_COLLECTIONS.evidence).countDocuments(), 4);
+    assert.equal((await readBreakoutAccount(db))?.historyFrom, "2025-01-03T00:00:00.000Z", "unchecked rows changed the imported period");
+    assert.deepEqual(new Uint8Array((await db.collection(BREAKOUT_COLLECTIONS.batches).findOne({ _id: first.id } as never))!.rawBytes.buffer), bytes);
+    const beforeStale = await dump();
+    await assert.rejects(commitBreakoutCsv(db, client, confirm([clean[1].key])), /changed after this preview/);
+    assert.equal(await dump(), beforeStale);
+    const retry = await commitBreakoutCsv(db, client, confirm([clean[0].key]));
+    assert.equal(retry.reused, true); assert.equal(retry.newRows, 0); assert.equal(await dump(), beforeStale);
+    const next = await previewBreakoutCsv(db, client, input);
+    assert.equal(next.duplicates, 1); assert.equal(next.clean, 1); assert.equal(next.reconciliation, 2);
+    // Checking just one of two overlapping rows cannot make it clean.
+    const selectedHeld = await commitBreakoutCsv(db, client, confirm([held[0].key], next.revision));
+    assert.equal(selectedHeld.needsReconciliation, 1); assert.equal(selectedHeld.readyToReview, 0);
+    const heldRecord = (await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).findOne({ key: held[0].key }))!;
+    assert.equal(heldRecord.status, "reconciliation");
+    // A future export containing only the unchecked sibling still carries a hold.
+    const siblingOnly = { ...input, bytes: csv(row("2025-01-01", { entry_time: "2025-01-01T00:30:00Z" })) };
+    assert.equal((await previewBreakoutCsv(db, client, siblingOnly)).rows[0].status, "reconciliation");
+    const remaining = await previewBreakoutCsv(db, client, input);
+    await commitBreakoutCsv(db, client, confirm([clean[1].key], remaining.revision));
+    assert.equal(await db.collection(BREAKOUT_COLLECTIONS.rows).countDocuments(), 3, "a later selection from the same file was ignored");
+    assert.equal(await db.collection("performance_published_trades").countDocuments(), 0);
+    // Full-file evidence protects existing trades even if the correction is unchecked.
+    const correctionInput = { ...input, bytes: csv(row("2025-01-03", { fees: "2", net_pnl: "8" }), row("2025-01-07")) };
+    const correction = await previewBreakoutCsv(db, client, correctionInput);
+    assert.equal(correction.affectedPending, 1);
+    await commitBreakoutCsv(db, client, { ...correctionInput, fileSha256: correction.fileSha256, revision: correction.revision, selectedKeys: correction.rows.filter(row => row.status === "new").map(row => row.key) });
+    assert.equal((await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).findOne({ key: clean[0].key }))?.status, "reconciliation");
+    const account = (await readBreakoutAccount(db))!;
+    await activateBreakoutSource(db, client, account.importRevision);
+    await db.collection<BreakoutRecord>(BREAKOUT_COLLECTIONS.rows).updateOne({ _id: heldRecord._id }, { $set: { riskConfirmed: true } });
+    await assert.rejects(publishStoredTrade(db, client, heldRecord._id, heldRecord.fingerprint), /reconciliation/);
   } finally {
     assert.match(db.databaseName, /^blueprint_breakout_test_[a-f0-9]+$/);
     try { await db.dropDatabase(); } finally { await client.close(); }

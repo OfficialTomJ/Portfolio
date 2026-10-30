@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { BREAKOUT_HEADERS, BreakoutInputError, activeBreakoutHistoryFrom, breakoutConflicts, parseBreakoutCsv, isLegacyHistory, type BreakoutAccount } from "./breakout";
 import { readBoundedBody, readBreakoutUpload } from "./import-request";
 import { rejectBybitAccountAccess } from "./source-policy";
+import { planBreakoutImport } from "./breakout-preview";
 
 const base = ["BTC/USD", "long", "0.5", "100", "110", "2025-01-01T00:00:00.123456789+00:00", "2025-01-01T01:00:00.987654321+00:00", "5.00000", "0.10000", "4.90000"];
 const csv = (rows: string[][] = [base], headers: readonly string[] = BREAKOUT_HEADERS) => new TextEncoder().encode([headers.join(","), ...rows.map(row => row.join(","))].join("\n"));
@@ -69,4 +70,26 @@ test("stream limit works without Content-Length; invalid multipart and foreign f
 });
 test("retired Bybit account access cannot be enabled by credentials", () => {
   assert.throws(rejectBybitAccountAccess, /retired/);
+});
+
+test("preview distinguishes clean, duplicate and held rows without hiding unchecked evidence", () => {
+  const conflicting = [...base]; conflicting[5] = "2025-01-01T00:30:00Z";
+  const file = parseBreakoutCsv(csv([base, conflicting]));
+  const preview = planBreakoutImport(file, []);
+  assert.ok(preview.rows.every(row => row.status === "reconciliation"));
+  const single = parseBreakoutCsv(csv());
+  assert.equal(planBreakoutImport(single, [], [file.rows[1]]).rows[0].status, "reconciliation");
+});
+
+test("confirmation requires a bounded, unique selection, CSV digest and preview revision", async () => {
+  const file = parseBreakoutCsv(csv());
+  const form = () => { const data = new FormData(); data.set("file", new File([csv()], "positions.csv", { type: "text/csv" })); data.set("accountId", "breakout-1"); data.set("fileSha256", file.sha256); data.set("revision", "0"); data.set("selectedKeys", JSON.stringify([file.rows[0].key])); return data; };
+  const confirmed = await readBreakoutUpload(new Request("https://example.com", { method: "POST", body: form() }), "confirm");
+  assert.deepEqual(confirmed.selectedKeys, [file.rows[0].key]); assert.equal(confirmed.revision, 0);
+  for (const value of ["[]", "{}", "bad json", JSON.stringify([file.rows[0].key, file.rows[0].key]), JSON.stringify(["unknown"])]) {
+    const data = form(); data.set("selectedKeys", value);
+    await assert.rejects(readBreakoutUpload(new Request("https://example.com", { method: "POST", body: data }), "confirm"));
+  }
+  const missing = form(); missing.delete("selectedKeys");
+  await assert.rejects(readBreakoutUpload(new Request("https://example.com", { method: "POST", body: missing }), "confirm"), /fields/);
 });

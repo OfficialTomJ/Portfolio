@@ -4,7 +4,11 @@ The private journal uses Breakout closed-position exports. Bybit account ingesti
 
 ## Upload and review
 
-Open `/performance/review` as the verified, allowlisted creator and choose **Upload Breakout CSV**. The initial release supports one explicit account, **Breakout account 1**. No history-start date is required. Recent-trades-only exports are supported: each row is compared with stored position identities, identical positions are skipped and new ones are added. Missing rows never remove earlier imports. Overlap between export date ranges does not itself make positions ambiguous.
+Open `/performance/review` as the verified, allowlisted creator and choose **Upload Breakout CSV**. **Upload and process** validates the entire file and opens a read-only preview table. No CSV, account or trade is saved at this stage. The initial release supports one explicit account, **Breakout account 1**, with no history-start field. Recent exports are supported; missing rows never remove earlier imports. Overlap between export date ranges does not itself make positions ambiguous.
+
+The table shows each position's instrument, direction, entry/exit times and prices, net R, CSV line and import status. Clean new trades start checked. Already imported trades have locked checkboxes. Reconciliation candidates start unchecked; selecting them saves them only to Reconciliation, outside metrics and publication. Filter the table or select/clear clean trades before choosing **Import selected**. Cancelling the preview saves nothing. Existing imported trades are never removed by unchecking a row.
+
+Invalid CSVs remain blocked in full, with the validation error and CSV line when available. There is no option to bypass an invalid row and commit the rest of a damaged file. Correct or re-export it first.
 
 The supported columns are:
 
@@ -14,7 +18,9 @@ instrument,side,quantity,entry_price,exit_price,entry_time,exit_time,realized_pn
 
 Column order, UTF-8 BOMs, standard quoting and LF/CRLF are supported. Instruments use `/USD`, sides use `long`/`short`, and timestamps must include a timezone. Files must be nonempty, at most 2 MB and at most 5,000 rows. The entire file must pass validation before any import collection or document is written. An invalid final row rejects the entire file. Net P&L must exactly equal realized P&L minus fees. The importer never evaluates spreadsheet formulas or guesses missing columns.
 
-Successful uploads archive the original bytes and source values privately, then atomically save candidates and the batch summary. Renamed/reordered/repeated exports do not duplicate identical positions. Full timestamp precision and decimal values participate in source identity. Indistinguishable duplicate rows within one file are rejected, because the export contains no position IDs to distinguish them. Transaction failures leave no partial trade/account/batch changes. A commit whose response was lost can be recovered by retrying the same file.
+Confirmation resends the original file, its digest, the preview revision and selected row keys. The server validates everything again and rejects changed files, unknown selections and stale previews. It atomically saves only selected new candidates, original bytes, full-file private evidence and the batch summary. Unselected rows remain available in a future preview of the same file, and different selections have separate idempotent batch identities. Renamed/reordered/repeated exports do not duplicate positions. Full timestamp precision and decimal values participate in source identity. Indistinguishable duplicate rows within one file are rejected, because the export contains no position IDs to distinguish them. Transaction failures leave no partial changes. An identical confirmation retry is safe even if its response was lost.
+
+Conflict checks use all observed CSV evidence, including unchecked rows, rather than just the chosen subset. Deselecting one side of an overlap cannot make the other side clean, including in later exports. Evidence is private and does not itself create a journal trade. The preview warns when confirming will hold previously clean pending positions; published results remain immutable. The observed history period advances only from selected imported rows.
 
 Clean positions enter the normal private review workspace. Overlapping same-symbol/direction positions and changed rows sharing an entry identity enter **Reconciliation**, excluded from metrics and publication. Existing pending rows can become held when a later upload introduces overlap. Published results remain immutable. There is no automatic grouping, cross-platform matching, history repair, exclusion of tiny trades or annotation transfer. An agent can inspect the archived rows and make a separately reviewed correction later.
 
@@ -22,7 +28,7 @@ The CSV contains no intended risk or stop settings. Edit and save each new trade
 
 ## Source switch and history
 
-Uploading never publishes a trade or switches public sources. The private metrics preview uses the proposed Breakout period and keeps eligible earlier Bybit trades. **Bybit history** provides the original stored results and review notes, without counting the covered period twice.
+Previewing saves nothing. Confirming an import never publishes a trade or switches public sources. The private metrics use selected clean imports and the proposed Breakout period, keeping eligible earlier Bybit trades. **Bybit history** provides the original stored results and review notes, without counting the covered period twice.
 
 When ready, **Use Breakout as result source** explicitly switches the public period from the earliest imported entry's UTC day. Its confirmation explains that covered Bybit results will be archived from public metrics, and that only approved Breakout trades appear publicly. The originals and annotations remain in their collections and private history; earlier Bybit results stay public. This is a source boundary based on imported evidence, not a guessed trade-to-trade reconciliation. Legacy trades spanning the boundary remain in private history.
 

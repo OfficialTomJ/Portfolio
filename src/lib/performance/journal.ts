@@ -1,6 +1,7 @@
 import type { Db, MongoClient } from "mongodb";
-import { BREAKOUT_ACCOUNT_ID, breakoutConflicts, breakoutFingerprint, isLegacyHistory, type BreakoutAccount, type BreakoutRecord } from "./breakout";
-import { BREAKOUT_COLLECTIONS, BreakoutConflictError, readBreakoutAccount } from "./breakout-store";
+import { BREAKOUT_ACCOUNT_ID, breakoutFingerprint, isLegacyHistory, type BreakoutAccount, type BreakoutRecord } from "./breakout";
+import { BREAKOUT_COLLECTIONS, BreakoutConflictError, readBreakoutAccount, type ImportEvidence } from "./breakout-store";
+import { conflictEvidence } from "./breakout-preview";
 import { performanceReviewFingerprint } from "./review";
 import { publicTradeIdForCycle } from "./publication";
 import { normalizeClosedCycle } from "./normalize";
@@ -50,7 +51,8 @@ export async function publishStoredTrade(db: Db, client: MongoClient, id: string
         if (row.trade.openedAt < (account.activatedFrom ?? account.historyFrom)) throw new BreakoutConflictError("Confirm the Breakout source switch for the earlier imported history before publishing.");
         if (row.status !== "pending_review" || !row.riskConfirmed || row.fingerprint !== fingerprint || breakoutFingerprint(row) !== fingerprint || validatePublishedPerformanceTrade(row.trade)) throw new BreakoutConflictError("Trade changed, needs risk confirmation, or requires reconciliation.");
         const all = await rows.find({ accountId: BREAKOUT_ACCOUNT_ID }, { session }).limit(20_001).toArray();
-        if (all.length > 20_000 || breakoutConflicts(all).has(row.key) || all.some(other => other.identity === row.identity && other.key !== row.key)) throw new BreakoutConflictError("This position needs agent reconciliation.");
+        const evidence = await db.collection<ImportEvidence>(BREAKOUT_COLLECTIONS.evidence).find({ accountId: BREAKOUT_ACCOUNT_ID }, { session }).limit(20_001).toArray();
+        if (all.length > 20_000 || evidence.length > 20_000 || conflictEvidence([...all, ...evidence]).has(row.key)) throw new BreakoutConflictError("This position needs agent reconciliation.");
         // Serialize with imports, which also revise the account document.
         await db.collection<BreakoutAccount>(BREAKOUT_COLLECTIONS.accounts).updateOne({ _id: BREAKOUT_ACCOUNT_ID }, { $inc: { importRevision: 1 } }, { session });
         trade = row.trade;

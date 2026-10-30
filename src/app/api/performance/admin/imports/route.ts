@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Not found" }, { status: 404, headers });
   if (!isSameOriginAdminRequest(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers });
   try {
-    const input = await readBreakoutUpload(request);
+    const input = await readBreakoutUpload(request, "confirm");
     const summary = await importBreakoutCsv(getDb(), getMongoClient(), { ...input, userId: session.user.id });
     return NextResponse.json({ ok: true, summary }, { headers });
   } catch (error) {

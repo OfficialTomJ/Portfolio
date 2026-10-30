@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import type { ClientSession } from "mongodb";
 import { getDb, getMongoClient } from "@/lib/mongodb";
 import { classifyLegacyTags, EMPTY_ANNOTATION, normalizeTagName, parseAnnotation, TRADE_ID_PATTERN, type TradeAnnotation } from "./annotations-model";
 import { METADATA_COLLECTION, type PublicMetadataDocument } from "./public-metadata";
@@ -89,7 +90,7 @@ export async function createStrategyTag(value: unknown, userId: string): Promise
   return { id, name: tag!.name };
 }
 
-export async function saveTradeAnnotation(id: string, value: unknown, userId: string): Promise<TradeAnnotation> {
+export async function saveTradeAnnotation(id: string, value: unknown, userId: string, saveRelated?: (session: ClientSession) => Promise<void>): Promise<TradeAnnotation> {
   const target = await resolveAnnotationTarget(id);
   if (!target) throw new AnnotationTargetError("Trade not found");
   let annotation: TradeAnnotation;
@@ -126,6 +127,7 @@ export async function saveTradeAnnotation(id: string, value: unknown, userId: st
           revision: before.revision, riskR: before.riskR, tradeType: before.tradeType, strategyIds: before.strategyIds, description: before.description, privateNotes: before.privateNotes,
           asrComments: before.asrComments, expectedR: before.expectedR, valid: before.valid,
         }, after: next, changedAt: now, changedBy: userId, ...(previousPublic ? { legacyPublicBefore: previousPublic } : {}) }, { session });
+      if (saveRelated) await saveRelated(session);
       saved = next;
     });
   } finally { await session.endSession(); }

@@ -139,6 +139,6 @@ export interface BreakoutAccount {
 export function activeBreakoutHistoryFrom(account: BreakoutAccount | null): string | null {
   return account?.activatedAt ? account.activatedFrom ?? account.historyFrom : null;
 }
-export function isLegacyHistory(trade: PerformanceTrade, account: Pick<BreakoutAccount, "historyFrom"> | null): boolean {
+export function isLegacyHistory(trade: Pick<PerformanceTrade, "openedAt" | "closedAt">, account: Pick<BreakoutAccount, "historyFrom"> | null): boolean {
   return !account || (trade.openedAt < account.historyFrom && trade.closedAt < account.historyFrom);
 }

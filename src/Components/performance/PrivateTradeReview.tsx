@@ -28,7 +28,7 @@ export default function PrivateTradeReview({ trade, market, status, annotation, 
           <div className="p-2 sm:p-3">{market ? <TradePriceChart trade={trade} candles={market.candles} source={market.source} initialInterval="4h" /> : <div className="grid h-80 place-items-center text-sm text-zinc-500">Market chart unavailable</div>}</div>
           <dl className="grid grid-cols-2 gap-4 border-t border-white/10 p-4 sm:p-5"><div className="min-w-0"><dt className="text-xs text-zinc-500">Entry</dt><dd className="mt-1 break-words text-lg text-zinc-200">{price(trade.entryPrice)}</dd><dd className="mt-1 text-xs leading-5 text-zinc-500">{date.format(new Date(trade.openedAt))} GMT</dd></div><div className="min-w-0"><dt className="text-xs text-zinc-500">Exit</dt><dd className="mt-1 break-words text-lg text-zinc-200">{price(trade.exitPrice)}</dd><dd className="mt-1 text-xs leading-5 text-zinc-500">{date.format(new Date(trade.closedAt))} GMT</dd></div></dl>
         </section>
-        <InlineTradeEditor trade={trade} initialAnnotation={annotation} initialTags={tags} nextTradeId={nextTradeId} initialPublication={publication} />
+        <InlineTradeEditor trade={trade} initialAnnotation={annotation} initialTags={tags} nextTradeId={nextTradeId} initialPublication={publication} editIdeas />
       </div>
       {status === "published" && <Link href={`/performance/trades/${trade.id}`} className="mt-5 inline-block min-h-10 py-2 text-xs text-zinc-500 hover:text-white">View public trade page ↗</Link>}
     </div>

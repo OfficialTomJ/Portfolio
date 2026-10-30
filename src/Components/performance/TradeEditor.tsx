@@ -8,24 +8,26 @@ import type { TradeTag, TradeDirection } from "@/lib/performance/types";
 import { signedR } from "@/lib/performance/metrics";
 import { isValidTradeRiskR } from "@/lib/performance/risk";
 import type { AdminPublication } from "@/lib/performance/admin-publication";
+import { EMPTY_IDEA_FIELDS, type IdeaEditorData, type IdeaFields, type IdeaGroups } from "@/lib/performance/ideas-model";
+import TradeIdeaFields from "./TradeIdeaFields";
 import AdminPublishButton from "./AdminPublishButton";
 
 export interface EditableTradeSummary { id: string; symbol: string; direction: TradeDirection; resultR?: number }
 const field = "mt-1.5 w-full min-w-0 rounded-lg border border-white/15 bg-black px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-[#ff6719]/70";
-type EditorProps = { trade: EditableTradeSummary; initialAnnotation?: TradeAnnotation; initialTags: TradeTag[]; initialPublication?: AdminPublication; onClose?: () => void; inline?: boolean; nextTradeId?: string | null };
+type EditorProps = { trade: EditableTradeSummary; initialAnnotation?: TradeAnnotation; initialTags: TradeTag[]; initialPublication?: AdminPublication; onClose?: () => void; inline?: boolean; nextTradeId?: string | null; editIdeas?: boolean; onSaved?: () => void };
 
-export default function TradeEditorButton({ trade, initialAnnotation, initialTags = [], initialPublication, className = "" }: {
-  trade: EditableTradeSummary; initialAnnotation?: TradeAnnotation; initialTags?: TradeTag[]; initialPublication?: AdminPublication; className?: string;
+export default function TradeEditorButton({ trade, initialAnnotation, initialTags = [], initialPublication, className = "", editIdeas = false, onSaved }: {
+  trade: EditableTradeSummary; initialAnnotation?: TradeAnnotation; initialTags?: TradeTag[]; initialPublication?: AdminPublication; className?: string; editIdeas?: boolean; onSaved?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  return <><button type="button" onClick={() => setOpen(true)} className={`min-h-11 rounded-lg border border-white/15 px-3 py-2 text-sm text-zinc-200 transition hover:border-[#ff6719]/50 hover:text-white ${className}`} aria-label={`Edit ${trade.symbol} trade`}>Edit trade</button>{open && <TradeEditor trade={trade} initialAnnotation={initialAnnotation} initialTags={initialTags} initialPublication={initialPublication} onClose={() => setOpen(false)} />}</>;
+  return <><button type="button" onClick={() => setOpen(true)} className={`min-h-11 rounded-lg border border-white/15 px-3 py-2 text-sm text-zinc-200 transition hover:border-[#ff6719]/50 hover:text-white ${className}`} aria-label={`Edit ${trade.symbol} trade`}>Edit trade</button>{open && <TradeEditor trade={trade} initialAnnotation={initialAnnotation} initialTags={initialTags} initialPublication={initialPublication} editIdeas={editIdeas} onSaved={onSaved} onClose={() => setOpen(false)} />}</>;
 }
 
 export function InlineTradeEditor(props: Omit<EditorProps, "inline" | "onClose">) {
   return <TradeEditor key={props.trade.id} {...props} inline />;
 }
 
-function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication, onClose, inline = false, nextTradeId }: EditorProps) {
+function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication, onClose, inline = false, nextTradeId, editIdeas = false, onSaved }: EditorProps) {
   const router = useRouter();
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -48,9 +50,18 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [conflict, setConflict] = useState(false);
+  const [ideaEditor, setIdeaEditor] = useState<IdeaEditorData | null>(null);
+  const [ideaId, setIdeaId] = useState("");
+  const [ideaFields, setIdeaFields] = useState<IdeaFields>({ ...EMPTY_IDEA_FIELDS });
+  const ideaDirty = editIdeas && ideaEditor?.eligible && (ideaId === "new" || ideaId !== (ideaEditor.assignments[trade.id] ?? ""));
+  const ideasReady = !editIdeas || ideaEditor !== null;
+  const applyIdeas = (groups: IdeaGroups) => {
+    setIdeaEditor(previous => ({ ...groups, eligible: previous?.eligible ?? true }));
+    setIdeaId(groups.assignments[trade.id] ?? ""); setIdeaFields({ ...EMPTY_IDEA_FIELDS });
+  };
   const payload = { ...annotation, riskR: Number(risk), expectedR: expected.trim() === "" ? null : Number(expected) };
   const validRisk = risk.trim() !== "" && isValidTradeRiskR(payload.riskR);
-  const dirty = !loading && JSON.stringify(payload) !== original;
+  const dirty = !loading && (JSON.stringify(payload) !== original || !!ideaDirty);
   const complete = closed && payload.expectedR !== null && Number.isFinite(payload.expectedR) && Math.abs(payload.expectedR) <= 100 && annotation.valid !== null;
 
   const applySaved = useCallback((next: TradeAnnotation) => {
@@ -63,16 +74,22 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
     const overflow = document.body.style.overflow;
     if (!inline) { element?.showModal(); document.body.style.overflow = "hidden"; }
     const controller = new AbortController();
-    fetch(`/api/performance/admin/trades/${trade.id}/metadata`, { cache: "no-store", signal: controller.signal })
+    fetch(`/api/performance/admin/trades/${trade.id}/metadata${editIdeas ? "?ideas=1" : ""}`, { cache: "no-store", signal: controller.signal })
       .then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Could not load editor"); return body; })
       .then(body => {
         if (controller.signal.aborted || body.annotation.revision < revision.current) return;
         if (!edited.current) applySaved(body.annotation);
         setTags(previous => edited.current ? [...new Map([...previous, ...body.tags].map((tag: TradeTag) => [tag.id, tag])).values()] : body.tags);
+        if (editIdeas) {
+          if (!body.ideaEditor) throw new Error("Ideas unavailable");
+          if (!edited.current) {
+            setIdeaEditor(body.ideaEditor); setIdeaId(body.ideaEditor.assignments[trade.id] ?? "");
+          }
+        }
         setClosed(body.closed); if (!confirmedPublished.current && body.publication) setPublication(body.publication); setLoading(false);
       }).catch(e => { if (e.name !== "AbortError" && !controller.signal.aborted) setError(seeded.current ? "Could not check for newer edits. Saving will still verify this version." : "Could not load this trade. Refresh and try again."); });
     return () => { controller.abort(); if (!inline) { document.body.style.overflow = overflow; element?.close(); } };
-  }, [trade.id, inline, applySaved]);
+  }, [trade.id, inline, applySaved, editIdeas]);
 
   useEffect(() => {
     if (!inline || !dirty || saving || publishing) return;
@@ -103,22 +120,32 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
     if (dirty && !window.confirm("Discard your draft and load the saved version?")) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/performance/admin/trades/${trade.id}/metadata`, { cache: "no-store" });
+      const response = await fetch(`/api/performance/admin/trades/${trade.id}/metadata${editIdeas ? "?ideas=1" : ""}`, { cache: "no-store" });
       const body = await response.json(); if (!response.ok) throw new Error("Could not reload saved version");
-      applySaved(body.annotation); setTags(body.tags); setClosed(body.closed); setPublication(body.publication); setError(""); setConflict(false);
+      applySaved(body.annotation);
+      if (editIdeas) {
+        if (!body.ideaEditor) throw new Error("Ideas unavailable");
+        setIdeaEditor(body.ideaEditor); setIdeaId(body.ideaEditor.assignments[trade.id] ?? ""); setIdeaFields({ ...EMPTY_IDEA_FIELDS });
+      }
+      setTags(body.tags); setClosed(body.closed); setPublication(body.publication); setError(""); setConflict(false);
+      if (editIdeas) onSaved?.();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not reload saved version"); } finally { setLoading(false); }
   }
   async function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (saving || loading || creating || publishing) return;
+    event.preventDefault(); if (saving || loading || creating || publishing || !ideasReady || conflict) return;
     if (!validRisk) { setError("Risk (R) must be a positive number"); return; }
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const next = submitter instanceof HTMLButtonElement && submitter.dataset.action === "next";
     if (next && !complete) return;
     setSaving(true); setError(""); setMessage("");
     try {
-      const response = await fetch(`/api/performance/admin/trades/${trade.id}/metadata`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await fetch(`/api/performance/admin/trades/${trade.id}/metadata`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, ...(ideaDirty ? { ideaEdit: ideaId === "new"
+        ? { action: "create", revision: ideaEditor!.revision, fields: ideaFields }
+        : { action: "assign", revision: ideaEditor!.revision, ideaId: ideaId || null } } : {}) }) });
       const result = await response.json(); if (!response.ok) { setConflict(response.status === 409); throw new Error(result.error ?? "Could not save changes"); }
-      applySaved(result.annotation); setConflict(false);
+      applySaved(result.annotation);
+      if (result.ideaGroups) applyIdeas(result.ideaGroups);
+      setConflict(false); onSaved?.();
       if (next) {
         // Re-read the account-scoped queue only after a confirmed save. Never publish.
         const nextResponse = await fetch(`/api/performance/admin/review/next?current=${encodeURIComponent(trade.id)}`, { cache: "no-store" });
@@ -141,7 +168,7 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
           <p id={`${id}-risk-help`} className="text-xs leading-5 text-zinc-500">{validRisk ? `${payload.riskR}R at risk.` : "Enter a positive risk value in R."} Results and Expected R stay on the journal&apos;s fixed 1R basis.</p>
         </fieldset>
         {closed && <fieldset className="space-y-4"><legend className="sr-only">ASR assessment</legend><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm text-zinc-300">Trade validity<select aria-label="Trade validity" value={annotation.valid === null ? "unset" : annotation.valid ? "valid" : "invalid"} onChange={event => { edited.current = true; setMessage(""); setAnnotation(previous => ({ ...previous, valid: event.target.value === "unset" ? null : event.target.value === "valid" })); }} className={field}><option value="unset">Not reviewed</option><option value="valid">Valid trade</option><option value="invalid">Invalid trade</option></select></label><label className="block text-sm text-zinc-300">Expected R<input aria-label="Expected R" type="number" inputMode="decimal" step="any" min={-100} max={100} value={expected} onChange={event => { edited.current = true; setMessage(""); setExpected(event.target.value); }} placeholder="e.g. 2.5" className={field} /></label></div><p className="text-xs leading-5 text-zinc-500">Your assessment with perfect management, on the same 1R basis.</p>{payload.expectedR !== null && Number.isFinite(payload.expectedR) && <p className="text-xs text-zinc-400">Review gap <span className="ml-2 font-medium text-zinc-200">{signedR(payload.expectedR - trade.resultR!)}</span></p>}<label className="block text-sm text-zinc-300">ASR comments<textarea aria-label="ASR comments" rows={4} value={annotation.asrComments} onChange={event => update("asrComments", event.target.value)} maxLength={10000} placeholder="Setup, management and what you would do differently" className={field} /></label></fieldset>}
-        <details open={!inline || !closed} className="border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm font-medium text-zinc-300">Classification</summary><div className="mt-4 space-y-4"><label className="block text-sm text-zinc-300">Trade type<select aria-label="Trade type" value={annotation.tradeType ?? ""} onChange={event => { edited.current = true; setMessage(""); setAnnotation(previous => ({ ...previous, tradeType: event.target.value === "DAY" ? "DAY" : event.target.value === "SWING" ? "SWING" : null })); }} className={field}><option value="">Not set</option><option value="DAY">DAY</option><option value="SWING">SWING</option></select><span className="mt-1 block text-xs text-zinc-500">Public once published.</span></label><div><label htmlFor={`${id}-query`} className="text-sm text-zinc-300">Strategies <span className="text-xs text-zinc-500">· Private</span></label><div className="mt-2 flex flex-wrap gap-2">{annotation.strategyIds.map(tagId => <button key={tagId} type="button" onClick={() => toggleTag(tagId)} className="max-w-full break-words rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]" aria-label={`Remove ${tags.find(tag => tag.id === tagId)?.name} strategy`}>{tags.find(tag => tag.id === tagId)?.name} ×</button>)}</div><input id={`${id}-query`} value={query} onChange={event => setQuery(event.target.value)} maxLength={40} placeholder="Find or create a strategy" className={field} /><div className="mt-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{tags.filter(tag => tag.name.toLowerCase().includes(query.trim().toLowerCase())).map(tag => <button key={tag.id} type="button" aria-pressed={annotation.strategyIds.includes(tag.id)} onClick={() => toggleTag(tag.id)} disabled={!annotation.strategyIds.includes(tag.id) && annotation.strategyIds.length >= 12} className={`max-w-full break-words rounded-lg border px-3 py-2 text-xs ${annotation.strategyIds.includes(tag.id) ? "border-[#ff6719]/40 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{annotation.strategyIds.includes(tag.id) ? "✓ " : "+ "}{tag.name}</button>)}</div>{query.trim() && !tags.some(tag => tag.name.toLowerCase() === query.trim().toLowerCase()) && <button type="button" onClick={createTag} disabled={creating || annotation.strategyIds.length >= 12} className="mt-3 max-w-full break-words text-sm text-[#ff8b52]">{creating ? "Creating…" : `Create “${query.trim()}”`}</button>}</div></div></details>
+        <details open={!inline || !closed} className="border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm font-medium text-zinc-300">Classification</summary><div className="mt-4 space-y-4">{editIdeas && (ideaEditor ? <TradeIdeaFields editor={ideaEditor} selected={ideaId} fields={ideaFields} onSelect={value => { edited.current = true; setMessage(""); setIdeaId(value); }} onFields={value => { edited.current = true; setMessage(""); setIdeaFields(value); }} /> : <p className="text-xs text-zinc-500">Loading saved ideas…</p>)}<label className="block text-sm text-zinc-300">Trade type<select aria-label="Trade type" value={annotation.tradeType ?? ""} onChange={event => { edited.current = true; setMessage(""); setAnnotation(previous => ({ ...previous, tradeType: event.target.value === "DAY" ? "DAY" : event.target.value === "SWING" ? "SWING" : null })); }} className={field}><option value="">Not set</option><option value="DAY">DAY</option><option value="SWING">SWING</option></select><span className="mt-1 block text-xs text-zinc-500">Public once published.</span></label><div><label htmlFor={`${id}-query`} className="text-sm text-zinc-300">Strategies <span className="text-xs text-zinc-500">· Private</span></label><div className="mt-2 flex flex-wrap gap-2">{annotation.strategyIds.map(tagId => <button key={tagId} type="button" onClick={() => toggleTag(tagId)} className="max-w-full break-words rounded-full border border-[#ff6719]/30 bg-[#ff6719]/10 px-3 py-1.5 text-xs text-[#ffad83]" aria-label={`Remove ${tags.find(tag => tag.id === tagId)?.name} strategy`}>{tags.find(tag => tag.id === tagId)?.name} ×</button>)}</div><input id={`${id}-query`} value={query} onChange={event => setQuery(event.target.value)} maxLength={40} placeholder="Find or create a strategy" className={field} /><div className="mt-2 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{tags.filter(tag => tag.name.toLowerCase().includes(query.trim().toLowerCase())).map(tag => <button key={tag.id} type="button" aria-pressed={annotation.strategyIds.includes(tag.id)} onClick={() => toggleTag(tag.id)} disabled={!annotation.strategyIds.includes(tag.id) && annotation.strategyIds.length >= 12} className={`max-w-full break-words rounded-lg border px-3 py-2 text-xs ${annotation.strategyIds.includes(tag.id) ? "border-[#ff6719]/40 text-[#ffad83]" : "border-white/10 text-zinc-400"}`}>{annotation.strategyIds.includes(tag.id) ? "✓ " : "+ "}{tag.name}</button>)}</div>{query.trim() && !tags.some(tag => tag.name.toLowerCase() === query.trim().toLowerCase()) && <button type="button" onClick={createTag} disabled={creating || annotation.strategyIds.length >= 12} className="mt-3 max-w-full break-words text-sm text-[#ff8b52]">{creating ? "Creating…" : `Create “${query.trim()}”`}</button>}</div></div></details>
         <details open={!inline} className="border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm font-medium text-zinc-300">Private notes</summary><label className="mt-3 block"><span className="sr-only">Private notes</span><textarea aria-label="Private notes" rows={3} value={annotation.privateNotes} onChange={event => update("privateNotes", event.target.value)} maxLength={10000} placeholder="Working notes and reminders" className={field} /></label></details>
         <details open={!inline} className="border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm font-medium text-zinc-300">Public description</summary><label className="mt-3 block"><span className="sr-only">Description</span><textarea aria-label="Description" rows={3} value={annotation.description} onChange={event => update("description", event.target.value)} maxLength={5000} placeholder="Your public write-up for this trade" className={field} /></label><p className="mt-1 text-xs text-zinc-500">Visible on the trade page once published.</p></details>
         {closed && <section aria-label="Publication" className="space-y-3 border-t border-white/10 pt-4">
@@ -158,7 +185,7 @@ function TradeEditor({ trade, initialAnnotation, initialTags, initialPublication
     <footer className="shrink-0 border-t border-white/10 bg-[#07090d] p-4 sm:p-5">
       {!loading && error && <div role="alert" className="mb-3 text-sm text-red-300"><p>{error}</p>{conflict && <button type="button" onClick={reloadSaved} disabled={saving || creating} className="mt-2 min-h-10 underline">Reload saved version</button>}</div>}
       {message && <p role="status" className="mb-3 text-sm text-[#ffad83]">{message}</p>}
-      <div className="flex flex-wrap items-center gap-2"><button type="submit" disabled={loading || saving || creating || publishing || !dirty} className="min-h-11 rounded-lg bg-[#ff6719] px-4 py-2 text-sm font-medium text-black disabled:opacity-40">{saving ? "Saving…" : "Save changes"}</button>{!inline && <button type="button" onClick={close} disabled={saving || creating || publishing} className="min-h-11 rounded-lg px-3 py-2 text-sm text-zinc-400">{dirty ? "Cancel" : "Close"}</button>}{inline && nextTradeId && <button type="submit" data-action="next" aria-label="Save and next unreviewed" disabled={loading || saving || creating || publishing || !complete} className="min-h-11 rounded-lg border border-[#ff6719]/40 px-3 py-2 text-sm text-[#ffad83] disabled:opacity-40">Save & next</button>}</div>
+      <div className="flex flex-wrap items-center gap-2"><button type="submit" disabled={loading || saving || creating || publishing || !ideasReady || conflict || !dirty} className="min-h-11 rounded-lg bg-[#ff6719] px-4 py-2 text-sm font-medium text-black disabled:opacity-40">{saving ? "Saving…" : "Save changes"}</button>{!inline && <button type="button" onClick={close} disabled={saving || creating || publishing} className="min-h-11 rounded-lg px-3 py-2 text-sm text-zinc-400">{dirty ? "Cancel" : "Close"}</button>}{inline && nextTradeId && <button type="submit" data-action="next" aria-label="Save and next unreviewed" disabled={loading || saving || creating || publishing || !ideasReady || conflict || !complete} className="min-h-11 rounded-lg border border-[#ff6719]/40 px-3 py-2 text-sm text-[#ffad83] disabled:opacity-40">Save & next</button>}</div>
       <p className="mt-3 text-xs leading-5 text-zinc-500">Saving never publishes.{inline && nextTradeId ? " Next review includes all periods." : inline ? " End of review queue." : ""}</p>
     </footer>
   </form>;

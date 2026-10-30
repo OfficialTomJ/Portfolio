@@ -8,6 +8,7 @@ import { asrStatus, matchesTradeFilters, type TradeTypeFilter, type TradeAnnotat
 import { filterReviewTrades, type ReviewTab, type PublicationFilter } from "@/lib/performance/review-workspace";
 import { signedR } from "@/lib/performance/metrics";
 import type { PerformanceTrade, TradeTag } from "@/lib/performance/types";
+import type { IdeaGroups } from "@/lib/performance/ideas-model";
 import AdminPublishButton from "./AdminPublishButton";
 import TradeEditorButton from "./TradeEditor";
 
@@ -15,10 +16,11 @@ const date = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric",
 const timestamp = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 // Fixed actions track prevents pending rows from shifting the shared result columns.
 const rowColumns = "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,1.1fr)_15rem]";
-export default function AdminTradeManager({ trades, pendingReviews, activePositions, reconciliation = [], annotations, tags, typeFilters, strategyFilters }: {
+export default function AdminTradeManager({ trades, pendingReviews, activePositions, reconciliation = [], annotations, tags, typeFilters, strategyFilters, ideaGroups }: {
   trades: PerformanceTrade[]; pendingReviews: AdminPendingReview[]; activePositions: AdminActivePosition[];
   annotations: Record<string, TradeAnnotation>; tags: TradeTag[]; typeFilters: TradeTypeFilter[]; strategyFilters: string[];
   reconciliation?: AdminReconciliationItem[];
+  ideaGroups?: Pick<IdeaGroups, "ideas" | "assignments"> | null;
 }) {
   const [tab, setTab] = useState<ReviewTab>("needs_asr");
   const [search, setSearch] = useState("");
@@ -48,11 +50,12 @@ export default function AdminTradeManager({ trades, pendingReviews, activePositi
       const annotation = annotations[trade.id];
       const expected = annotation?.expectedR;
       const status = asrStatus(annotation);
+      const idea = ideaGroups?.ideas.find(idea => idea.id === ideaGroups.assignments[trade.id]);
       const publication = pendingIds.has(trade.id) ? { status: "unpublished" as const, trade, fingerprint: pendingById.get(trade.id)! } : { status: "published" as const, trade };
       return <div key={trade.id} data-trade-id={trade.id} className={`grid items-start gap-4 border-b border-white/10 p-4 last:border-0 sm:p-5 ${rowColumns}`}>
-        <div className="min-w-0"><Link href={`/performance/review/trades/${trade.id}`} className="block hover:text-[#ff8b52]"><TradeName symbol={trade.symbol} direction={trade.direction} source={trade.source} /></Link><p className="mt-1 text-xs text-zinc-500">{date.format(new Date(trade.closedAt))} GMT</p><Classification annotation={annotation} tags={tags} />{trade.source === "breakout" && <p className="mt-2 text-xs text-zinc-400">Breakout CSV{pendingReviews.find(item => item.id === trade.id)?.riskConfirmed === false ? " · Save Risk (R) in Edit trade before publishing" : ""}</p>}<div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded border border-white/10 px-2 py-1 text-zinc-300">ASR: {status === "Not reviewed" ? "Needs review" : status}</span><span className="rounded border border-white/10 px-2 py-1 text-zinc-500">{pendingIds.has(trade.id) ? "Unpublished" : "Published"}</span></div></div>
+        <div className="min-w-0"><Link href={`/performance/review/trades/${trade.id}`} className="block hover:text-[#ff8b52]"><TradeName symbol={trade.symbol} direction={trade.direction} source={trade.source} /></Link><p className="mt-1 text-xs text-zinc-500">{date.format(new Date(trade.closedAt))} GMT</p><Classification annotation={annotation} tags={tags} /><p className="mt-2 break-words text-xs text-zinc-400">Idea: {ideaGroups ? idea?.name ?? "Unassigned" : "Unavailable"}</p>{trade.source === "breakout" && <p className="mt-2 text-xs text-zinc-400">Breakout CSV{pendingReviews.find(item => item.id === trade.id)?.riskConfirmed === false ? " · Save Risk (R) in Edit trade before publishing" : ""}</p>}<div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded border border-white/10 px-2 py-1 text-zinc-300">ASR: {status === "Not reviewed" ? "Needs review" : status}</span><span className="rounded border border-white/10 px-2 py-1 text-zinc-500">{pendingIds.has(trade.id) ? "Unpublished" : "Published"}</span></div></div>
         <div className="min-w-0 lg:text-right"><dl className="grid grid-cols-3 gap-3"><Result label="Actual R" value={signedR(trade.resultR)} actual /><Result label="Expected R" value={expected == null ? "Not reviewed" : signedR(expected)} /><Result label="Gap" value={expected == null ? "Not reviewed" : signedR(expected - trade.resultR)} /></dl><p className="mt-2 text-xs text-zinc-500">Validity: {annotation?.valid == null ? "Not reviewed" : annotation.valid ? "Valid" : "Invalid"}</p></div>
-        <div className="grid grid-cols-2 gap-2"><TradeEditorButton trade={trade} initialAnnotation={annotation} initialTags={tags} initialPublication={publication} /><Link href={`/performance/review/trades/${trade.id}`} className="min-h-11 rounded-lg border border-[#ff6719]/30 px-3 py-2.5 text-center text-sm text-[#ffad83]">Review</Link>{publication.status === "unpublished" ? <AdminPublishButton trade={trade} fingerprint={publication.fingerprint} tradeType={annotation?.tradeType} description={annotation?.description} className="col-span-2" onMessage={setNotice} anotherPublicationInProgress={publishing !== null && publishing !== trade.id} onPublicationStateChange={setPublishing} /> : <span className="col-span-2 inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 text-sm text-zinc-500">Published</span>}</div>
+        <div className="grid grid-cols-2 gap-2"><TradeEditorButton trade={trade} initialAnnotation={annotation} initialTags={tags} initialPublication={publication} editIdeas /><Link href={`/performance/review/trades/${trade.id}`} className="min-h-11 rounded-lg border border-[#ff6719]/30 px-3 py-2.5 text-center text-sm text-[#ffad83]">Review</Link>{publication.status === "unpublished" ? <AdminPublishButton trade={trade} fingerprint={publication.fingerprint} tradeType={annotation?.tradeType} description={annotation?.description} className="col-span-2" onMessage={setNotice} anotherPublicationInProgress={publishing !== null && publishing !== trade.id} onPublicationStateChange={setPublishing} /> : <span className="col-span-2 inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 text-sm text-zinc-500">Published</span>}</div>
       </div>;
     }) : <Empty />}</div>}
   </section>;

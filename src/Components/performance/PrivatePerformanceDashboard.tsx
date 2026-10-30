@@ -5,6 +5,7 @@ import { asrStatus, buildAsrComparison, matchesTradeFilters, type TradeAnnotatio
 import { buildPerformanceView, calendarMonthRange, getAvailableYears, getCalendarMonthKeys, signedR, sydneyDateKey } from "@/lib/performance/metrics";
 import type { AdminActivePosition, AdminPendingReview, AdminReconciliationItem } from "@/lib/performance/admin-selection";
 import type { PerformanceDataset, PerformanceRange, TradeTag } from "@/lib/performance/types";
+import type { IdeaGroups } from "@/lib/performance/ideas-model";
 import AdminTradeManager from "./AdminTradeManager";
 import MultiSelectFilter from "./MultiSelectFilter";
 import PerformanceEquityChart from "./PerformanceEquityChart";
@@ -20,10 +21,11 @@ function Metric({ label, value }: { label: string; value: string }) {
   return <div className="min-w-0"><p className="text-xs text-zinc-500">{label}</p><p className="mt-1.5 break-words text-xl font-medium tabular-nums text-zinc-100 sm:text-2xl">{value}</p></div>;
 }
 
-export default function PrivatePerformanceDashboard({ dataset, pendingReviews, activePositions, reconciliation, annotations, tags }: {
+export default function PrivatePerformanceDashboard({ dataset, pendingReviews, activePositions, reconciliation, annotations, tags, ideaGroups }: {
   dataset: PerformanceDataset; pendingReviews: AdminPendingReview[]; activePositions: AdminActivePosition[];
   annotations: Record<string, TradeAnnotation>; tags: TradeTag[];
   reconciliation: AdminReconciliationItem[];
+  ideaGroups: Pick<IdeaGroups, "ideas" | "assignments"> | null;
 }) {
   const [period, setPeriod] = useState<Period>("CUSTOM");
   const years = getAvailableYears(dataset);
@@ -84,6 +86,6 @@ export default function PrivatePerformanceDashboard({ dataset, pendingReviews, a
         <p className="mt-3 text-xs leading-5 text-zinc-500">{mode === "actual" ? `Actual results for all ${view.trades.length} closed trades in this selection, including unpublished and unreviewed trades.` : `Both curves use the same ${comparison.pairedCount} reviewed trades. Expected R is your assessment; gap = expected minus actual.`}</p>
       </div>
     </section>
-    <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} reconciliation={reconciliation} annotations={annotations} tags={tags} typeFilters={typeFilters} strategyFilters={strategyFilters} />
+    <AdminTradeManager trades={view.trades} pendingReviews={pendingReviews} activePositions={activePositions} reconciliation={reconciliation} annotations={annotations} tags={tags} typeFilters={typeFilters} strategyFilters={strategyFilters} ideaGroups={ideaGroups} />
   </div>;
 }

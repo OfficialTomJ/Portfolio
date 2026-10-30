@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPerformanceAdminSession, isSameOriginAdminRequest } from "@/lib/performance/admin-access";
-import { AnnotationConflictError, AnnotationInputError, AnnotationTargetError, getTagCatalogue, getTradeAnnotations, resolveAnnotationTarget, saveTradeAnnotation } from "@/lib/performance/annotations";
+import { AnnotationConflictError, AnnotationInputError, AnnotationTargetError, getTagCatalogue, getTradeAnnotations, resolveAnnotationTarget } from "@/lib/performance/annotations";
 import { getAdminPerformanceTrade } from "@/lib/performance/admin-data";
+import { getTradeIdeaEditor, saveAdminTradeEdit } from "@/lib/performance/admin-trade-edit";
+import { IdeaConflictError, IdeaInputError } from "@/lib/performance/ideas-repository";
 import type { AdminPublication } from "@/lib/performance/admin-publication";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" };
 type Context = { params: Promise<{ id: string }> };
 
-export async function GET(_request: NextRequest, { params }: Context) {
+export async function GET(request: NextRequest, { params }: Context) {
   if (!await getPerformanceAdminSession()) return NextResponse.json({ error: "Not found" }, { status: 404, headers });
   const { id } = await params;
   const target = await resolveAnnotationTarget(id);
@@ -18,7 +20,8 @@ export async function GET(_request: NextRequest, { params }: Context) {
   const publication: AdminPublication = !result ? { status: "active" } : result.status === "published"
     ? { status: "published", trade: result.trade }
     : { status: "unpublished", trade: result.trade, fingerprint: result.fingerprint! };
-  return NextResponse.json({ annotation: annotations[id], tags, closed: target.closed, publication }, { headers });
+  const ideaEditor = request.nextUrl.searchParams.get("ideas") === "1" ? await getTradeIdeaEditor(id) : undefined;
+  return NextResponse.json({ annotation: annotations[id], tags, closed: target.closed, publication, ideaEditor }, { headers });
 }
 
 export async function PUT(request: NextRequest, { params }: Context) {
@@ -30,13 +33,13 @@ export async function PUT(request: NextRequest, { params }: Context) {
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid edit" }, { status: 400, headers }); }
   try {
-    const annotation = await saveTradeAnnotation(id, body, session.user.id);
-    return NextResponse.json({ annotation }, { headers });
+    const saved = await saveAdminTradeEdit(id, body, session.user.id);
+    return NextResponse.json(saved, { headers });
   } catch (error) {
-    if (error instanceof AnnotationConflictError) return NextResponse.json({ error: error.message }, { status: 409, headers });
+    if (error instanceof AnnotationConflictError || error instanceof IdeaConflictError) return NextResponse.json({ error: error.message }, { status: 409, headers });
     if (error instanceof AnnotationTargetError) return NextResponse.json({ error: error.message }, { status: 404, headers });
     // Validation messages contain no credentials or private field contents.
-    if (error instanceof AnnotationInputError) return NextResponse.json({ error: error.message }, { status: 400, headers });
+    if (error instanceof AnnotationInputError || error instanceof IdeaInputError) return NextResponse.json({ error: error.message }, { status: 400, headers });
     console.error("[performance/metadata] save failed");
     return NextResponse.json({ error: "Could not save this edit. Please try again." }, { status: 500, headers });
   }

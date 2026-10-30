@@ -13,6 +13,7 @@ import {
   type BybitPosition,
 } from "./bybit";
 import { normalizeClosedCycle } from "./normalize";
+import { reconstructClosedRounds, closedPnlForRound, matchExecutionCycle } from "./execution-rounds";
 import {
   currentPositionOpeningOrderIds,
   hasMultipleOpeningOrdersInCycle,
@@ -98,6 +99,9 @@ interface PositionCycleDocument {
   reviewFingerprint?: string;
   reviewApprovedFingerprint?: string;
   reviewApprovedAt?: Date;
+  executionReconciliation?: {
+    openedAt: Date; closedAt: Date; openingOrderIds: string[]; closingOrderIds: string[];
+  };
 }
 
 interface PrivateExecutionDocument extends BybitExecution {
@@ -352,10 +356,6 @@ function dateValue(value: string | number | undefined, fallback: Date): Date {
 
 function positionDirection(side: BybitPosition["side"]): TradeDirection {
   return side === "Sell" ? "Short" : "Long";
-}
-
-function closedPositionDirection(side: BybitClosedPnl["side"]): TradeDirection {
-  return side === "Sell" ? "Long" : "Short";
 }
 
 function accountScopeId(environment: string, userId: string | number): string {
@@ -724,30 +724,72 @@ async function capturePositionCycles(
   return active;
 }
 
-async function assignClosedPnlToCycles(
-  cycles: PositionCycleDocument[],
-  closedPnl: Collection<PrivateClosedPnlDocument>,
-  environment: string,
-  sourceAccountId: string
+/** Backfill trades that opened and fully closed between position snapshots. */
+async function captureClosedExecutionCycles(
+  cycles: Collection<PositionCycleDocument>, executions: Collection<PrivateExecutionDocument>,
+  pnl: Collection<PrivateClosedPnlDocument>, orders: Collection<PrivateOrderDocument>,
+  environment: string, sourceAccountId: string, riskVersions: PerformanceRiskVersion[], capturedAt: Date,
+  activeIds: Set<string>
 ) {
-  const records = await closedPnl
-    .find({ environment, sourceAccountId, execType: "Trade" })
-    .sort({ updatedTime: 1 })
-    .toArray();
-  const orderedCycles = [...cycles].sort((a, b) => b.openedAt.getTime() - a.openedAt.getTime());
+  const scope = { environment, sourceAccountId };
+  const [fills, records, existing, orderRows] = await Promise.all([
+    executions.find({ ...scope, execType: "Trade" }).toArray(),
+    pnl.find({ ...scope, execType: "Trade" }).toArray(),
+    cycles.find(scope).toArray(), orders.find(scope).toArray(),
+  ]);
+  const orderById = new Map(orderRows.map(o => [o.orderId, o]));
+  const result = reconstructClosedRounds(fills);
+  for (const issue of result.issues) console.warn("[performance/reconciliation]", issue);
+  for (const round of result.rounds) {
+    const source = closedPnlForRound(round, records);
+    if (!source) continue;
+    const prior = matchExecutionCycle(round, existing);
+    // Reconstruction supports one-way positions. Never infer a hedge index.
+    const openingOrders = round.openingOrderIds.map(id => orderById.get(id));
+    if (openingOrders.some(o => o && o.positionIdx !== 0) || (!prior && !openingOrders.some(o => o?.positionIdx === 0))) continue;
+    if (prior && activeIds.has(prior._id)) continue;
+    const id = prior?._id ?? [sourceAccountId, environment, "linear", round.symbol, 0, round.openedAt.getTime()].join(":");
+    const singleEntry = round.openingOrderIds.length === 1;
+    await cycles.updateOne({ _id: id }, {
+      $set: {
+        executionReconciliation: { openedAt: round.openedAt, closedAt: round.closedAt,
+          openingOrderIds: round.openingOrderIds, closingOrderIds: round.closingOrderIds },
+        ...(prior?.status === "open" ? { status: "awaiting_close" as const } : {}),
+        ...(!prior ? { environment, sourceAccountId, symbol: round.symbol, direction: round.direction,
+          positionIdx: 0, openedAt: round.openedAt, entryPrice: round.entryPrice, quantity: round.quantity,
+          leverage: null, status: "awaiting_close" as const,
+          ...lockPerformanceRisk(undefined, riskVersions, round.openedAt) } : {}),
+      },
+      $setOnInsert: { firstSeenAt: capturedAt, lastSeenAt: capturedAt },
+      ...(singleEntry && prior?.publicationHoldReason === "overlapping_entries"
+        ? { $unset: { publicationHold: "", publicationHoldReason: "", publicationHoldAt: "" } } : {}),
+    }, { upsert: true });
+  }
+}
 
-  for (const record of records) {
-    const closedAt = dateValue(record.updatedTime, record.lastSeenAt);
-    const direction = closedPositionDirection(record.side);
-    const match = orderedCycles.find(
-      (cycle) =>
-        cycle.symbol === record.symbol &&
-        cycle.direction === direction &&
-        cycle.openedAt.getTime() <= closedAt.getTime()
-    );
-    if (match && record.cycleId !== match._id) {
-      await closedPnl.updateOne({ _id: record._id }, { $set: { cycleId: match._id } });
+async function assignClosedPnlToCycles(
+  cycles: PositionCycleDocument[], closedPnl: Collection<PrivateClosedPnlDocument>,
+  environment: string, sourceAccountId: string
+) {
+  const records = await closedPnl.find({ environment, sourceAccountId, execType: "Trade" }).toArray();
+  const byClosingOrder = new Map<string, string>();
+  for (const cycle of cycles) {
+    for (const orderId of cycle.executionReconciliation?.closingOrderIds ?? []) {
+      if (byClosingOrder.has(orderId) && byClosingOrder.get(orderId) !== cycle._id) throw new Error("Closing order belongs to multiple cycles");
+      byClosingOrder.set(orderId, cycle._id);
     }
+  }
+  const byId = new Map(cycles.map(c => [c._id, c]));
+  for (const record of records) {
+    const match = byClosingOrder.get(record.orderId);
+    if (match && record.cycleId !== match) {
+      await closedPnl.updateOne({ _id: record._id }, { $set: { cycleId: match } });
+    } else if (!match && record.cycleId && byId.get(record.cycleId)?.executionReconciliation) {
+      // A later same-symbol exit cannot extend an already reconciled position.
+      await closedPnl.updateOne({ _id: record._id }, { $unset: { cycleId: "" } });
+    }
+    // Preserve legacy assignments lacking complete fills; do not guess new ones
+    // from the latest same-symbol opening timestamp.
   }
 }
 
@@ -1054,6 +1096,8 @@ export async function syncPerformanceJournal(): Promise<PerformanceSyncResult> {
       snapshot.executions,
       capturedAt
     );
+    await captureClosedExecutionCycles(cycles, executions, closedPnl, orders,
+      environment, sourceAccountId, riskVersions, capturedAt, activeIds);
     const normalized = await publishClosedCycles(
       cycles,
       executions,

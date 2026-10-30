@@ -38,6 +38,8 @@ After switching, publish clean reviewed positions individually. Publication chec
 
 Closed-position exports do not supply active trades. The admin reports **Last imported** and **History through** separately and does not treat a newly uploaded old file as current source coverage. Recent import summaries are visible in **Import history**. All account IDs, raw CSVs, quantities, fees, dollar results and private reviews remain behind the admin gate and outside public trade DTOs. Breakout instruments display USD, with exchange candles labelled as proxies.
 
+The trade-ideas view includes selected clean Breakout positions and supports the normal Risk/ASR editor. Held and unchecked positions stay outside idea results. Existing Bybit idea assignments and notes are preserved in their original scope; covered Bybit records remain visible as archives with no result contribution. No idea assignment is transferred automatically to a Breakout position. A journal with only Breakout imports does not require a Bybit sync to use ideas.
+
 ## Operator and recovery notes
 
 - Review/list/approve CLI commands now use stored candidates and never refresh Bybit. The old account sync, scale-in attribution and Bybit risk-configuration commands are retired. Use the admin Risk (R) editor for trade budgets.

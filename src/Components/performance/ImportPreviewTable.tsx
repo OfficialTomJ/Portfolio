@@ -14,7 +14,8 @@ export default function ImportPreviewTable({ preview, selected, busy, onChange }
   const clean = preview.rows.filter(row => row.status === "new");
   const checked = clean.filter(row => selection.has(row.key)).length;
   useEffect(() => { if (all.current) all.current.indeterminate = checked > 0 && checked < clean.length; }, [checked, clean.length]);
-  const rows = preview.rows.filter(row => filter === "all" || row.status === filter);
+  const rows = preview.rows.filter(row => filter === "all" || row.status === filter)
+    .sort((a, b) => b.trade.closedAt.localeCompare(a.trade.closedAt) || b.trade.openedAt.localeCompare(a.trade.openedAt) || a.line - b.line);
   const pages = Math.max(1, Math.ceil(rows.length / 50));
   const current = Math.min(page, pages - 1);
   function toggle(key: string) { onChange(selection.has(key) ? selected.filter(value => value !== key) : [...selected, key]); }

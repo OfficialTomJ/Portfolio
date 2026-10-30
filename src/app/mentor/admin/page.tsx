@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSession } from "../../../lib/session";
-import { isAdmin } from "../../../lib/admin";
+import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
 import {
   getOverview,
   getSignupSeries,
@@ -11,12 +10,12 @@ import {
   type DayCount,
 } from "../../../lib/analytics";
 
-export const metadata = { title: "Admin, The Blueprint" };
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Admin, The Blueprint", robots: { index: false, follow: false } };
 
 // Private creator dashboard. Invisible (404) to anyone not in ADMIN_EMAILS.
 export default async function AdminDashboard() {
-  const session = await getSession();
-  if (!isAdmin(session)) notFound();
+  if (!await getPerformanceAdminSession()) notFound();
 
   const [overview, signups, certs, funnel, engagement] = await Promise.all([
     getOverview(),
@@ -29,7 +28,7 @@ export default async function AdminDashboard() {
   const maxStarted = Math.max(1, ...funnel.map((f) => f.started));
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-10 space-y-10">
+    <main className="mx-auto max-w-7xl px-4 sm:px-6 py-10 space-y-10">
       <header>
         <p className="text-[var(--bp-accent)] text-sm font-medium uppercase tracking-widest mb-2">
           Admin

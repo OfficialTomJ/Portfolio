@@ -13,11 +13,13 @@ import type { StoredLegacyCycle } from "./journal";
 import type { PerformanceTrade } from "./types";
 import { METADATA_COLLECTION, type PublicMetadataDocument } from "./public-metadata";
 import { editSchema, initialEdit, publicFacts, publicIdeaSchema, type TradeEdit, type WorkspaceSource, type WorkspaceRow, type WorkspaceSnapshot, type IdeaDraft, type PublicIdea } from "./workspace-model";
+import { asrSchema, type AsrDocument } from "./asr-model";
 import { selectIdeaTrades } from "./ideas-selection";
 import { PUBLIC_EDITS, PUBLIC_IDEAS, PUBLIC_ASSIGNMENTS, type PublicAssignment, type PublicEditDocument } from "./workspace-public";
 
 export const EDITS = "performance_private_reconciliations";
 export const HISTORY = "performance_private_reconciliation_history";
+export const ASR_REVIEWS = "performance_private_asr_reviews";
 export const IDEA_DRAFTS = "performance_private_idea_publication_drafts";
 interface EditDocument { _id: string; revision: number; edit: TradeEdit; sourceFingerprint: string; original: WorkspaceSource; updatedAt: string }
 interface HistoryDocument { _id: string; actor: string; commandHash: string; tradeId: string; action: string; revision: number; at: string; reason: string; before: unknown; after: unknown }
@@ -73,9 +75,9 @@ async function sources(session?: ClientSession): Promise<{ rows: WorkspaceSource
 
 export async function getWorkspace(): Promise<WorkspaceSnapshot> {
   const db = getDb();
-  const [catalogue, edits, publications, context, ideaDocs, history] = await Promise.all([
+  const [catalogue, edits, publications, context, ideaDocs, history, asrDocs] = await Promise.all([
     sources(), db.collection<EditDocument>(EDITS).find({}).toArray(), db.collection<PublicEditDocument>(PUBLIC_EDITS).find({}).toArray(), getIdeasContext(),
-    db.collection<IdeaDraft & { _id: string }>(IDEA_DRAFTS).find({}).toArray(), db.collection<HistoryDocument>(HISTORY).find({}).sort({ at: -1 }).limit(100).toArray(),
+    db.collection<IdeaDraft & { _id: string }>(IDEA_DRAFTS).find({}).toArray(), db.collection<HistoryDocument>(HISTORY).find({}).sort({ at: -1 }).limit(100).toArray(), db.collection<AsrDocument>(ASR_REVIEWS).find({}).toArray(),
   ]);
   const ideas = context ? await context.repository.load() : { revision: 0, ideas: [], assignments: {} };
   const annotations = await getTradeAnnotations(catalogue.rows.map(r => r.id));
@@ -83,12 +85,15 @@ export async function getWorkspace(): Promise<WorkspaceSnapshot> {
   const byEdit = new Map(edits.map(d => [d._id, d])), byPub = new Map(publications.map(d => [d._id, d]));
   const assignments = await db.collection<PublicAssignment>(PUBLIC_ASSIGNMENTS).find({}).toArray();
   const publishedAssignments=new Map(assignments.map(a=>[a._id,a.ideaId]));
+  const byAsr = new Map(asrDocs.map(d => [d._id, d]));
   const rows: WorkspaceRow[] = catalogue.rows.map(source => {
     const stored = byEdit.get(source.id), published = byPub.get(source.id), old = catalogue.published.find(t => t.id === source.id);
     const sourceChanged=!!stored&&stored.sourceFingerprint!==source.sourceFingerprint;
-    const savedEdit = stored?.edit ?? initialEdit(source, annotations[source.id] ?? EMPTY_ANNOTATION, ideas.assignments[source.id] ?? null);
+    const baseEdit = stored?.edit ?? initialEdit(source, annotations[source.id] ?? EMPTY_ANNOTATION, ideas.assignments[source.id] ?? null);
+    const asr = byAsr.get(source.id);
+    const savedEdit = asr ? {...baseEdit, ...asr.fields} : baseEdit;
     const edit:TradeEdit = sourceChanged ? {...savedEdit,inclusion:savedEdit.inclusion==="included"?"held":savedEdit.inclusion,resolveHold:false} : savedEdit;
-    return { ...source, revision: stored?.revision ?? 0, edit, published: published ? published.trade : old ? { ...old, tradeType: meta.get(source.id)?.tradeType ?? null, description: meta.get(source.id)?.description ?? "" } : null,
+    return { ...source, revision: stored?.revision ?? 0, asrRevision:asr?.revision ?? 0, asrStale:!!asr&&(sourceChanged||asr.basisFingerprint!==hash({facts:baseEdit.facts,riskR:baseEdit.riskR})), edit, published: published ? published.trade : old ? { ...old, tradeType: meta.get(source.id)?.tradeType ?? null, description: meta.get(source.id)?.description ?? "" } : null,
       publishedInclusion: published?.inclusion ?? (old ? "included" : null), publishedRevision: published?.revision ?? null,
       publishedIdeaId:publishedAssignments.has(source.id)?publishedAssignments.get(source.id)!:published?.ideaId??null,
       sourceChanged, dirty: sourceChanged || !!stored && published?.revision !== stored.revision };
@@ -101,6 +106,7 @@ const common = { requestId: z.string().uuid(), revision: z.number().int().nonneg
 const commandSchema = z.discriminatedUnion("action", [
   z.object({ ...common, action:z.literal("save"), sourceFingerprint:z.string().regex(/^[a-f0-9]{64}$/), edit:editSchema }).strict(),
   z.object({ ...common, action:z.literal("publish") }).strict(),
+  z.object({ ...common, action:z.literal("save-asr"), fields:asrSchema }).strict(),
   z.object({ ...common, action:z.literal("restore"), historyId:z.string().uuid() }).strict(),
   z.object({ action:z.enum(["save-idea", "publish-idea", "unpublish-idea"]), id:z.string().regex(/^idea-[a-f0-9-]{36}$/), requestId:common.requestId, revision:common.revision, fields:publicIdeaSchema.optional() }).strict(),
 ]);
@@ -127,7 +133,8 @@ export async function mutateWorkspace(value: unknown, actor: string) {
         const published = db.collection<PublicIdea & { _id:string }>(PUBLIC_IDEAS);
         if (cmd.action === "publish-idea") {
           const old = await published.findOne({ _id:cmd.id }, { session });
-          const publication = { _id:cmd.id, id:cmd.id, ...fields, tradeIds, firstPublishedAt:old?.firstPublishedAt ?? doc.firstPublishedAt ?? now, updatedAt:now };
+          if (!fields.target.trim() || !fields.invalidation.trim()) throw new WorkspaceInput("Add a target/scenario and invalidation before publishing an idea");
+          const publication = { _id:cmd.id, id:cmd.id, ...fields, updates:(fields.updates ?? []).map(update => ({...update,publishedAt:old?.updates?.find(u=>u.id===update.id)?.publishedAt ?? now})), tradeIds, firstPublishedAt:old?.firstPublishedAt ?? doc.firstPublishedAt ?? now, updatedAt:now };
           await published.replaceOne({ _id:cmd.id }, publication, { session, upsert:true });
           if (before?.publishedRevision == null) {
             // First publication explicitly adopts saved legacy memberships. Later
@@ -146,6 +153,17 @@ export async function mutateWorkspace(value: unknown, actor: string) {
       }
       const catalogue = await sources(session), source = catalogue.rows.find(r => r.id === cmd.id);
       if (!source) throw new WorkspaceInput("Trade no longer exists in this journal");
+      if (cmd.action === "save-asr") {
+        const reviews = db.collection<AsrDocument>(ASR_REVIEWS), before = await reviews.findOne({_id:cmd.id},{session});
+        if ((before?.revision ?? 0) !== cmd.revision) throw new WorkspaceConflict("ASR changed in another tab. Reload before saving.");
+        const reconciliation = await db.collection<EditDocument>(EDITS).findOne({_id:cmd.id},{session});
+        const annotations = await getTradeAnnotations([cmd.id]);
+        const basis = reconciliation?.edit ?? initialEdit(source,annotations[cmd.id]??EMPTY_ANNOTATION,ideas.assignments[cmd.id]??null);
+        const after:AsrDocument = {_id:cmd.id,revision:cmd.revision+1,fields:cmd.fields,updatedAt:now,basisFingerprint:hash({facts:basis.facts,riskR:basis.riskR})};
+        await reviews.replaceOne({_id:cmd.id},after,{upsert:true,session});
+        await db.collection<HistoryDocument>(HISTORY).insertOne({_id:cmd.requestId,actor,commandHash,tradeId:cmd.id,action:cmd.action,revision:after.revision,at:now,reason:"Private ASR saved",before,after},{session});
+        return;
+      }
       const collection = db.collection<EditDocument>(EDITS), before = await collection.findOne({ _id:cmd.id }, { session });
       if ((before?.revision ?? 0) !== cmd.revision) throw new WorkspaceConflict("Trade changed in another tab. Your draft is retained; reload before saving.");
       if (cmd.action === "save" || cmd.action === "restore") {
@@ -160,6 +178,10 @@ export async function mutateWorkspace(value: unknown, actor: string) {
           if (source.sourceFingerprint !== cmd.sourceFingerprint) throw new WorkspaceConflict("Original evidence changed. Reload and review the new evidence.");
           edit = cmd.edit;
         }
+        // Reconciliation and restoration do not edit assessments; ASR has its own revision stream.
+        const legacyAnnotations = before ? null : await getTradeAnnotations([cmd.id]);
+        const previousReview = before?.edit ?? initialEdit(source,legacyAnnotations?.[cmd.id]??EMPTY_ANNOTATION,ideas.assignments[cmd.id]??null);
+        edit = {...edit,expectedR:previousReview.expectedR,valid:previousReview.valid,asrComments:previousReview.asrComments};
         if (edit.ideaId && !ideas.ideas.some(i => i.id === edit.ideaId)) throw new WorkspaceInput("Selected idea no longer exists");
         if (edit.resultMode === "source" && (edit.netPnl === null || edit.riskBasis === null) && edit.facts.resultR !== source.facts.resultR) throw new WorkspaceInput("Choose manually reconciled R when original calculation inputs are unavailable");
         if (source.duplicateOf && edit.inclusion === "included") throw new WorkspaceInput("This is a recorded duplicate. Edit the canonical trade instead, or keep it excluded.");

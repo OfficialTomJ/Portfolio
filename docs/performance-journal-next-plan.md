@@ -13,10 +13,10 @@ to Chronicles Discord. Breakout CSV imports are the source for new trading data.
 Thomas must be able to reconcile new and historical trades himself from one
 private admin page, regardless of their original source.
 
-Reuse the combined journal preview's visual direction: compact heading, dominant
-result, large chart, restrained controls, an immediate Discord CTA, and supporting
-detail below. This is an R-based trading journal; the combined capital model and
-Spot functionality are parked. Keep existing public journal and trade URLs.
+Public layout refinement, 31 October: retain the original journal layout, visible
+statistics and curve, with the calendar beside the trade record. Integrate public
+ideas into that record using **By idea** and **All trades** views. The combined
+capital model and Spot functionality remain parked. Keep existing journal URLs.
 
 | Work | Decision |
 | --- | --- |
@@ -58,49 +58,36 @@ The release succeeds when:
 
 ### Opening screen
 
-Use the current dark/orange brand and the combined preview's composition:
+Use the original dark/orange journal layout: full heading, net R, period and trade
+type controls, visible win rate/expectancy/drawdown/profit factor, and cumulative R
+chart. Default to 30 days. Keep the original Discord/Substack invitation below
+results, then show the calendar beside the record on desktop and above it on mobile.
 
-1. Compact **Performance Journal** heading and short source/coverage line.
-2. A dominant **Net result: +X.XX R** for the selected period, including negative
-   and zero states with equally clear treatment.
-3. Supporting closed-trade count, win rate and maximum drawdown. Keep the main
-   result visually dominant; put remaining statistics in expandable detail.
-4. A full-width cumulative R chart with useful tooltips, zero baseline and concise
-   period controls: YTD, 30D, 90D and All; custom dates/year in More.
-5. A chart-footer CTA: **Follow the ideas behind the results — Join Discord**.
+The number, curve, counts and statistics use the same public dataset and filters.
+A selected calendar day narrows the record; the headline remains the period total.
+Retain updated dates, R explanation and simulated/prop-environment disclosure.
 
-Default to 30-day history. The number, curve, counts and supporting statistics must use the
-same published dataset and period. Label it as a published closed-trade record;
-imports, unresolved records and open positions do not imply complete account PnL.
-Show last publication/update and actual covered dates without presenting an old
-export as fresh trading coverage. Retain simulated/prop-environment disclosure.
+### Ideas and trades
 
-At 1280 × 800 and 375 × 812, aim to show the main result, meaningful chart area
-and primary CTA in the opening screen after site navigation. At 320 × 568 allow
-natural scrolling. No horizontal page overflow or inaccessible clipped controls.
+- Default to **By idea** when public ideas exist, otherwise **All trades**.
+- Collapsed ideas show title, owner-supplied status, idea date, a two-line thesis
+  preview (at most 170 characters), and closed-trade count/net R for the selection.
+- Expansion shows a short thesis preview (at most 360 characters/four lines), first
+  publication date, and linked closed trades. The dedicated idea page carries the
+  full thesis, target/scenario, invalidation and optional analysis article.
+- Limit the initial set to six ideas with an explicit show-more control.
+- Keep trades without a published idea in **Other closed trades**. Every matching
+  public trade remains accessible exactly once in the grouped record.
+- **All trades** preserves the original newest-first list, with links to approved
+  ideas where present. Period, type and calendar-day filters apply to both views;
+  switching filters preserves the reader's selected view.
+- An idea without any public closed trades can appear without implying open or
+  unpublished positions. A day selection shows only ideas with matching closes.
+- Long-form idea results remain labelled all time on the dedicated idea page;
+  the grouped journal results are explicitly the selected period/day and filters.
 
-The CTA links directly to the confirmed Chronicles invite. Centralise that
-destination: the current journal and invitation pilot contain different invite
-URLs, so verify the intended live destination before staging handoff. Reuse the
-direct-link approach; no email popup or signup gate is needed for this journal
-release. The wider Discord entry/product signup work remains deferred.
-
-### Below the chart
-
-- **Ideas behind the trades:** a small initial set of published idea summaries
-  with title, thesis excerpt, status, publication date, linked closed-trade count
-  and net R from those published trades. An idea without results says so.
-- **Trade history:** newest closes first, labelled R result, asset, direction,
-  dates, trade type and an optional linked idea. Search and Day/Swing filters
-  remain available without dominating the opening screen.
-- **Statistics and calendar:** expand for the existing detailed measures/calendar.
-- **About this record:** concise R explanation, coverage and environment disclosure.
-- A final Discord invitation; Substack is a secondary contextual link.
-
-Selecting a calendar day or trade filter must state what has been filtered.
-Idea cards show their all-time published result with that label; period-specific
-results, if offered, must be explicitly labelled rather than silently changing
-the meaning of an idea's outcome.
+The calendar remains visible without expansion. At narrow sizes use natural page
+scrolling, wrapped controls and bounded public idea excerpts. No horizontal overflow.
 
 ### Public ideas
 
@@ -129,9 +116,40 @@ unpublished trade counts, private results, assignments or pending positions.
 Unpublishing an idea removes its narrative, not its trades' published economics.
 An idea is a grouping of trades, never an additional performance contribution.
 
+### Refinement for rough idea capture
+
+Private ideas remain quick working notes. Do not auto-publish or rewrite them.
+Public drafts require enough thesis, target/scenario and invalidation text for a
+reader; numeric levels and dated updates remain optional. Support conditions such
+as moving-average failures or candle closes in text rather than forcing a fixed
+price. A reference line is not an automatic outcome detector.
+
+Show private, draft, published, and published-with-draft-changes states explicitly,
+with filters and current public/draft revision numbers. Saving a draft leaves the
+published version visible. Publishing and withdrawing an idea remain deliberate
+separate actions; neither changes its published trade economics.
+
+The idea page shows one market chart at a time, selected by the reader. Never
+reuse another market's numeric levels. Plot optional manually supplied target and
+invalidation from their stated date until the next update, group dense trade
+markers by candle, and allow trades/levels/thesis markers to be toggled. Selecting
+one trade isolates its entry and exit. Show the full trade record alongside the
+chart so missing reference data never removes the execution evidence.
+
+Show stated analysis/update dates separately from actual first publication. Flag
+retrospective dates and mixed-market ideas in private preparation. Do not convert
+shorthand, dynamic indicators or conflicting levels into invented precise rules.
+Keep long content behind short journal summaries and full idea details. Bound
+long chart windows and paginated lists; missing/out-of-window candles must never
+pin an execution to the nearest chart edge.
+
+ASR saves use a dedicated private collection and do not dirty publication drafts.
+If facts or intended risk change after review, retain the assessment but flag it
+for reconfirmation and exclude it from completed-ASR comparison until reviewed.
+
 ## One private workspace
 
-Keep `/performance/review` as the single management entry point. Use in-page views
+Use `/admin` for import, consolidation/reconciliation and publication. Keep `/performance/review` as a compatibility redirect. Creator analytics remain available at `/admin/overview`. Use in-page views
 for **Trades**, **Ideas**, **Imports** and **Publication & history**. Preserve
 existing deep links and full trade review for optional detailed charts; all routine
 editing must be possible without leaving this workspace.
@@ -139,7 +157,7 @@ editing must be possible without leaving this workspace.
 The workspace shows private totals and clear counts for needs reconciliation,
 ready for review/publication and unpublished changes. Default the trade list to
 newest first; search, status, asset, idea and date filters help find older records.
-Retain ASR and its comparison as optional private tools.
+Move Advanced Self Review to `/admin/asr`. Its assessments, comments, coverage and actual/expected comparison remain private, with separate revisions and saves. Reconciliation editors contain no ASR fields.
 
 ### Import
 
@@ -172,7 +190,7 @@ edit an existing trade. It contains the following understandable groups:
 | Result | Actual realised net R; private source monetary details and calculation where available |
 | Risk and execution | Intended Risk (R), optional stop, quantity, fees and other supported private execution details |
 | Idea and classification | Existing/new idea, Day/Swing, private strategies |
-| Review | Expected R, validity, ASR and private notes |
+| Private reconciliation notes | Notes explaining corrections; ASR lives separately at `/admin/asr` |
 | Public presentation | Approved description and public-preview controls |
 | Reconciliation | Include/hold/exclude decision and a short reason for correcting source facts |
 

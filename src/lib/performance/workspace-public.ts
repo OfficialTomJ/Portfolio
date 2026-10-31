@@ -19,7 +19,10 @@ export function applyPublishedEdits(trades: PerformanceTrade[], edits: Map<strin
 export async function getPublicIdeas(): Promise<PublicIdea[]> {
   const docs = await getDb().collection<PublicIdea & { _id: string }>(PUBLIC_IDEAS).find({}).sort({ updatedAt: -1 }).toArray();
   return docs.map(d => ({ id: d.id, title: d.title, thesis: d.thesis, target: d.target, invalidation: d.invalidation,
-    status: d.status, ideaAt: d.ideaAt, articleUrl: d.articleUrl, firstPublishedAt: d.firstPublishedAt, updatedAt: d.updatedAt, tradeIds: d.tradeIds }));
+    status: d.status, ideaAt: d.ideaAt, articleUrl: d.articleUrl, firstPublishedAt: d.firstPublishedAt, updatedAt: d.updatedAt, tradeIds: d.tradeIds,
+    ...(d.chart ? { chart: { symbol:d.chart.symbol, targetPrice:d.chart.targetPrice, invalidationPrice:d.chart.invalidationPrice } } : {}),
+    updates: (d.updates ?? []).map(u => ({ id:u.id, at:u.at, title:u.title, thesis:u.thesis, target:u.target, invalidation:u.invalidation, publishedAt:u.publishedAt,
+      ...(u.chart===null ? {chart:null} : u.chart ? { chart:{symbol:u.chart.symbol,targetPrice:u.chart.targetPrice,invalidationPrice:u.chart.invalidationPrice} } : {}) })) }));
 }
 export async function publicIdeaTrades(idea: PublicIdea, trades: PerformanceTrade[]) {
   return (await getPublicIdeaViews(trades)).find(i=>i.id===idea.id)?.trades??[];

@@ -1,8 +1,4 @@
 "use client";
-import { displayPerformanceSymbol } from "@/lib/performance/types";
-
-
-import Link from "next/link";
 import { useState } from "react";
 import {
   buildPerformanceView,
@@ -19,7 +15,8 @@ import MultiSelectFilter from "./MultiSelectFilter";
 import AsrComparison from "./AsrComparison";
 import AdminTradeManager from "./AdminTradeManager";
 import { track } from "@/lib/track";
-import AdminPublishButton from "./AdminPublishButton";
+import PublicJournalRecord from "./PublicJournalRecord";
+import type { PublicIdeaView } from "@/lib/performance/public-record";
 import JournalUpdatesPrompt from "./JournalUpdatesPrompt";
 import PerformanceCalendar from "./PerformanceCalendar";
 import PerformanceEquityChart from "./PerformanceEquityChart";
@@ -38,13 +35,6 @@ const CALENDAR_RANGES: { value: PerformanceRange; label: string }[] = [
 ];
 
 type PeriodSelection = PerformanceRange | `MONTH:${string}`;
-
-const dateFormatter = new Intl.DateTimeFormat("en-AU", {
-  timeZone: "Australia/Sydney",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-});
 
 const shortDateFormatter = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney",
@@ -96,6 +86,7 @@ export default function PerformanceDashboard({
   annotations = {},
   activePositions = [],
   tagCatalogue,
+  ideas = [],
 }: {
   dataset: PerformanceDataset;
   reviewMode?: boolean;
@@ -103,16 +94,14 @@ export default function PerformanceDashboard({
   annotations?: Record<string, TradeAnnotation>;
   activePositions?: AdminActivePosition[];
   tagCatalogue?: TradeTag[];
+  ideas?: PublicIdeaView[];
 }) {
-  const pendingById = new Map(pendingReviews.map((review) => [review.id, review.fingerprint]));
   const [period, setPeriod] = useState<PeriodSelection>("30D");
   const [typeFilters, setTypeFilters] = useState<TradeTypeFilter[]>([]);
   const [strategyFilters, setStrategyFilters] = useState<string[]>([]);
   const tags = reviewMode ? tagCatalogue ?? [] : [];
   const typeOptions = [{ id: "DAY", name: "DAY" }, { id: "SWING", name: "SWING" }, ...(reviewMode ? [{ id: "UNCLASSIFIED", name: "Unclassified" }] : [])];
   const filterChips = [...typeFilters.map(id => ({ id, name: id === "UNCLASSIFIED" ? "Unclassified" : id, type: true })), ...(reviewMode ? strategyFilters.map(id => ({ id, name: tags.find(tag => tag.id === id)?.name ?? "Strategy", type: false })) : [])];
-  const [publicationNotice, setPublicationNotice] = useState("");
-  const [publishingTradeId, setPublishingTradeId] = useState<string | null>(null);
   const asOfKey = sydneyDateKey(dataset.asOf);
   const inceptionKey = sydneyDateKey(dataset.inceptionAt);
   const monthKeys = getCalendarMonthKeys(dataset);
@@ -249,7 +238,7 @@ export default function PerformanceDashboard({
 
         {view.isPartial && (
           <div className="border-b border-[#ff6719]/10 bg-[#ff6719]/[0.045] px-4 py-3 text-xs text-[#ffb38d]/80 sm:px-5">
-            Partial period · journal data begins {dateFormatter.format(new Date(dataset.inceptionAt))}
+            Partial period · journal data begins {shortDateFormatter.format(new Date(dataset.inceptionAt))}
           </div>
         )}
 
@@ -284,83 +273,13 @@ export default function PerformanceDashboard({
           onSelectDate={selectDate}
         />
 
-        <section className="flex flex-col overflow-hidden rounded-2xl border border-white/[0.09] bg-[#07090d] md:max-h-[650px] md:min-h-[520px]">
-          <div className="flex flex-col items-start gap-2 border-b border-white/[0.08] px-4 py-5 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:px-6">
-            <div>
-              <h2 className="text-lg font-medium">Closed trades</h2>
-              {selectedDateLabel && <p className="mt-1 text-xs text-[#ff8b52]">Closed on {selectedDateLabel}</p>}
-            </div>
-            {selectedDate ? (
-              <button type="button" onClick={() => setSelectedDate(null)} className="text-xs text-zinc-400 transition-colors hover:text-white">Clear day</button>
-            ) : (
-              <p className="text-xs text-zinc-500">Newest first</p>
-            )}
-          </div>
-          {reviewMode && publicationNotice && (
-            <p role="status" className="border-b border-white/[0.08] px-4 py-3 text-xs leading-5 text-[#ffb38d] sm:px-6">
-              {publicationNotice}
-            </p>
-          )}
-          {visibleTrades.length === 0 ? (
-            <div className="grid flex-1 place-items-center px-5 py-16 text-center">
-              <div>
-                <p className="text-zinc-300">
-                  {dataset.trades.length === 0
-                    ? "No connected-account trades have closed and qualified for publication yet."
-                    : `No closed trades ${selectedDateLabel ? `on ${selectedDateLabel}` : "in this period"}.`}
-                </p>
-                <p className="mt-2 text-sm text-zinc-600">
-                  {dataset.trades.length === 0
-                    ? "Open positions remain private and never appear here."
-                    : "Choose another date or period."}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
-              {visibleTrades.map((item) => {
-                const fingerprint = reviewMode ? pendingById.get(item.id) : undefined;
-                return (
-                  <div key={item.id} className="group flex items-stretch border-b border-white/[0.07] transition-colors last:border-0 hover:bg-white/[0.025]">
-                    <Link
-                      href={reviewMode ? `/performance/review/trades/${item.id}` : `/performance/trades/${item.id}`}
-                      onClick={reviewMode ? undefined : () => track("performance_trade_open", { direction: item.direction.toLowerCase(), period })}
-                      className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 focus-visible:outline focus-visible:outline-[#ff6719] sm:px-6"
-                    >
-                      <div className="min-w-0">
-                        <p className="break-words font-medium leading-5 text-zinc-100">{displayPerformanceSymbol(item)}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] ${item.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
-                            {item.direction.toUpperCase()} {item.direction === "Long" ? "↑" : "↓"}
-                          </span>
-                          <span className="text-xs text-zinc-500">{dateFormatter.format(new Date(item.closedAt))}</span>
-                          {fingerprint && (
-                            <span className="rounded border border-[#ff6719]/30 bg-[#ff6719]/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-[#ffad83]">
-                              Pending review
-                            </span>
-                          )}
-                        </div>
-                        {item.tradeType && <span className="mt-2 inline-block rounded border border-white/10 px-2 py-1 text-xs text-zinc-400">{item.tradeType}</span>}
-                      </div>
-                      <span className={`shrink-0 text-right text-sm font-semibold tabular-nums ${item.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-300"}`}>
-                        {signedR(item.resultR)}
-                      </span>
-                    </Link>
-                    {fingerprint && (
-                      <AdminPublishButton
-                        trade={item}
-                        fingerprint={fingerprint}
-                        onMessage={setPublicationNotice}
-                        anotherPublicationInProgress={publishingTradeId !== null && publishingTradeId !== item.id}
-                        onPublicationStateChange={setPublishingTradeId}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        <PublicJournalRecord
+          trades={visibleTrades}
+          ideas={ideas}
+          period={period}
+          selectedDateLabel={selectedDateLabel}
+          onClearDay={() => setSelectedDate(null)}
+        />
       </div>}
     </div>
   );

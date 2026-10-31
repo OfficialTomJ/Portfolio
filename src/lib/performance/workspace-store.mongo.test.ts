@@ -6,7 +6,7 @@ test("historical corrections, publication, source evidence, private ideas and tr
   assert.ok(process.env.MONGODB_URI?.startsWith("mongodb://127.0.0.1:"),"Only use a disposable localhost MongoDB");
   process.env.MONGODB_DB=`journal_workspace_test_${randomUUID().replaceAll("-","")}`;
   const {getDb,getMongoClient}=await import("../mongodb");
-  const {getWorkspace,mutateWorkspace,HISTORY,EDITS}=await import("./workspace-store");
+  const {getWorkspace,mutateWorkspace,HISTORY,EDITS,ASR_REVIEWS}=await import("./workspace-store");
   const {getLivePerformanceDataset}=await import("./data");
   const {getPublicIdeaViews,PUBLIC_EDITS}=await import("./workspace-public");
   const {BREAKOUT_HEADERS,BREAKOUT_ACCOUNT_ID}=await import("./breakout");
@@ -39,13 +39,27 @@ test("historical corrections, publication, source evidence, private ideas and tr
     const history=(await db.collection(HISTORY).find({tradeId:id,action:"save"}).sort({at:1}).toArray())[0];
     await cmd({action:"restore",id,revision:2,historyId:history._id});assert.equal((await published()).length,0);
     await cmd({action:"publish",id,revision:3});assert.equal((await published())[0].resultR,2.25);
+    const beforeAsr=(await getWorkspace()).rows.find(r=>r.id===id)!;
+    assert.equal(beforeAsr.dirty,false);
+    const editsBeforeAsr=await db.collection(EDITS).countDocuments(),publicBeforeAsr=JSON.stringify(await published());
+    const asrRequest={action:"save-asr",id,revision:0,requestId:randomUUID(),fields:{expectedR:4.5,valid:true,asrComments:"ASR PRIVATE SENTINEL"}};
+    await mutateWorkspace(asrRequest,"test-owner");await mutateWorkspace(asrRequest,"test-owner");
+    const afterAsr=(await getWorkspace()).rows.find(r=>r.id===id)!;
+    assert.equal(afterAsr.asrRevision,1);assert.equal(afterAsr.revision,beforeAsr.revision);assert.equal(afterAsr.dirty,false);
+    assert.equal(afterAsr.edit.expectedR,4.5);assert.equal(afterAsr.edit.asrComments,"ASR PRIVATE SENTINEL");
+    assert.equal(await db.collection(EDITS).countDocuments(),editsBeforeAsr);assert.equal(await db.collection(ASR_REVIEWS).countDocuments(),1);
+    assert.equal(JSON.stringify(await published()),publicBeforeAsr,"ASR altered public results");
+    await assert.rejects(cmd({...asrRequest,requestId:randomUUID()}),/ASR changed/);
+    await assert.rejects(cmd({action:"save-asr",id,revision:1,fields:{...asrRequest.fields,facts:original}}),/Unrecognized key/);
     const context=await getIdeasContext();assert.ok(context);
     const groups=await context.repository.mutate({action:"create",revision:0,fields:{name:"Private working idea",thesis:"PRIVATE THESIS",target:"",invalidation:"",notes:"SECRET NOTES"},tradeIds:[id]},new Set([id]),"test-owner");
-    const ideaId=groups.ideas[0].id,fields={title:"Public idea",thesis:"Approved public thesis",target:"",invalidation:"",status:"completed",ideaAt:"2025-01-01T00:00:00Z",articleUrl:""};
+    const ideaId=groups.ideas[0].id,fields={title:"Public idea",thesis:"Approved public thesis",target:"Next resistance",invalidation:"Daily close below the range",status:"completed",ideaAt:"2025-01-01T00:00:00Z",articleUrl:""};
     assert.equal((await getPublicIdeaViews(await published())).length,0);
     await cmd({action:"save-idea",id:ideaId,revision:0,fields});assert.equal((await getPublicIdeaViews(await published())).length,0);
     await cmd({action:"publish-idea",id:ideaId,revision:1});let views=await getPublicIdeaViews(await published());assert.equal(views[0].title,"Public idea");assert.ok(!JSON.stringify(views).includes("SECRET NOTES"));
     const firstPublished=views[0].firstPublishedAt;
+    assert.ok(!JSON.stringify(views).includes("ASR PRIVATE SENTINEL"));
+
     await cmd({action:"unpublish-idea",id:ideaId,revision:2});assert.equal((await published()).length,1);
     await cmd({action:"publish-idea",id:ideaId,revision:3});views=await getPublicIdeaViews(await published());assert.equal(views[0].firstPublishedAt,firstPublished);
     w=await getWorkspace();row=w.rows.find(r=>r.id===id)!;
@@ -55,6 +69,21 @@ test("historical corrections, publication, source evidence, private ideas and tr
     await cmd({action:"save-idea",id:ideaId,revision:4,fields:{...fields,thesis:"Updated approved thesis"}});
     await cmd({action:"publish-idea",id:ideaId,revision:5});
     assert.equal((await getPublicIdeaViews(await published()))[0].trades.length,1,"narrative update moved a published assignment");
+    const updateId=randomUUID(),datedFields={...fields,updates:[{id:updateId,at:"2025-01-03T00:00:00Z",title:"Thesis update",thesis:"New public context",target:"Higher range",invalidation:"Daily close below support",chart:{symbol:"BTCUSDT",targetPrice:120,invalidationPrice:95}}]};
+    await cmd({action:"save-idea",id:ideaId,revision:6,fields:datedFields});
+    assert.equal((await getWorkspace()).ideaDrafts.find(d=>d.id===ideaId)!.published,true);
+    assert.equal((await getPublicIdeaViews(await published()))[0].updates?.length,0,"draft update leaked publicly");
+    await cmd({action:"publish-idea",id:ideaId,revision:7});
+    const updatePublication=(await getPublicIdeaViews(await published()))[0].updates![0].publishedAt;
+    assert.ok(Date.parse(updatePublication)>Date.parse(datedFields.updates[0].at),"publication was backdated");
+    await cmd({action:"save-idea",id:ideaId,revision:8,fields:{...datedFields,title:"Refined public title"}});
+    await cmd({action:"publish-idea",id:ideaId,revision:9});
+    assert.equal((await getPublicIdeaViews(await published()))[0].updates![0].publishedAt,updatePublication);
+    await cmd({action:"save-idea",id:ideaId,revision:10,fields:{...datedFields,updates:[{...datedFields.updates[0],chart:null}]}});
+    await cmd({action:"publish-idea",id:ideaId,revision:11});
+    assert.equal((await getPublicIdeaViews(await published()))[0].updates![0].chart,null,"cleared numeric levels did not survive public projection");
+
+
     const cycleId="synthetic-held-legacy-cycle",heldLegacyId=publicTradeIdForCycle(cycleId);
     await db.collection("performance_private_position_cycles").insertOne({_id:cycleId,environment:"demo",sourceAccountId:"test-account",symbol:"SOLUSDT",direction:"Short",openedAt:new Date("2025-01-05"),closedAt:new Date("2025-01-06"),lastSeenAt:new Date("2025-01-06"),entryPrice:100,quantity:1,status:"unresolved",publicationHold:true,riskAmount:1000} as never);
     w=await getWorkspace();const oldHeld=w.rows.find(r=>r.id===heldLegacyId)!;assert.equal(oldHeld.edit.facts.resultR,null);
@@ -90,5 +119,15 @@ test("historical corrections, publication, source evidence, private ideas and tr
     const same=(await getWorkspace()).rows.find(r=>r.id===id)!;
     const race=await Promise.allSettled([cmd({action:"save",id,revision:same.revision,sourceFingerprint:same.sourceFingerprint,edit:{...same.edit,reason:"Concurrent A"}}),cmd({action:"save",id,revision:same.revision,sourceFingerprint:same.sourceFingerprint,edit:{...same.edit,reason:"Concurrent B"}})]);
     assert.equal(race.filter(r=>r.status==="fulfilled").length,1);assert.equal(await db.collection(EDITS).countDocuments(),savedCount);
+    const beforeFactChange=(await getWorkspace()).rows.find(r=>r.id===id)!;
+    await cmd({action:"save",id,revision:beforeFactChange.revision,sourceFingerprint:beforeFactChange.sourceFingerprint,edit:{...beforeFactChange.edit,reason:"Later fact reconciliation",facts:{...beforeFactChange.edit.facts,resultR:2.35}}});
+    const staleReview=(await getWorkspace()).rows.find(r=>r.id===id)!;
+    assert.equal(staleReview.asrStale,true);assert.equal(staleReview.edit.expectedR,4.5);
+    const publicBeforeRefresh=JSON.stringify(await published());
+    await cmd({action:"save-asr",id,revision:1,fields:asrRequest.fields});
+    const refreshedReview=(await getWorkspace()).rows.find(r=>r.id===id)!;
+    assert.equal(refreshedReview.asrStale,false);assert.equal(refreshedReview.revision,staleReview.revision);assert.equal(refreshedReview.dirty,staleReview.dirty);
+    assert.equal(JSON.stringify(await published()),publicBeforeRefresh);
+
   } finally {await db.dropDatabase();await client.close();}
 });

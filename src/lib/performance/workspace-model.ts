@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { PerformanceTrade, TradeTag } from "./types";
 import type { TradeAnnotation } from "./annotations-model";
 import type { IdeaGroups } from "./ideas-model";
+import { ideaChartSchema, ideaUpdateSchema, type IdeaChart, type IdeaUpdate, type PublishedIdeaUpdate } from "./idea-timeline-model";
 
 const nullablePositive = z.number().finite().positive().nullable();
 const instant = z.string().datetime({ offset: true }).refine(v => Number.isFinite(Date.parse(v)) && Date.parse(v) <= Date.now()+300000, "Enter a valid, non-future time with a timezone");
@@ -38,14 +39,22 @@ export interface WorkspaceSource {
   privateExecution: { quantity: number | null; fees: number | null; netPnl: number | null; riskBasis: number | null; stopPrice: number | null };
   evidence: unknown;
 }
-export interface WorkspaceRow extends WorkspaceSource { revision: number; edit: TradeEdit; published: PerformanceTrade | null; publishedInclusion: string | null; publishedRevision: number | null; publishedIdeaId:string|null; sourceChanged:boolean; dirty: boolean }
-export interface PublicIdeaFields { title: string; thesis: string; target: string; invalidation: string; status: "active" | "completed" | "invalidated"; ideaAt: string; articleUrl: string }
+export interface WorkspaceRow extends WorkspaceSource { revision: number; asrRevision?: number; asrStale?: boolean; edit: TradeEdit; published: PerformanceTrade | null; publishedInclusion: string | null; publishedRevision: number | null; publishedIdeaId:string|null; sourceChanged:boolean; dirty: boolean }
+export interface PublicIdeaFields { title: string; thesis: string; target: string; invalidation: string; status: "active" | "completed" | "invalidated"; ideaAt: string; articleUrl: string; chart?: IdeaChart; updates?: IdeaUpdate[] }
 export const publicIdeaSchema = z.object({ title: z.string().trim().min(1).max(120), thesis: z.string().trim().min(1).max(5000), target: z.string().trim().max(1000),
   invalidation: z.string().trim().max(1000), status: z.enum(["active", "completed", "invalidated"]), ideaAt: instant,
   articleUrl: z.union([z.literal(""), z.string().url().max(1000).refine(v => new URL(v).protocol === "https:", "Use an HTTPS article URL")]),
-}).strict();
+  chart: ideaChartSchema.optional(), updates: z.array(ideaUpdateSchema).max(24).optional(),
+}).strict().superRefine((v,ctx) => {
+  const seen = new Set<string>();
+  for (const update of v.updates ?? []) {
+    if (seen.has(update.id)) ctx.addIssue({code:"custom",message:"Timeline updates must have unique IDs"});
+    if (Date.parse(update.at) < Date.parse(v.ideaAt)) ctx.addIssue({code:"custom",message:"Timeline updates cannot precede the idea date"});
+    seen.add(update.id);
+  }
+});
 export interface IdeaDraft { id: string; revision: number; fields: PublicIdeaFields; published: boolean; publishedRevision: number | null; firstPublishedAt?:string; tradeIds?:string[] }
-export interface PublicIdea extends PublicIdeaFields { id: string; firstPublishedAt: string; updatedAt: string; tradeIds: string[] }
+export interface PublicIdea extends PublicIdeaFields { id: string; firstPublishedAt: string; updatedAt: string; tradeIds: string[]; updates?: PublishedIdeaUpdate[] }
 export interface WorkspaceHistory { id: string; tradeId: string; action: string; revision: number; at: string; reason: string }
 export interface WorkspaceSnapshot { rows: WorkspaceRow[]; ideas: IdeaGroups; tags:TradeTag[]; ideaDrafts: IdeaDraft[]; history: WorkspaceHistory[]; asOf: string }
 export function initialEdit(source: WorkspaceSource, annotation: TradeAnnotation, ideaId: string | null): TradeEdit {

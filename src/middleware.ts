@@ -25,7 +25,7 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
   const url = req.nextUrl.clone();
   const { pathname } = url;
-  const privateReview = pathname === "/admin" || pathname === "/mentor/admin" || pathname === "/performance/review" ||
+  const privateReview = pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/mentor/admin" || pathname.startsWith("/mentor/admin/") || pathname === "/performance/review" ||
     pathname.startsWith("/performance/review/") ||
     pathname === "/mentor/performance/review" ||
     pathname.startsWith("/mentor/performance/review/");

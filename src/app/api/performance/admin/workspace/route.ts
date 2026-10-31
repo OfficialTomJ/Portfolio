@@ -16,7 +16,7 @@ export async function POST(request:NextRequest) {
     const reader = request.body?.getReader();
     if (!reader) throw new WorkspaceInput("Empty request");
     const chunks:Uint8Array[] = []; let size=0;
-    while (true) { const next=await reader.read(); if(next.done) break; size+=next.value.length; if(size>65000) { await reader.cancel(); return NextResponse.json({error:"Edit is too large"},{status:413,headers}); } chunks.push(next.value); }
+    while (true) { const next=await reader.read(); if(next.done) break; size+=next.value.length; if(size>650000) { await reader.cancel(); return NextResponse.json({error:"Edit is too large"},{status:413,headers}); } chunks.push(next.value); }
     let body:unknown; try { body=JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { throw new WorkspaceInput("Invalid edit"); }
     return NextResponse.json(await mutateWorkspace(body, session.user.id), { headers });
   } catch(e) {

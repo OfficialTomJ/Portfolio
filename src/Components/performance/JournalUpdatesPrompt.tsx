@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { JOURNAL_DISCORD_URL } from "@/lib/performance/community";
 import { useEffect, useRef } from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
 import { track } from "@/lib/track";
@@ -53,7 +54,7 @@ export default function JournalUpdatesPrompt({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <a
-            href="https://discord.gg/8tK967YJ6y"
+            href={JOURNAL_DISCORD_URL}
             target="_blank"
             rel="noreferrer"
             onClick={() => trackClick("discord")}

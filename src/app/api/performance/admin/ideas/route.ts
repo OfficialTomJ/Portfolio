@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
   try { body = JSON.parse(raw); } catch { return json({ error: "Invalid edit" }, 400); }
   const parsed = ideaMutationSchema.safeParse(body);
   if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "Invalid edit" }, 400);
+  // Deletion must also unlink publication/reconciliation in the workspace transaction.
+  if(parsed.data.action === "delete")return json({error:"Delete ideas from the journal workspace."},400);
   try {
     const context = await getIdeasContext();
     if (!context) return json({ error: "No synced account is available." }, 503);

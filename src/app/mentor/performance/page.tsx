@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cache } from "react";
+import { getPublicIdeaViews } from "@/lib/performance/workspace-public";
 import PerformanceDashboard from "@/Components/performance/PerformanceDashboard";
 import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import { getLivePerformanceDataset } from "@/lib/performance/data";
@@ -72,6 +73,7 @@ export const dynamic = "force-dynamic";
 export default async function PerformancePage() {
   const result = await getPerformancePageDataset();
   const dataset = result.dataset;
+  const ideas = dataset ? await getPublicIdeaViews(dataset.trades) : [];
   const tradeLabel = dataset
     ? `${dataset.trades.length} closed trade${dataset.trades.length === 1 ? "" : "s"}`
     : null;
@@ -86,7 +88,7 @@ export default async function PerformancePage() {
           </h1>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
             <p className="break-words text-base leading-6 text-zinc-300 sm:text-lg">
-              Closed strategy trades, measured in R.
+              The results, and the ideas behind them.
             </p>
             <p className="text-xs leading-5 text-zinc-500">
               {dataset && tradeLabel
@@ -99,7 +101,7 @@ export default async function PerformancePage() {
 
       <section className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 sm:pt-6">
         {dataset ? (
-          <PerformanceDashboard dataset={dataset} />
+          <PerformanceDashboard dataset={dataset} ideas={ideas} />
         ) : (
           <PerformanceUnavailable />
         )}
@@ -110,7 +112,7 @@ export default async function PerformancePage() {
           <div>
             <h2 className="text-sm font-medium text-zinc-300">About this record</h2>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-zinc-600 sm:text-sm sm:leading-6">
-              This journal records completed leverage and prop strategy trades. Active positions, signals, strategy rules, position sizing and dollar returns are not shown.
+              This journal records completed leverage and prop strategy trades, measured in R against each trade’s recorded base risk. Published ideas explain the context behind the trades. Open positions, account balances, position sizing and dollar returns remain private.
             </p>
           </div>
           <p className="mt-3 max-w-md text-xs leading-5 text-zinc-600 sm:mt-0 sm:text-right">

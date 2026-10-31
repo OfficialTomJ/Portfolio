@@ -16,6 +16,8 @@ const nextConfig = {
         { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
       ];
       return [
+        { source: "/admin/:path*", headers: privateReviewHeaders },
+        { source: "/mentor/admin/:path*", headers: privateReviewHeaders },
         { source: "/performance/review/:path*", headers: privateReviewHeaders },
         { source: "/mentor/performance/review/:path*", headers: privateReviewHeaders },
       ];

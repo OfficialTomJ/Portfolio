@@ -1,152 +1,19 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import JournalWorkspace from "@/Components/performance/JournalWorkspace";
+import AdminImportControl from "@/Components/performance/AdminImportControl";
+import PerformanceUnavailable from "@/Components/performance/PerformanceUnavailable";
 import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
-import {
-  getOverview,
-  getSignupSeries,
-  getCertificateSeries,
-  getEpisodeFunnel,
-  getEngagementTotals,
-  type DayCount,
-} from "../../../lib/analytics";
-
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Admin, The Blueprint", robots: { index: false, follow: false } };
-
-// Private creator dashboard. Invisible (404) to anyone not in ADMIN_EMAILS.
-export default async function AdminDashboard() {
-  if (!await getPerformanceAdminSession()) notFound();
-
-  const [overview, signups, certs, funnel, engagement] = await Promise.all([
-    getOverview(),
-    getSignupSeries(30),
-    getCertificateSeries(30),
-    getEpisodeFunnel(),
-    getEngagementTotals(),
-  ]);
-
-  const maxStarted = Math.max(1, ...funnel.map((f) => f.started));
-
-  return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 py-10 space-y-10">
-      <header>
-        <p className="text-[var(--bp-accent)] text-sm font-medium uppercase tracking-widest mb-2">
-          Admin
-        </p>
-        <h1 className="text-3xl font-semibold">Creator dashboard</h1>
-        <Link href="/performance/review" className="mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)] transition-colors hover:bg-[var(--bp-accent)]/10">
-          Review Performance Journal
-        </Link>
-      </header>
-
-      {/* Overview cards */}
-      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <Stat label="Members" value={overview.members} />
-        <Stat
-          label="Verified"
-          value={overview.verified}
-          sub={`${pct(overview.verified, overview.members)}% of members`}
-        />
-        <Stat label="New signups (7d)" value={overview.signups7d} />
-        <Stat label="New signups (30d)" value={overview.signups30d} />
-        <Stat label="Completions" value={overview.completions} />
-        <Stat
-          label="Completion rate"
-          value={`${overview.completionRate}%`}
-          sub="of verified members"
-        />
-      </section>
-
-      {/* Daily series */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Series title="Signups (last 30 days)" data={signups} />
-        <Series title="Completions (last 30 days)" data={certs} />
-      </section>
-
-      {/* Episode drop-off */}
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Episode drop-off</h2>
-        <div className="bp-surface rounded-xl overflow-hidden">
-          {funnel.length === 0 && (
-            <p className="p-5 text-[var(--bp-text-dim)]">No episodes yet.</p>
-          )}
-          {funnel.map((row, i) => (
-            <div
-              key={row.slug}
-              className="flex items-center gap-4 px-5 py-3 border-b border-[var(--bp-border)] last:border-0"
-            >
-              <span className="text-sm text-[var(--bp-text-dim)] w-8 shrink-0">
-                {row.episodeNumber || i + 1}
-              </span>
-              <span className="flex-1 min-w-0 truncate text-sm">{row.title}</span>
-              <div className="hidden sm:block w-40 h-2 rounded-full bg-white/10 overflow-hidden shrink-0">
-                <div
-                  className="h-full bg-[var(--bp-accent)]"
-                  style={{ width: `${(row.started / maxStarted) * 100}%` }}
-                />
-              </div>
-              <span className="text-sm w-28 text-right shrink-0 text-[var(--bp-text-dim)]">
-                {row.completed}/{row.started}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-[var(--bp-text-dim)]">
-          completed / started per episode
-        </p>
-      </section>
-
-      {/* Engagement */}
-      <section className="grid grid-cols-3 gap-4">
-        <Stat label="Comments" value={engagement.comments} />
-        <Stat label="Episode likes" value={engagement.likes} />
-        <Stat label="Resource downloads" value={engagement.resourceDownloads} />
-      </section>
-    </main>
-  );
-}
-
-function pct(n: number, total: number): number {
-  return total > 0 ? Math.round((n / total) * 100) : 0;
-}
-
-function Stat({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: number | string;
-  sub?: string;
-}) {
-  return (
-    <div className="bp-surface rounded-xl p-5">
-      <p className="text-sm text-[var(--bp-text-dim)]">{label}</p>
-      <p className="text-3xl font-semibold mt-1">{value}</p>
-      {sub && <p className="text-xs text-[var(--bp-text-dim)] mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function Series({ title, data }: { title: string; data: DayCount[] }) {
-  const max = Math.max(1, ...data.map((d) => d.count));
-  const total = data.reduce((s, d) => s + d.count, 0);
-  return (
-    <div className="bp-surface rounded-xl p-5">
-      <div className="flex items-baseline justify-between mb-4">
-        <p className="text-sm text-[var(--bp-text-dim)]">{title}</p>
-        <p className="text-sm font-medium">{total} total</p>
-      </div>
-      <div className="flex items-end gap-[2px] h-24">
-        {data.map((d) => (
-          <div
-            key={d.date}
-            title={`${d.date}: ${d.count}`}
-            className="flex-1 bg-[var(--bp-accent)] rounded-sm min-h-[2px]"
-            style={{ height: `${(d.count / max) * 100}%`, opacity: d.count ? 1 : 0.25 }}
-          />
-        ))}
-      </div>
-    </div>
-  );
+import { getWorkspace } from "@/lib/performance/workspace-store";
+import { getDb } from "@/lib/mongodb";
+import { readBreakoutAccount, readImportHistory } from "@/lib/performance/breakout-store";
+export const dynamic="force-dynamic";
+export const metadata:Metadata={title:"Journal workspace | Admin",robots:{index:false,follow:false}};
+export default async function ReviewPage({searchParams}:{searchParams:Promise<{view?:string;trade?:string;idea?:string}>}) {
+  if(!await getPerformanceAdminSession())notFound();
+  const query=await searchParams; const view=query.view;
+  const [workspace,account,imports]=await Promise.all([getWorkspace().catch(()=>null),readBreakoutAccount(getDb()).catch(()=>null),readImportHistory(getDb()).catch(()=>[])]);
+  return <main className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-6 sm:pt-9"><header className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[.18em] text-[#ff8b52]">Private workspace</p><h1 className="mt-2 text-2xl font-medium tracking-tight text-zinc-100 sm:text-3xl">Performance Journal</h1></div><nav aria-label="Private admin pages" className="flex flex-wrap gap-2"><Link href="/admin/asr" className="inline-flex min-h-11 items-center rounded-lg border border-white/10 px-4 text-xs text-zinc-300">Private ASR →</Link><Link href="/admin/overview" className="inline-flex min-h-11 items-center rounded-lg border border-white/10 px-4 text-xs text-zinc-300">Creator overview</Link><Link href="/performance" target="_blank" className="inline-flex min-h-11 items-center rounded-lg border border-white/10 px-4 text-xs text-zinc-300">View public journal ↗</Link></nav></header>
+  {workspace?<JournalWorkspace key={query.trade??query.idea??"workspace"} initialSelected={query.trade??null} initialIdea={query.idea??null} initial={workspace} initialView={query.trade||view==="trades"?"trades":view==="imports"?"imports":view==="history"?"history":"ideas"} imports={<AdminImportControl account={account?{historyFrom:account.historyFrom,historyThrough:account.historyThrough,lastImportedAt:account.lastImportedAt.toISOString(),importRevision:account.importRevision,active:!!account.activatedAt&&(account.activatedFrom??account.historyFrom)===account.historyFrom}:null} imports={imports}/>}/>:<PerformanceUnavailable title="Private workspace is temporarily unavailable."/>}</main>;
 }

@@ -47,17 +47,19 @@ export default function TradeDetailView({
   reviewStatus,
   annotation,
   tagCatalogue = [],
+  exampleIdeaId,
 }: {
   trade: PerformanceTrade;
   market: MarketCandles | null;
   reviewStatus?: "published" | "pending_review";
   annotation?: TradeAnnotation;
   tagCatalogue?: TradeTag[];
+  exampleIdeaId?: string;
 }) {
   const privateReview = !!reviewStatus;
   const pending = reviewStatus === "pending_review";
-  const backHref = privateReview ? "/performance/review" : "/performance";
-  const backLabel = privateReview ? "Private review" : "Performance journal";
+  const backHref = exampleIdeaId ? `/performance/ideas/${exampleIdeaId}` : privateReview ? "/performance/review" : "/performance";
+  const backLabel = exampleIdeaId ? "Trading idea" : privateReview ? "Private review" : "Performance journal";
 
   return (
     <main className="min-h-[calc(100vh-4rem)] pb-24">
@@ -66,16 +68,18 @@ export default function TradeDetailView({
           <FaArrowLeftLong className="text-xs" /> {backLabel}
         </Link>
 
+        {exampleIdeaId&&<aside className="mt-5 rounded-xl border border-amber-300/25 bg-amber-300/5 p-4 text-xs leading-5 text-amber-100/80">Staging sample only · Fictional execution for previewing trade details. Excluded from journal performance; this is not an account trade.</aside>}
+
         <header className="mt-7 flex flex-col gap-5 border-b border-white/[0.08] pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-[#ff6719]/20 bg-[#ff6719]/[0.07] px-2.5 py-1 font-medium uppercase tracking-[0.14em] text-[#ff8b52]">
-                {pending ? "Pending review · admin only" : privateReview ? "Published · admin view" : "Verified result"}
+                {exampleIdeaId ? "Staging sample · fictional" : pending ? "Pending review · admin only" : privateReview ? "Published · admin view" : "Verified result"}
               </span>
               <span className={`rounded-full border px-3 py-1 font-semibold uppercase tracking-[0.14em] ${trade.direction === "Long" ? "border-[#22c55e]/35 bg-[#22c55e]/[0.10] text-[#22c55e]" : "border-[#ef4444]/35 bg-[#ef4444]/[0.10] text-[#ef4444]"}`}>
                 {trade.direction} {trade.direction === "Long" ? "↑" : "↓"}
               </span>
-              <span className="text-zinc-600">{trade.source === "breakout" ? "Closed · Breakout prop trading" : "Closed · Bybit demo history"}</span>
+              <span className="text-zinc-600">{exampleIdeaId ? "Closed · sample execution" : trade.source === "breakout" ? "Closed · Breakout prop trading" : "Closed · Bybit demo history"}</span>
             </div>
             <h1 className="mt-4 break-words text-4xl font-medium leading-tight tracking-[-0.04em] text-white sm:text-5xl">
               {displayPerformanceSymbol(trade)}
@@ -86,7 +90,7 @@ export default function TradeDetailView({
             {trade.tradeType && <span className="mt-3 inline-block rounded border border-white/15 px-2.5 py-1 text-xs text-zinc-300">{trade.tradeType}</span>}
           </div>
           <div className="sm:text-right">
-            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-600">Net result</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-600">{exampleIdeaId?"Sample result":"Net result"}</p>
             <p className={`mt-1 text-4xl font-medium tracking-tight ${trade.resultR >= 0 ? "text-[var(--bp-accent)]" : "text-zinc-200"}`}>
               {signedR(trade.resultR)}
             </p>
@@ -138,7 +142,7 @@ export default function TradeDetailView({
           </div>
         </section>
 
-        {!privateReview && <div className="mt-6"><JournalUpdatesPrompt placement="trade_detail" /></div>}
+        {!privateReview && !exampleIdeaId && <div className="mt-6"><JournalUpdatesPrompt placement="trade_detail" /></div>}
       </div>
     </main>
   );

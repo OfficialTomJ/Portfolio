@@ -6,6 +6,7 @@ import { enrichPublicTrades } from "./public-metadata";
 import { validatePublishedPerformanceTrade } from "./sync-validation";
 import { activeBreakoutHistoryFrom, isLegacyHistory } from "./breakout";
 import { readBreakoutAccount } from "./breakout-store";
+import { publishedEdits, applyPublishedEdits } from "./workspace-public";
 import type { PerformanceDatasetLoadResult, PerformanceTrade, PerformanceTradeLoadResult } from "./types";
 
 const PUBLIC_TRADE_PROJECTION = { _id: 1, id: 1, symbol: 1, direction: 1, openedAt: 1, closedAt: 1,
@@ -22,21 +23,23 @@ export function toPublicTrade(document: PerformanceTrade): PerformanceTrade | nu
 export async function getLivePerformanceDataset(): Promise<PerformanceDatasetLoadResult> {
   try {
     const db = getDb();
-    const [documents, state, excludedCycles, account] = await Promise.all([
+    const [documents, state, excludedCycles, account, edits] = await Promise.all([
       db.collection<PublishedPerformanceTrade>(PERFORMANCE_COLLECTIONS.publishedTrades).find({}, { projection: PUBLIC_TRADE_PROJECTION }).sort({ closedAt: -1 }).toArray(),
       db.collection<{ _id: string; firstSyncAt: Date; lastSuccessAt: Date }>(PERFORMANCE_COLLECTIONS.syncState).findOne({ _id: process.env.BYBIT_ENV ?? "demo" }),
       db.collection<{ _id: string }>(PERFORMANCE_COLLECTIONS.positionCycles).find({ $or: [{ excludedFromJournal: true }, { publicationHold: true }] }, { projection: { _id: 1 } }).toArray(),
       readBreakoutAccount(db),
+      publishedEdits(),
     ]);
     if (!state?.firstSyncAt && !account) return { status: "unavailable", dataset: null };
     const excluded = excludedTradeIds(excludedCycles);
     const sourceFrom = activeBreakoutHistoryFrom(account);
     const activeAccount = sourceFrom ? { historyFrom: sourceFrom } : null;
-    const selected = documents.filter(doc => !excluded.has(doc._id) && (doc.source === "breakout" ? !!sourceFrom && doc.openedAt >= sourceFrom : isLegacyHistory(doc, activeAccount)));
-    const trades = await enrichPublicTrades(selected.map(toPublicTrade).filter((trade): trade is PerformanceTrade => !!trade));
-    const inceptionAt = state?.firstSyncAt ?? new Date(account!.historyFrom);
+    const selected = documents.filter(doc => (!excluded.has(doc._id) || edits.get(doc.id)?.inclusion === "included") && (doc.source === "breakout" ? !!sourceFrom && doc.openedAt >= sourceFrom : isLegacyHistory(doc, activeAccount)));
+    const trades = applyPublishedEdits(await enrichPublicTrades(selected.map(toPublicTrade).filter((trade): trade is PerformanceTrade => !!trade)), edits);
+    const initialDate = state?.firstSyncAt ?? new Date(account!.historyFrom);
+    const inceptionAt = new Date(Math.min(initialDate.getTime(), ...trades.map(t=>Math.min(Date.parse(t.openedAt),Date.parse(t.closedAt)))));
     const asOf = new Date(Math.max(inceptionAt.getTime(), state?.lastSuccessAt?.getTime() ?? 0,
-      account?.lastImportedAt.getTime() ?? 0, account?.activatedAt?.getTime() ?? 0, ...selected.map(doc => doc.updatedAt?.getTime() ?? 0)));
+      account?.lastImportedAt.getTime() ?? 0, account?.activatedAt?.getTime() ?? 0, ...selected.map(doc => doc.updatedAt?.getTime() ?? 0), ...[...edits.values()].map(e => Date.parse(e.updatedAt))));
     return { status: "available", dataset: { id: "live", label: activeAccount ? "Breakout and earlier history" : "Journal history",
       description: "Published closed trades", inceptionAt: inceptionAt.toISOString(), asOf: asOf.toISOString(), trades } };
   } catch {

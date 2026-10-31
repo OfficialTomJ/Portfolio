@@ -14,6 +14,7 @@ import {
   type Time,
   type WhitespaceData,
 } from "lightweight-charts";
+import { executionSide } from "@/lib/performance/idea-chart-markers";
 import { signedR } from "@/lib/performance/metrics";
 import type {
   MarketCandles,
@@ -240,14 +241,14 @@ export default function TradePriceChart({
         position: trade.direction === "Long" ? "belowBar" : "aboveBar",
         color: directionColor,
         shape: trade.direction === "Long" ? "arrowUp" : "arrowDown",
-        text: compact ? "ENTRY" : `${trade.direction.toUpperCase()} ENTRY`,
+        text: compact ? `${executionSide(trade.direction,true).toUpperCase()}` : `${executionSide(trade.direction,true).toUpperCase()} ENTRY`,
       },
       {
         time: exitTime as Time,
         position: trade.direction === "Long" ? "aboveBar" : "belowBar",
-        color: resultColor,
-        shape: "circle",
-        text: `EXIT ${result}`,
+        color: executionSide(trade.direction,false)==="buy"?GREEN:RED,
+        shape: executionSide(trade.direction,false)==="buy"?"arrowUp":"arrowDown",
+        text: `${executionSide(trade.direction,false).toUpperCase()} EXIT ${result}`,
       },
     ];
     markers.sort((a, b) => Number(a.time) - Number(b.time));

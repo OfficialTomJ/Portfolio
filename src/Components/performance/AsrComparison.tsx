@@ -5,9 +5,9 @@ import { signedR } from "@/lib/performance/metrics";
 import type { PerformanceView } from "@/lib/performance/types";
 import PerformanceEquityChart from "./PerformanceEquityChart";
 
-export default function AsrComparison({ view, annotations }: { view: PerformanceView; annotations: Record<string, TradeAnnotation> }) {
+export default function AsrComparison({ view, annotations, initialMode = "actual" }: { view: PerformanceView; annotations: Record<string, TradeAnnotation>; initialMode?: "asr" | "actual" }) {
   const [validity, setValidity] = useState<"all" | "valid" | "invalid">("all");
-  const [mode, setMode] = useState<"asr" | "actual">("actual");
+  const [mode, setMode] = useState<"asr" | "actual">(initialMode);
   const result = useMemo(() => buildAsrComparison(view.trades, annotations, view.startsAt, validity), [view, annotations, validity]);
   return <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#07090d]">
     <header className="flex flex-col gap-4 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -18,7 +18,7 @@ export default function AsrComparison({ view, annotations }: { view: Performance
     {mode === "asr" && <div className="grid grid-cols-3 divide-x divide-white/10 border-b border-white/10">
       {[{ label: "Actual R", value: result.actualR }, { label: "Expected R", value: result.expectedR }, { label: "Management gap", value: result.gap }].map((item) => <div key={item.label} className="min-w-0 p-3 sm:p-5"><p className="text-[10px] uppercase leading-4 tracking-wider text-zinc-500">{item.label}</p><p className="mt-2 break-words text-xl font-medium tabular-nums sm:text-2xl">{result.pairedCount ? signedR(item.value) : "N/A"}</p></div>)}
     </div>}
-    <div className="p-4 sm:p-6">{mode === "actual" ? <PerformanceEquityChart points={view.equity} /> : result.pairedCount ? <PerformanceEquityChart points={result.actual} comparisonPoints={result.expected} /> : <div className="grid h-32 place-items-center text-center"><div><p className="text-sm text-zinc-300">No completed ASRs in this selection.</p><p className="mt-2 text-xs text-zinc-500">Add expected R and validity in Edit trade.</p></div></div>}
+    <div className="p-4 sm:p-6">{mode === "actual" ? <PerformanceEquityChart points={view.equity} /> : result.pairedCount ? <PerformanceEquityChart points={result.actual} comparisonPoints={result.expected} /> : <div className="grid h-32 place-items-center text-center"><div><p className="text-sm text-zinc-300">No completed ASRs in this selection.</p><p className="mt-2 text-xs text-zinc-500">Add expected R and validity in a private ASR review.</p></div></div>}
       <p className="mt-3 text-xs leading-5 text-zinc-500">{mode === "actual" ? `Actual results for all ${view.trades.length} closed trades in this selection, including pending review.` : `Both curves use the same ${result.pairedCount} reviewed trade${result.pairedCount === 1 ? "" : "s"}. Expected R is your manual assessment. Gap = expected minus actual.`}</p>
     </div>
   </section>;

@@ -4,7 +4,7 @@ import type { IdeaGroups, IdeaMutation, TradeIdea } from "./ideas-model";
 
 export class IdeaConflictError extends Error {}
 export class IdeaInputError extends Error {}
-interface IdeaDocument extends TradeIdea { _id: string; scope: string }
+interface IdeaDocument extends TradeIdea { _id: string; scope: string; deletedAt?: string; linkRevision?: number }
 interface AssignmentDocument { _id: string; scope: string; tradeId: string; ideaId: string }
 interface StateDocument { _id: string; revision: number }
 interface HistoryDocument { _id: string; scope: string; actor: string; at: Date; command: IdeaMutation; before: IdeaGroups }
@@ -21,7 +21,7 @@ export class IdeasRepository {
     const options = { session };
     // Mongo sessions do not support parallel operations inside a transaction.
     const state = await this.db.collection<StateDocument>(this.names[2]).findOne({ _id: this.scope }, options);
-    const ideas = await this.db.collection<IdeaDocument>(this.names[0]).find({ scope: this.scope }, options).sort({ createdAt: 1 }).toArray();
+    const ideas = await this.db.collection<IdeaDocument>(this.names[0]).find({ scope: this.scope, deletedAt: { $exists:false } }, options).sort({ createdAt: 1 }).toArray();
     const assignments = await this.db.collection<AssignmentDocument>(this.names[1]).find({ scope: this.scope }, options).toArray();
     return {
       revision: state?.revision ?? 0,
@@ -40,6 +40,14 @@ export class IdeasRepository {
       return await session.withTransaction(() => this.mutateInSession(command, eligibleIds, actor, session),
         { readConcern: { level: "snapshot" }, writeConcern: { w: "majority" } });
     } finally { await session.endSession(); }
+  }
+
+  /** Serialize saves/publication with deletion so stale tabs cannot recreate a link. */
+  async lockIdea(ideaId:string,session:ClientSession):Promise<void> {
+    const result=await this.db.collection<IdeaDocument>(this.names[0]).updateOne(
+      {scope:this.scope,id:ideaId,deletedAt:{$exists:false}},{$inc:{linkRevision:1}},{session},
+    );
+    if(!result.matchedCount)throw new IdeaInputError("Idea no longer exists. Reload the workspace.");
   }
 
   /** Join the trade editor's transaction so assignment and review save together. */
@@ -64,8 +72,8 @@ export class IdeasRepository {
       } else if (command.action === "update") {
         await ideas.updateOne({ scope: this.scope, id: command.ideaId }, { $set: { ...command.fields, updatedAt: now } }, { session });
       } else if (command.action === "delete") {
-        if (Object.values(before.assignments).includes(command.ideaId)) throw new IdeaInputError("Move or unassign this idea's trades before deleting it.");
-        await ideas.deleteOne({ scope: this.scope, id: command.ideaId }, { session });
+        await ideas.updateOne({ scope:this.scope,id:command.ideaId },{$set:{deletedAt:now,updatedAt:now}},{session});
+        await assignments.deleteMany({scope:this.scope,ideaId:command.ideaId},{session});
       }
       if (command.action === "create" || command.action === "assign") {
         const ideaId = command.action === "create" ? newId : command.ideaId;

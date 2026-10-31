@@ -49,7 +49,7 @@ export default function AdminImportControl({ account, imports }: { account: Acco
       const body = await response.json();
       if (!response.ok) { if (response.status === 409) setStale(true); setError(body.error ?? "Import was not confirmed. Preview the file again."); return; }
       setSummary(body.summary); setPreview(null); setSelected([]); setFile(null); if (input.current) input.current.value = "";
-      setMessage("Import complete. Selected clean positions are ready for private review. Selected conflicts stay in Reconciliation. Nothing was published."); router.refresh();
+      setMessage("Import complete. Selected clean positions are ready for private review. Selected conflicts stay in Reconciliation. Nothing was published."); window.dispatchEvent(new Event("journal-import-updated")); router.refresh();
     } catch { setError("Import could not be confirmed. Refresh import history, then retry the same file if needed."); }
     finally { setBusy(false); }
   }
@@ -60,7 +60,7 @@ export default function AdminImportControl({ account, imports }: { account: Acco
       const response = await fetch("/api/performance/admin/imports/activate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision: account.importRevision }) });
       const body = await response.json();
       if (!response.ok) { setError(body.error ?? "Source switch was not confirmed."); return; }
-      setMessage("Breakout is now the result source for this period. Earlier Bybit history is preserved. Publish reviewed Breakout positions individually."); router.refresh();
+      setMessage("Breakout is now the result source for this period. Earlier Bybit history is preserved. Publish reviewed Breakout positions individually."); window.dispatchEvent(new Event("journal-import-updated")); router.refresh();
     } catch { setError("Source switch could not be confirmed. Refresh before retrying."); }
     finally { setBusy(false); }
   }

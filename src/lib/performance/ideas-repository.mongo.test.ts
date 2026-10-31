@@ -27,7 +27,6 @@ test("idea saves are atomic, persistent, scoped, audited and protected from stal
     assert.deepEqual(await a.load(), group);
     assert.deepEqual(await b.load(), { revision: 0, ideas: [], assignments: {} });
     await assert.rejects(() => a.mutate({ action: "assign", revision: 0, ideaId: null, tradeIds: ids }, eligible, "test"), IdeaConflictError);
-    await assert.rejects(() => a.mutate({ action: "delete", revision: 1, ideaId: first }, eligible, "test"), IdeaInputError);
     assert.deepEqual(await a.load(), group);
     await assert.rejects(() => a.mutate({ action: "create", revision: 1, fields: { ...EMPTY_IDEA_FIELDS, name: "Invalid batch" }, tradeIds: [...ids, "trade-33333333333333333333"] }, eligible, "test"), IdeaInputError);
     assert.deepEqual(await a.load(), group);
@@ -64,6 +63,10 @@ test("idea saves are atomic, persistent, scoped, audited and protected from stal
       const joined = await session.withTransaction(() => a.mutateInSession({ action: "assign", revision: 6, ideaId: second, tradeIds: ids }, eligible, "test", session));
       assert.equal(joined.revision, 7);
       assert.deepEqual(joined.assignments, { [ids[0]]: second, [ids[1]]: second });
+      const deleted=await a.mutate({action:"delete",revision:7,ideaId:second},eligible,"test");
+      assert.deepEqual(deleted.ideas,[]);assert.deepEqual(deleted.assignments,{});
+      assert.ok((await db.collection(a.names[0]).findOne({id:second}))?.deletedAt,"deleted idea retained for audit recovery");
+      await assert.rejects(a.mutate({action:"assign",revision:8,ideaId:second,tradeIds:ids},eligible,"test"),IdeaInputError);
     } finally { await session.endSession(); }
 
   } finally {

@@ -1,5 +1,5 @@
 import type { PublicIdea } from "./workspace-model";
-import type { IdeaChart } from "./idea-timeline-model";
+import { ideaChartLevels, type IdeaChart } from "./idea-timeline-model";
 import type { PerformanceTrade, TradeCandle, TradeCandleInterval } from "./types";
 
 export interface IdeaMilestone { id:string; at:string; publishedAt:string; title:string; thesis:string; target:string; invalidation:string; chart?:IdeaChart }
@@ -13,7 +13,11 @@ export function ideaMilestones(idea:PublicIdea):IdeaMilestone[] {
   return result;
 }
 export function ideaMarkets(idea:PublicIdea,trades:PerformanceTrade[]):string[] {
-  return [...new Set([idea.chart?.symbol,...trades.map(t=>t.symbol)].filter((v):v is string=>!!v))];
+  return [...new Set([...ideaChartLevels(idea).map(chart=>chart.symbol),...trades.map(t=>t.symbol)].filter((v):v is string=>!!v))];
+}
+/** Exact symbols only: no other market may contribute markers or a trade range. */
+export function ideaMarketTrades(trades:PerformanceTrade[],symbol:string):PerformanceTrade[] {
+  return trades.filter(trade=>trade.symbol===symbol).sort((a,b)=>Date.parse(a.openedAt)-Date.parse(b.openedAt));
 }
 export function ideaChartWindow(milestones:IdeaMilestone[],trades:PerformanceTrade[],focusAt:string,selectedTrade?:PerformanceTrade,now=Date.now(),requestedInterval?:TradeCandleInterval) {
   const day=86400000;

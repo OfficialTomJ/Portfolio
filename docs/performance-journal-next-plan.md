@@ -15,7 +15,9 @@ private admin page, regardless of their original source.
 
 Public layout refinement, 31 October: retain the original journal layout, visible
 statistics and curve, with the calendar beside the trade record. Integrate public
-ideas into that record using **By idea** and **All trades** views. The combined
+ideas into that record using **By idea** and **All trades** views. By idea contains
+only compact idea links (title and basic status/date/results, arrow CTA); trades
+and unlinked executions belong in All trades. There are no idea dropdowns. The combined
 capital model and Spot functionality remain parked. Keep existing journal URLs.
 
 | Work | Decision |
@@ -118,6 +120,9 @@ can exist before it has a published closed trade. Public responses must not reve
 unpublished trade counts, private results, assignments or pending positions.
 Unpublishing an idea removes its narrative, not its trades' published economics.
 An idea is a grouping of trades, never an additional performance contribution.
+Confirmed deletion withdraws the idea and unlinks all private/public memberships
+atomically. It keeps source trades, corrections, results and ASR intact, with a
+retained idea tombstone and audit record. Stale saves cannot recreate deleted links.
 
 ### Refinement for rough idea capture
 
@@ -125,7 +130,10 @@ Private ideas remain quick working notes. Do not auto-publish or rewrite them.
 Public drafts require enough thesis, target/scenario and invalidation text for a
 reader; numeric chart levels remain optional. Support conditions such
 as moving-average failures or candle closes in text rather than forcing a fixed
-price. A reference line is not an automatic outcome detector.
+price. A reference line is not an automatic outcome detector. The chart editor accepts
+multiple unique USDT markets, each with its own optional target/invalidation prices.
+The market selector includes these tickers and linked trade markets; each chart
+receives only exact-symbol trades and levels. Preserve older single-market ideas.
 
 Show Draft, Published, and Published · unpublished edits states explicitly,
 with filters for drafts and published ideas. Saving a draft leaves the
@@ -171,7 +179,7 @@ for reconfirmation and exclude it from completed-ASR comparison until reviewed.
 ## One private workspace
 
 Use `/admin` for import, consolidation/reconciliation and publication. Keep `/performance/review` as a compatibility redirect. Creator analytics remain available at `/admin/overview`. Use in-page views
-in this order: **Ideas**, **Trades**, **Publication & history**. Import is a
+in this order: **Ideas**, **Trades**. Publication history is hidden from the navigation but retained for auditing. Import is a
 collapsible section inside Trades only. Default to Ideas. Preserve
 existing deep links and full trade review for optional detailed charts; all routine
 editing must be possible without leaving this workspace.

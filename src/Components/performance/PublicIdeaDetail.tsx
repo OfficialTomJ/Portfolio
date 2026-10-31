@@ -2,9 +2,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { PublicIdeaView } from "@/lib/performance/public-record";
-import { ideaChartWindow, ideaMarkets } from "@/lib/performance/idea-timeline";
+import { ideaChartWindow, ideaMarkets, ideaMarketTrades } from "@/lib/performance/idea-timeline";
 import { calculateStats, signedR } from "@/lib/performance/metrics";
 import { displayPerformanceSymbol, type PerformanceTrade, type TradeCandleInterval } from "@/lib/performance/types";
+import { ideaMarketLevels } from "@/lib/performance/idea-timeline-model";
 import IdeaPriceChart from "./IdeaPriceChart";
 import DiscordCTA from "./DiscordCTA";
 const panel="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#09090b]";
@@ -16,7 +17,7 @@ export default function PublicIdeaDetail({idea,exampleTrades=[]}:{idea:PublicIde
   const record=demonstration?exampleTrades:idea.trades;
   const markets=useMemo(()=>ideaMarkets(idea,record),[idea,record]);
   const [symbol,setSymbol]=useState(markets[0]??""),[selectedTrade,setSelectedTrade]=useState(""),[showTrades,setShowTrades]=useState(true),[showLevels,setShowLevels]=useState(true),[limit,setLimit]=useState(10),[interval,setInterval]=useState<TradeCandleInterval>("4h");
-  const trades=useMemo(()=>record.filter(t=>t.symbol===symbol).sort((a,b)=>Date.parse(a.openedAt)-Date.parse(b.openedAt)),[record,symbol]);
+  const trades=useMemo(()=>ideaMarketTrades(record,symbol),[record,symbol]);
   const current=useMemo(()=>[{id:"current",at:idea.ideaAt,publishedAt:idea.firstPublishedAt,title:idea.title,thesis:idea.thesis,target:idea.target,invalidation:idea.invalidation,chart:idea.chart}],[idea]);
   const [chartNow]=useState(()=>Date.now());
   const selected=trades.find(t=>t.id===selectedTrade);
@@ -31,7 +32,7 @@ export default function PublicIdeaDetail({idea,exampleTrades=[]}:{idea:PublicIde
       {[["Target / scenario",idea.target],["Invalidation",idea.invalidation]].map(([label,text])=><div key={label}><h2 className="text-sm font-medium text-zinc-200">{label}</h2><p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-6 text-zinc-400">{text||"Not supplied."}</p></div>)}
     </section>
     {symbol&&<section className={panel} aria-label="Idea chart and controls"><header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-b border-white/10 px-4 py-3"><div className="flex flex-wrap items-center gap-3"><h2 className="text-sm font-medium">Chart</h2><label className="text-xs text-zinc-500">Market<select aria-label="Idea chart market" className="ml-2 min-h-11 max-w-full rounded-lg border border-white/15 bg-black px-3 text-xs text-zinc-300" value={symbol} onChange={e=>{setSymbol(e.target.value);setSelectedTrade("");setLimit(10);}}>{markets.map(m=><option key={m}>{m}</option>)}</select></label><nav aria-label="Idea chart timeframe" className="flex flex-wrap gap-1">{([["1h","1h"],["4h","4h"],["1d","Daily"]] as const).map(([value,label])=><button key={value} type="button" aria-pressed={interval===value} onClick={()=>setInterval(value)} className={`${button} ${interval===value?"border-[#ff6719]/40 bg-[#ff6719]/10 !text-[#ffad83]":""}`}>{label}</button>)}</nav></div><div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-400"><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={showTrades} onChange={e=>setShowTrades(e.target.checked)}/>Trades</label><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={showLevels} onChange={e=>setShowLevels(e.target.checked)}/>Target / invalidation</label></div>{selected&&<button type="button" className={button} onClick={()=>setSelectedTrade("")}>Show all trades</button>}</header>
-      <IdeaPriceChart key={`${symbol}:${window.start}:${window.end}:${window.interval}`} symbol={symbol} {...window} levels={idea.chart} trades={trades} selectedTrade={selectedTrade} showTrades={showTrades} showLevels={showLevels}/>
+      <IdeaPriceChart key={`${symbol}:${window.start}:${window.end}:${window.interval}`} symbol={symbol} {...window} levels={ideaMarketLevels(idea,symbol)} trades={trades} selectedTrade={selectedTrade} showTrades={showTrades} showLevels={showLevels}/>
       {window.clipped&&<p className="border-t border-white/10 px-4 py-2 text-[11px] leading-5 text-zinc-500">Showing a bounded date range. Select a trade below to focus its entry and exit.</p>}
     </section>}
     <section className={panel} aria-label="Published trade attempts"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-4"><div><h2 className="text-sm font-medium">Trades{symbol?` · ${symbol}`:""}</h2><p className="mt-1 text-[11px] text-zinc-500">{trades.length} {demonstration?"sample":"closed"} trade{trades.length===1?"":"s"} · earliest entry first</p></div><p className="text-xs text-zinc-500">{demonstration?"Sample results":"All markets"} · {stats.tradeCount} closed · <span className={`text-base tabular-nums ${stats.totalR<0?"text-rose-300":"text-[#ffad83]"}`}>{stats.tradeCount?signedR(stats.totalR):"No results yet"}</span></p></header>

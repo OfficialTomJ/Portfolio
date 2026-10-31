@@ -94,6 +94,34 @@ test("historical corrections, publication, source evidence, private ideas and tr
     assert.equal((await getPublicIdeaViews(await published()))[0].updates![0].chart,null,"cleared numeric levels did not survive public projection");
 
 
+    const multiFields={...fields,charts:[{symbol:"BTCUSDT",targetPrice:120,invalidationPrice:95},{symbol:"SOLUSDT",targetPrice:180,invalidationPrice:130}]};
+    await cmd({action:"save-idea",id:ideaId,revision:12,fields:multiFields});
+    assert.equal((await getPublicIdeaViews(await published()))[0].charts,undefined,"unpublished market edits leaked");
+    await cmd({action:"publish-idea",id:ideaId,revision:13});
+    assert.deepEqual((await getPublicIdeaViews(await published()))[0].charts,multiFields.charts);
+    const beforeDelete=await getWorkspace(),linked=beforeDelete.rows.find(r=>r.id===id)!;
+    const factsBeforeDelete=JSON.stringify(await published());
+    const asrBeforeDelete=JSON.stringify(await db.collection(ASR_REVIEWS).find({}).toArray());
+    await assert.rejects(cmd({action:"delete-idea",id:ideaId,revision:13}),/Idea changed/);
+    assert.equal((await getPublicIdeaViews(await published())).length,1,"failed delete removed publication");
+    const deletion={action:"delete-idea",id:ideaId,revision:14,requestId:randomUUID()};
+    await mutateWorkspace(deletion,"test-owner");await mutateWorkspace(deletion,"test-owner");
+    const afterDelete=await getWorkspace(),kept=afterDelete.rows.find(r=>r.id===id)!;
+    assert.equal(afterDelete.rows.length,beforeDelete.rows.length);
+    assert.deepEqual(kept.edit.facts,linked.edit.facts);assert.equal(kept.edit.privateNotes,linked.edit.privateNotes);
+    assert.equal(kept.edit.ideaId,null);assert.equal(kept.publishedIdeaId,null);
+    assert.ok(!afterDelete.ideas.ideas.some(i=>i.id===ideaId));assert.ok(!afterDelete.ideaDrafts.some(i=>i.id===ideaId));
+    assert.equal((await context.repository.load()).assignments[id],undefined);
+    assert.equal((await getPublicIdeaViews(await published())).length,0);
+    assert.equal(JSON.stringify(await published()),factsBeforeDelete,"deletion changed trade results");
+    assert.equal(JSON.stringify(await db.collection(ASR_REVIEWS).find({}).toArray()),asrBeforeDelete);
+    assert.equal(await db.collection(HISTORY).countDocuments({action:"delete-idea",tradeId:ideaId}),1);
+    await assert.rejects(cmd({action:"save",id,revision:linked.revision,sourceFingerprint:linked.sourceFingerprint,edit:{...linked.edit,reason:"Stale linked trade"}}),/changed in another tab/);
+    await assert.rejects(cmd({action:"save",id,revision:kept.revision,sourceFingerprint:kept.sourceFingerprint,edit:{...kept.edit,ideaId,reason:"Revive deleted link"}}),/no longer exists/);
+    await assert.rejects(cmd({action:"restore",id,revision:kept.revision,historyId:beforeDelete.history.find(h=>h.tradeId===id&&h.action==="save")!.id}),/no longer exists/);
+    // A later save to the retained trade still works without the deleted idea.
+    await cmd({action:"save",id,revision:kept.revision,sourceFingerprint:kept.sourceFingerprint,edit:{...kept.edit,reason:"Retained trade remains editable"}});
+
     const cycleId="synthetic-held-legacy-cycle",heldLegacyId=publicTradeIdForCycle(cycleId);
     await db.collection("performance_private_position_cycles").insertOne({_id:cycleId,environment:"demo",sourceAccountId:"test-account",symbol:"SOLUSDT",direction:"Short",openedAt:new Date("2025-01-05"),closedAt:new Date("2025-01-06"),lastSeenAt:new Date("2025-01-06"),entryPrice:100,quantity:1,status:"unresolved",publicationHold:true,riskAmount:1000} as never);
     w=await getWorkspace();const oldHeld=w.rows.find(r=>r.id===heldLegacyId)!;assert.equal(oldHeld.edit.facts.resultR,null);

@@ -14,7 +14,7 @@ import type { PerformanceTrade } from "./types";
 import { METADATA_COLLECTION, type PublicMetadataDocument } from "./public-metadata";
 import { editSchema, initialEdit, publicFacts, publicIdeaSchema, ideaDraftSchema, type TradeEdit, type WorkspaceSource, type WorkspaceRow, type WorkspaceSnapshot, type IdeaDraft, type PublicIdea } from "./workspace-model";
 import { asrSchema, type AsrDocument } from "./asr-model";
-import { IdeaConflictError } from "./ideas-repository";
+import { IdeaConflictError, IdeaInputError } from "./ideas-repository";
 import { selectIdeaTrades } from "./ideas-selection";
 import { PUBLIC_EDITS, PUBLIC_IDEAS, PUBLIC_ASSIGNMENTS, type PublicAssignment, type PublicEditDocument } from "./workspace-public";
 
@@ -99,7 +99,7 @@ export async function getWorkspace(): Promise<WorkspaceSnapshot> {
       publishedIdeaId:publishedAssignments.has(source.id)?publishedAssignments.get(source.id)!:published?.ideaId??null,
       sourceChanged, dirty: sourceChanged || !!stored && published?.revision !== stored.revision };
   });
-  return { rows, ideas, tags:await getTagCatalogue(), ideaDrafts: ideaDocs.map(d => ({ id:d.id, revision:d.revision, fields:d.fields, published:d.published, publishedRevision:d.publishedRevision, firstPublishedAt:d.firstPublishedAt, tradeIds:d.tradeIds })),
+  return { rows, ideas, tags:await getTagCatalogue(), ideaDrafts: ideaDocs.filter(d=>!d.deletedAt).map(d => ({ id:d.id, revision:d.revision, fields:d.fields, published:d.published, publishedRevision:d.publishedRevision, firstPublishedAt:d.firstPublishedAt, tradeIds:d.tradeIds })),
     history: history.map(h => ({ id: h._id, tradeId:h.tradeId, action:h.action, revision:h.revision, at:h.at, reason:h.reason })), asOf: new Date().toISOString() };
 }
 
@@ -109,7 +109,7 @@ const commandSchema = z.discriminatedUnion("action", [
   z.object({ ...common, action:z.literal("publish") }).strict(),
   z.object({ ...common, action:z.literal("save-asr"), fields:asrSchema }).strict(),
   z.object({ ...common, action:z.literal("restore"), historyId:z.string().uuid() }).strict(),
-  z.object({ action:z.enum(["save-idea", "publish-idea", "unpublish-idea"]), id:z.string().regex(/^idea-[a-f0-9-]{36}$/), requestId:common.requestId, revision:common.revision, fields:ideaDraftSchema.optional() }).strict(),
+  z.object({ action:z.enum(["save-idea", "publish-idea", "unpublish-idea", "delete-idea"]), id:z.string().regex(/^idea-[a-f0-9-]{36}$/), requestId:common.requestId, revision:common.revision, fields:ideaDraftSchema.optional() }).strict(),
 ]);
 export async function mutateWorkspace(value: unknown, actor: string) {
   const parsed = commandSchema.safeParse(value);
@@ -121,11 +121,29 @@ export async function mutateWorkspace(value: unknown, actor: string) {
     await session.withTransaction(async () => {
       const prior = await db.collection<HistoryDocument>(HISTORY).findOne({ _id:cmd.requestId }, { session });
       if (prior) { if (prior.actor !== actor || prior.commandHash !== commandHash) throw new WorkspaceConflict("Request ID already used for a different change"); return; }
-      if (cmd.action === "save-idea" || cmd.action === "publish-idea" || cmd.action === "unpublish-idea") {
+      if (cmd.action === "save-idea" || cmd.action === "publish-idea" || cmd.action === "unpublish-idea" || cmd.action === "delete-idea") {
         if (!ideas.ideas.some(i => i.id === cmd.id)) throw new WorkspaceInput("Create or select a private idea first");
         const drafts = db.collection<IdeaDraft & { _id:string }>(IDEA_DRAFTS), before = await drafts.findOne({ _id:cmd.id }, { session });
         if ((before?.revision ?? 0) !== cmd.revision) throw new WorkspaceConflict("Idea changed. Reload the latest version.");
+        if(before?.deletedAt)throw new WorkspaceInput("Idea no longer exists");
         const revision = cmd.revision + 1;
+        if(cmd.action === "delete-idea") {
+          const original=ideas.ideas.find(idea=>idea.id===cmd.id)!;
+          // All unlinking joins the same transaction. Trade facts, inclusion and ASR survive.
+          await context!.repository.mutateInSession({action:"delete",revision:ideas.revision,ideaId:cmd.id},new Set(),actor,session);
+          const linkedEdits=await db.collection<EditDocument>(EDITS).find({"edit.ideaId":cmd.id},{session,projection:{_id:1,revision:1}}).toArray();
+          const linkedPublic=await db.collection<PublicEditDocument>(PUBLIC_EDITS).find({ideaId:cmd.id},{session,projection:{_id:1,ideaId:1}}).toArray();
+          const assignments=await db.collection<PublicAssignment>(PUBLIC_ASSIGNMENTS).find({ideaId:cmd.id},{session,projection:{_id:1,ideaId:1}}).toArray();
+          await db.collection<EditDocument>(EDITS).updateMany({"edit.ideaId":cmd.id},{$set:{"edit.ideaId":null,updatedAt:now},$inc:{revision:1}},{session});
+          await db.collection<PublicEditDocument>(PUBLIC_EDITS).updateMany({ideaId:cmd.id},{$set:{ideaId:null}},{session});
+          await db.collection<PublicAssignment>(PUBLIC_ASSIGNMENTS).updateMany({ideaId:cmd.id},{$set:{ideaId:null}},{session});
+          await db.collection<PublicIdea & {_id:string}>(PUBLIC_IDEAS).deleteOne({_id:cmd.id},{session});
+          const after={_id:cmd.id,id:cmd.id,revision,deletedAt:now,published:false,publishedRevision:before?.publishedRevision??null,fields:before?.fields??{title:original.name,thesis:original.thesis,target:original.target,invalidation:original.invalidation,status:"active" as const,ideaAt:original.createdAt,articleUrl:""}};
+          await drafts.replaceOne({_id:cmd.id},after,{session,upsert:true});
+          await db.collection<HistoryDocument>(HISTORY).insertOne({_id:cmd.requestId,actor,commandHash,tradeId:cmd.id,action:cmd.action,revision,at:now,reason:original.name,before:{draft:before,linkedEdits,linkedPublic,assignments},after},{session});
+          return;
+        }
+        await context!.repository.lockIdea(cmd.id,session);
         const fields = cmd.action === "save-idea" ? cmd.fields : before?.fields;
         if (!fields) throw new WorkspaceInput("Save your idea draft first");
         if (cmd.action === "save-idea") {
@@ -191,7 +209,10 @@ export async function mutateWorkspace(value: unknown, actor: string) {
         const legacyAnnotations = before ? null : await getTradeAnnotations([cmd.id]);
         const previousReview = before?.edit ?? initialEdit(source,legacyAnnotations?.[cmd.id]??EMPTY_ANNOTATION,ideas.assignments[cmd.id]??null);
         edit = {...edit,expectedR:previousReview.expectedR,valid:previousReview.valid,asrComments:previousReview.asrComments};
-        if (edit.ideaId && !ideas.ideas.some(i => i.id === edit.ideaId)) throw new WorkspaceInput("Selected idea no longer exists");
+        if(edit.ideaId) {
+          if(!context)throw new WorkspaceInput("Selected idea no longer exists");
+          await context.repository.lockIdea(edit.ideaId,session);
+        }
         if (edit.resultMode === "source" && (edit.netPnl === null || edit.riskBasis === null) && edit.facts.resultR !== source.facts.resultR) throw new WorkspaceInput("Choose manually reconciled R when original calculation inputs are unavailable");
         if (source.duplicateOf && edit.inclusion === "included") throw new WorkspaceInput("This is a recorded duplicate. Edit the canonical trade instead, or keep it excluded.");
         if (source.held && edit.inclusion === "included" && !edit.resolveHold) throw new WorkspaceInput("Review the source evidence and explicitly resolve the hold");
@@ -201,7 +222,12 @@ export async function mutateWorkspace(value: unknown, actor: string) {
       } else {
         if (!before) throw new WorkspaceInput("Save your reconciled trade before publication");
         if (before.sourceFingerprint !== source.sourceFingerprint) throw new WorkspaceConflict("Source evidence changed since the draft. Review and save again before publishing.");
-        const edit = editSchema.parse(before.edit), boundary = activeBreakoutHistoryFrom(catalogue.account);
+        const edit = editSchema.parse(before.edit);
+        if(edit.ideaId) {
+          if(!context)throw new WorkspaceInput("Selected idea no longer exists");
+          await context.repository.lockIdea(edit.ideaId,session);
+        }
+        const boundary = activeBreakoutHistoryFrom(catalogue.account);
         if (source.archived) throw new WorkspaceInput("Archived Bybit history remains outside the active source period. Editing does not reactivate it.");
         if (edit.inclusion === "included") {
           if (source.source === "breakout" && (!boundary || source.facts.openedAt < boundary || edit.facts.openedAt < boundary)) throw new WorkspaceInput("Confirm the Breakout source period in Imports before publishing");
@@ -221,6 +247,8 @@ export async function mutateWorkspace(value: unknown, actor: string) {
       }
     }, { readConcern:{ level:"snapshot" }, writeConcern:{ w:"majority" }, timeoutMS:30000 });
   } catch(e) {
+    if(e instanceof IdeaConflictError)throw new WorkspaceConflict(e.message);
+    if(e instanceof IdeaInputError)throw new WorkspaceInput(e.message);
     if (e instanceof z.ZodError) throw new WorkspaceInput(e.issues[0]?.message ?? "Invalid draft");
     if (e && typeof e === "object" && "code" in e && e.code === 11000) throw new WorkspaceConflict("Workspace changed concurrently. Reload and check the saved state.");
     throw e;

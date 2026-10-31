@@ -1,6 +1,6 @@
 # Performance Journal — staging review
 
-31 October 2026. The original public layout with expandable ideas and historical trade
+31 October 2026. The original public layout with compact idea links and historical trade
 reconciliation are implemented for owner testing. Production is unchanged.
 
 ## Open
@@ -16,7 +16,7 @@ reconciliation are implemented for owner testing. Production is unchanged.
 This deployment uses `blueprint_dev` and real authentication. Changes you make
 here persist in development data. Existing rough ideas remain private drafts; none were automatically published.
 A clearly labelled staging demonstration is the only new published idea. It shows
-three labelled fictional sample trades on its detail page only. These never enter
+four labelled fictional sample trades on its detail page only. These never enter
 the journal dataset, trade editor or performance totals.
 The earlier combined/Spot mock has been replaced on the staging alias only.
 
@@ -25,9 +25,9 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
 1. Check the public journal on desktop and phone. The original results/statistics,
    chart and visible calendar are restored. It defaults to 30 days; try periods,
    custom dates, Day/Swing filters and calendar-day selection. **By idea** gives
-   compact summaries that expand into context and linked trades; **All trades**
+   compact title/status/date/result links with an arrow CTA, without dropdowns or trade rows; **All trades**
    keeps the flat newest-first record. Idea results follow the selected period,
-   type and day. Unlinked trades remain accessible. Until an idea is explicitly
+   type and day. Unlinked trades appear only in **All trades**. Until an idea is explicitly
    published, the list defaults to **All trades**. Full thesis, scenario and
    invalidation live on the idea page, keeping the main record compact.
 2. In admin **Trades**, open both a historical Bybit trade and a Breakout trade.
@@ -38,7 +38,7 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
    before/after values and affected idea totals, then confirm if desired. Open
    the public journal/trade page to inspect the published version. Newly generated
    social images use the corrected fact fingerprint; existing image URLs remain.
-4. The admin tabs are **Ideas**, **Trades**, **Publication & history**. Ideas opens
+4. The admin tabs are **Ideas** and **Trades**. Ideas opens
    by default. Select an existing rough idea or create a title-only draft. There
    is one title and one editor for thesis, target/scenario, invalidation, date and
    outcome. Chart levels, linked trades and additional context are expandable.
@@ -51,7 +51,7 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
    Assign trades from their trade editor, then publish those assignments separately.
    The complete staging demonstration includes a thesis, confirmation conditions,
    targets, daily-close invalidation and reference market/levels.
-   It is explicitly illustrative, with three separately labelled display-only sample trades on its public detail page.
+   It is explicitly illustrative, with three BTC and one SOL display-only sample trades on its public detail page.
    Use **1h**, **4h** and **Daily**, then **Locate on chart** on each sample trade
    to isolate entry/exit arrows. **Show all trades** restores every execution arrow. Green up arrows are buys;
    red down arrows are sells. Hover to view the trade and its shaded holding
@@ -64,8 +64,8 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
 6. Open **Trades → Import trades** for the Breakout CSV preview and selective import.
    Confirming an import remains separate from source activation and publication.
    Held rows can now be opened in the same reconciliation editor.
-7. Use **Publication & history** to inspect saved revisions. **Restore draft**
-   creates a new private revision; publishing the restored version is separate.
+7. In **Chart levels**, add BTCUSDT and SOLUSDT with different target and invalidation prices. Save and publish the example. Switch markets on its public page: BTC shows only BTC executions and BTC levels; SOL shows only SOL executions and SOL levels. Additional context contains only the optional article link.
+8. **Delete idea** asks for confirmation. Cancel leaves everything intact. Confirming removes the idea and its public page, unlinks its trades, and preserves every trade, result and private review. The Publication & history tab is hidden; audit records remain stored.
 
 Archived Bybit history is editable with the same tools. Its source boundary keeps
 it out of results for the period supplied by Breakout; saving an archived edit
@@ -79,9 +79,9 @@ an explicit update. Stale edits fail without silently overwriting another tab.
 
 ## Verified
 
-- 127 performance tests passed; four optional integration suites were skipped in
+- 130 performance tests passed; four optional integration suites were skipped in
   the ordinary test run. The new reconciliation transaction suite ran separately
-  and passed against a disposable localhost replica set.
+  and passed against a disposable localhost replica set. The scoped ideas repository suite also passed separately.
 - Transaction scenarios cover historical published corrections, incomplete legacy
   holds, archived editing, private save/publication separation, restore, retries,
   concurrent saves, Breakout conflicts/re-imports, changed source evidence, idea
@@ -138,7 +138,7 @@ without horizontal overflow. All three sample detail URLs and an existing real
 trade detail returned successfully; samples remain labelled, noindex and absent
 from the journal dataset. Hosted privacy checks and browser logs were clean.
 
-The current example has three display-only executions in
+The current example has four display-only executions in
 `blueprint_dev.performance_staging_idea_examples`. Only the staging idea detail and sample trade detail loaders
 read this collection. It requires the exact staging hostname, explicit
 `blueprint_dev` database and a deployment that is not production. Sample fields
@@ -150,12 +150,19 @@ No new production trades were imported or published. No real source history was
 repaired as a browser test. Spot, scanner, the Discord/product signup redesign and
 F&G scheduling remain parked/deferred as agreed.
 
+Latest simplification checks also cover multiple-market validation, duplicate ticker
+rejection, legacy single-market compatibility, clearing all levels, exact market
+execution isolation, and transactional idea deletion. Deletion retries create one
+audit event, stale saves/restores cannot recreate a deleted assignment, and retained
+trades remain editable with unchanged public results and private ASR. Deleted idea
+content is retained as an audit tombstone, outside normal selectors and public loaders.
+
 ## Deployment and recovery
 
-- Staging deployment: `dpl_FyMBzP2QCSedAKJLXJpNv3vtzCTX`
-- Immutable URL: `https://thomasjohnston-8zi9tnd3l-thomas-johnstons-projects-d78bf4d9.vercel.app`
-- Previous staging deployment: `dpl_HuHb3QV8jn2QfjPZka6LMD55AipU`, at
-  `https://thomasjohnston-7uc0ppvj1-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_8RiLABCxU8rAV8v8SBZNtFnQuCta`
+- Immutable URL: `https://thomasjohnston-84p3hm14z-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Previous staging deployment: `dpl_FyMBzP2QCSedAKJLXJpNv3vtzCTX`, at
+  `https://thomasjohnston-8zi9tnd3l-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the
   staging alias change.
 

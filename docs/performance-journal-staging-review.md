@@ -55,7 +55,10 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
    Use **1h**, **4h** and **Daily**, then **Locate on chart** on each sample trade
    to isolate entry/exit arrows. **Show all trades** restores every execution arrow. Green up arrows are buys;
    red down arrows are sells. Hover to view the trade and its shaded holding
-   period. Click the trade content to open its full detail page; sample detail
+   period. All linked trades remain visible in symbol groups below the chart.
+   **Locate on chart** switches to that trade’s market, highlights it and scrolls
+   to the chart; the list remains grouped across every market. Pagination is per
+   symbol. Click the trade content to open its full detail page; sample detail
    pages remain clearly labelled and excluded from journal results.
 5. Open **Private ASR** at `/admin/asr`. Review a closed trade, save Expected R,
    validity and comments, and inspect the private paired comparison. This must not
@@ -169,10 +172,10 @@ unchanged; only the synthetic example and temporary QA idea were modified.
 
 ## Deployment and recovery
 
-- Staging deployment: `dpl_HvqnirY6Xzf2hqe3azGxDNDVKt94`
-- Immutable URL: `https://thomasjohnston-2jmttdem8-thomas-johnstons-projects-d78bf4d9.vercel.app`
-- Previous staging deployment: `dpl_FyMBzP2QCSedAKJLXJpNv3vtzCTX`, at
-  `https://thomasjohnston-8zi9tnd3l-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_BccsAQgGTsqFuxXrzNVoiWWSqgqj`
+- Immutable URL: `https://thomasjohnston-pb7zcbjub-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Previous staging deployment: `dpl_HvqnirY6Xzf2hqe3azGxDNDVKt94`, at
+  `https://thomasjohnston-2jmttdem8-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the
   staging alias change.
 

@@ -141,7 +141,10 @@ published version visible. Publishing and withdrawing an idea remain deliberate
 separate actions; neither changes its published trade economics.
 
 The idea page is one current thesis, target/scenario and invalidation, followed by
-its chart and detailed trade attempts. The owner edits the thesis directly; there
+its chart and detailed trade attempts grouped by symbol. Every traded market is visible
+regardless of the chart selection. Each group has its own pagination, so a busy
+market cannot hide the other market headings. Locate on chart switches to that
+trade’s market, highlights the trade and scrolls back to the chart. The owner edits the thesis directly; there
 is no timeline editor, timeline selector or thesis marker. Existing timeline
 records remain compatible with saved history but do not drive the public view.
 Saved changes still require explicit publication.

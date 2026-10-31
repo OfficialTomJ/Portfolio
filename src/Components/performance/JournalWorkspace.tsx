@@ -28,7 +28,7 @@ export default function JournalWorkspace({ initial, imports, initialView="ideas"
   const trades=eligible.map(r=>publicFacts(r.id,r.source,r.edit)),stats=calculateStats(trades);
   async function command(cmd:Record<string,unknown>) {
     setBusy(true);setError("");
-    try {const response=await fetch("/api/performance/admin/workspace",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...cmd,requestId:crypto.randomUUID()})});const body=await response.json();if(!response.ok)throw Error(body.error);setData(body);router.refresh();return body as WorkspaceSnapshot;}
+    try {const response=await fetch("/api/performance/admin/workspace",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...cmd,requestId:crypto.randomUUID()})});const body=await response.json().catch(()=>{throw Error("Save status is unknown. Refresh to check before retrying.");});if(!response.ok)throw Error(body.error);setData(body);router.refresh();return body as WorkspaceSnapshot;}
     catch(e){throw e instanceof Error?e:Error("Could not complete change");}finally{setBusy(false);}
   }
   async function reload(){setError("");try{const r=await fetch("/api/performance/admin/workspace",{cache:"no-store"});const body=await r.json();if(!r.ok)throw Error(body.error);setData(body);router.refresh();setNotice("Workspace refreshed.");}catch(e){setError((e as Error).message);}}

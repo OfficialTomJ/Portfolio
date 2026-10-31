@@ -2,24 +2,60 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "src/app/mentor/performance/trades/[id]/page.tsx": {
-      "regions": ["syd1"]
+      "regions": [
+        "syd1"
+      ]
     },
     "src/app/api/performance/market/route.ts": {
-      "regions": ["syd1"]
+      "regions": [
+        "syd1"
+      ]
     },
     "src/app/api/performance/trades/[id]/og/route.tsx": {
-      "regions": ["syd1"]
+      "regions": [
+        "syd1"
+      ]
     },
     "src/app/api/performance/sync/route.ts": {
-      "regions": ["syd1"],
+      "regions": [
+        "syd1"
+      ],
       "maxDuration": 60
     },
     "src/app/api/performance/admin/sync/route.ts": {
-      "regions": ["syd1"],
+      "regions": [
+        "syd1"
+      ],
       "maxDuration": 60
     },
     "src/app/api/performance/admin/review/[id]/publish/route.ts": {
-      "regions": ["syd1"],
+      "regions": [
+        "syd1"
+      ],
+      "maxDuration": 60
+    },
+    "src/app/api/performance/admin/workspace/route.ts": {
+      "regions": [
+        "syd1"
+      ],
+      "maxDuration": 60
+    },
+    "src/app/api/performance/admin/ideas/route.ts": {
+      "regions": [
+        "syd1"
+      ],
+      "maxDuration": 60
+    },
+    "src/app/mentor/admin/page.tsx": {
+      "regions": [
+        "syd1"
+      ],
+      "maxDuration": 60
+    },
+    "src/app/mentor/admin/asr/page.tsx": {
+      "regions": [
+        "syd1"
+      ],
       "maxDuration": 60
     }
   }

@@ -16,7 +16,7 @@ reconciliation are implemented for owner testing. Production is unchanged.
 This deployment uses `blueprint_dev` and real authentication. Changes you make
 here persist in development data. Existing rough ideas remain private drafts; none were automatically published.
 A clearly labelled staging demonstration is the only new published idea. It shows
-four labelled fictional sample trades on its detail page only. These never enter
+four labelled fictional sample trades on its idea and sample trade pages only. These never enter
 the journal dataset, trade editor or performance totals.
 The earlier combined/Spot mock has been replaced on the staging alias only.
 
@@ -157,10 +157,20 @@ audit event, stale saves/restores cannot recreate a deleted assignment, and reta
 trades remain editable with unchanged public results and private ASR. Deleted idea
 content is retained as an audit tombstone, outside normal selectors and public loaders.
 
+The admin delete confirmation is shown inside the page, including an explicit
+Cancel deletion action, rather than a native browser dialog. Live testing caught
+a ten-second hosting timeout after a successful idea save. Admin workspace/ideas
+endpoints and admin/ASR pages now run in Sydney with a 60-second limit; unreadable
+save responses prompt a refresh to check saved status before retrying. After this
+change, staging publication of the two-market example took 578ms and deletion of a
+temporary empty test idea took 710ms. Repeating the deletion request produced one
+audit event. Before/after hashes confirmed that real trade and ASR records were
+unchanged; only the synthetic example and temporary QA idea were modified.
+
 ## Deployment and recovery
 
-- Staging deployment: `dpl_8RiLABCxU8rAV8v8SBZNtFnQuCta`
-- Immutable URL: `https://thomasjohnston-84p3hm14z-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_HvqnirY6Xzf2hqe3azGxDNDVKt94`
+- Immutable URL: `https://thomasjohnston-2jmttdem8-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Previous staging deployment: `dpl_FyMBzP2QCSedAKJLXJpNv3vtzCTX`, at
   `https://thomasjohnston-8zi9tnd3l-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the

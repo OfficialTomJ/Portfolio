@@ -96,7 +96,7 @@ thesis; its linked trades are execution attempts. Several trades may share an
 idea, and an idea may span more than one asset.
 
 Use one title and one editable idea: thesis, target/scenario, invalidation, outcome,
-date and optional chart, timeline and analysis link. Rough ideas stay private drafts.
+date and optional chart and analysis link. Rough ideas stay private drafts.
 Existing private idea content opens in that editor without automatic publication.
 Legacy private notes remain preserved in storage and are never copied into published
 content. Published ideas retain a public snapshot while further saved edits stay
@@ -123,7 +123,7 @@ An idea is a grouping of trades, never an additional performance contribution.
 
 Private ideas remain quick working notes. Do not auto-publish or rewrite them.
 Public drafts require enough thesis, target/scenario and invalidation text for a
-reader; numeric levels and dated updates remain optional. Support conditions such
+reader; numeric chart levels remain optional. Support conditions such
 as moving-average failures or candle closes in text rather than forcing a fixed
 price. A reference line is not an automatic outcome detector.
 
@@ -132,19 +132,23 @@ with filters for drafts and published ideas. Saving a draft leaves the
 published version visible. Publishing and withdrawing an idea remain deliberate
 separate actions; neither changes its published trade economics.
 
-The idea page shows one market chart at a time, selected by the reader. Never
-reuse another market's numeric levels. Plot optional manually supplied target and
-invalidation from their stated date until the next update, group dense trade
-markers by candle, and allow trades/levels/thesis markers to be toggled. Selecting
-one trade isolates its entry and exit. Show the full trade record alongside the
-chart so missing reference data never removes the execution evidence.
+The idea page is one current thesis, target/scenario and invalidation, followed by
+its chart and detailed trade attempts. The owner edits the thesis directly; there
+is no timeline editor, timeline selector or thesis marker. Existing timeline
+records remain compatible with saved history but do not drive the public view.
+Saved changes still require explicit publication.
 
-Show stated analysis/update dates separately from actual first publication. Flag
-retrospective dates and mixed-market ideas in private preparation. Do not convert
-shorthand, dynamic indicators or conflicting levels into invented precise rules.
-Keep long content behind short journal summaries and full idea details. Bound
-long chart windows and paginated lists; missing/out-of-window candles must never
-pin an execution to the nearest chart edge.
+Show one market chart at a time, selected by the reader. Never reuse another
+market's numeric levels. Optional target/invalidation lines describe the current
+idea, not historical rules. Group dense execution markers by candle; selecting
+one trade isolates its entry and exit. Toggle markers/levels in place without
+recreating the chart, refetching candles, or resetting the reader's chart position.
+Keep the requested date window stable across overlay and text interactions.
+
+Show idea date, actual first publication and latest publication dates. Keep the
+idea copy compact and put execution detail in its linked trades. Bound long chart
+windows and paginated lists; missing/out-of-window candles must never pin an
+execution to the nearest chart edge.
 
 ASR saves use a dedicated private collection and do not dirty publication drafts.
 If facts or intended risk change after review, retain the assessment but flag it

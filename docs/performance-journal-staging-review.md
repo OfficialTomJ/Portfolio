@@ -40,16 +40,16 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
 4. The admin tabs are **Ideas**, **Trades**, **Publication & history**. Ideas opens
    by default. Select an existing rough idea or create a title-only draft. There
    is one title and one editor for thesis, target/scenario, invalidation, date and
-   outcome. Chart/timeline, linked trades and additional context are expandable.
+   outcome. Chart levels, linked trades and additional context are expandable.
    Drafts remain private. Save, review and confirm publication when ready. A
    published idea can have saved unpublished edits; the public snapshot remains
    unchanged until republished. **Move to draft** withdraws the public narrative
    without changing closed trade results. Legacy private notes are preserved in
    storage and never copied into the public version. Public readiness requires
-   thesis, target/scenario and invalidation; numeric levels and updates are optional.
+   thesis, target/scenario and invalidation; numeric levels are optional.
    Assign trades from their trade editor, then publish those assignments separately.
    The complete staging demonstration includes a thesis, confirmation conditions,
-   targets, daily-close invalidation, reference market/levels and two dated updates.
+   targets, daily-close invalidation and reference market/levels.
    It is explicitly illustrative, with no actual trade attempts attached.
 5. Open **Private ASR** at `/admin/asr`. Review a closed trade, save Expected R,
    validity and comments, and inspect the private paired comparison. This must not
@@ -73,7 +73,7 @@ an explicit update. Stale edits fail without silently overwriting another tab.
 
 ## Verified
 
-- 117 performance tests passed; four optional integration suites were skipped in
+- 119 performance tests passed; four optional integration suites were skipped in
   the ordinary test run. The new reconciliation transaction suite ran separately
   and passed against a disposable localhost replica set.
 - Transaction scenarios cover historical published corrections, incomplete legacy
@@ -100,9 +100,21 @@ an explicit update. Stale edits fail without silently overwriting another tab.
   fictional local data.
 - Latest staging verification confirmed tab order, imports inside Trades, one
   title/editor, and the complete example in public and admin. Reference candles
-  and dated thesis selection loaded. Public and admin pages had no horizontal
+  loaded. Public and admin pages had no horizontal
   overflow at 375px. Authenticated/anonymous API checks passed. The example
   creation verified unchanged existing ideas, private rows and published trades.
+  The latest UI simplification performs no idea or trade data migration.
+- Latest simplification removes timeline editing/selection and all thesis markers,
+  uses smaller headings/body text, puts one current thesis above the chart, and
+  leaves execution detail with the trades. Chart overlay effects now update the
+  existing series/marker plugin and do not recreate/fit the chart. The date window
+  remains fixed while overlays are toggled. Prior timeline fields are retained
+  in historical records; saving the single editor omits retired timeline fields.
+  Hosted browser QA panned the chart away from its initial position, switched
+  levels off/on and toggled trades, and confirmed the panned date range persisted.
+  At 375px the page had no horizontal overflow (20px title, 13px thesis). Admin
+  showed only current chart-level inputs, with no timeline editor. Hosted privacy
+  checks passed again. No idea or trade records were changed for this refinement.
 - The Chronicles invitation was verified to resolve to the intended server.
 
 No new production trades were imported or published. No real source history was
@@ -111,10 +123,10 @@ F&G scheduling remain parked/deferred as agreed.
 
 ## Deployment and recovery
 
-- Staging deployment: `dpl_4h8NN5yTexsQUWptx4BR1YJm1QfF`
-- Immutable URL: `https://thomasjohnston-lq5t1vztk-thomas-johnstons-projects-d78bf4d9.vercel.app`
-- Previous staging deployment: `dpl_513KNtSEPH5919XComMthxqXC3ie`, at
-  `https://thomasjohnston-9ie22u3yt-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_BnUpPcpAUACWfdRUjtpkygjmYntm`
+- Immutable URL: `https://thomasjohnston-owgch0aw4-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Previous staging deployment: `dpl_4h8NN5yTexsQUWptx4BR1YJm1QfF`, at
+  `https://thomasjohnston-lq5t1vztk-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the
   staging alias change.
 

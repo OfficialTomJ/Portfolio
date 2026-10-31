@@ -12,7 +12,7 @@ test("timeline preserves stated dates and actual publication, and carries unchan
   assert.equal(milestones[1].target,"Resistance");assert.equal(milestones[1].invalidation,idea.invalidation);
   assert.equal(milestones[1].chart?.symbol,"BTCUSDT");
   assert.equal(ideaMilestones({...idea,updates:[{...idea.updates![0],chart:null}]} )[1].chart,undefined,"explicitly cleared chart levels were inherited");
-  assert.deepEqual(ideaMarkets(idea,[{symbol:"ETHUSDT"} as never]),["BTCUSDT","ETHUSDT"]);
+  assert.deepEqual(ideaMarkets({...idea,updates:[{...idea.updates![0],chart:{symbol:"SOLUSDT",targetPrice:200,invalidationPrice:100}}]},[{symbol:"ETHUSDT"} as never]),["BTCUSDT","ETHUSDT"],"retired timeline markets must not appear in the current idea selector");
 });
 test("chart markers never clamp missing or out-of-window executions to an edge candle",()=>{
   const candles=[0,1,3].map(i=>({time:1735689600+i*14400,open:100,high:110,low:90,close:105}));

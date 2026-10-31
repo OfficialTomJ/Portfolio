@@ -13,7 +13,7 @@ export function ideaMilestones(idea:PublicIdea):IdeaMilestone[] {
   return result;
 }
 export function ideaMarkets(idea:PublicIdea,trades:PerformanceTrade[]):string[] {
-  return [...new Set([idea.chart?.symbol,...(idea.updates??[]).map(u=>u.chart?.symbol),...trades.map(t=>t.symbol)].filter((v):v is string=>!!v))];
+  return [...new Set([idea.chart?.symbol,...trades.map(t=>t.symbol)].filter((v):v is string=>!!v))];
 }
 export function ideaChartWindow(milestones:IdeaMilestone[],trades:PerformanceTrade[],focusAt:string,selectedTrade?:PerformanceTrade,now=Date.now()) {
   const times=[...milestones.map(m=>Date.parse(m.at)),...trades.flatMap(t=>[Date.parse(t.openedAt),Date.parse(t.closedAt)])];

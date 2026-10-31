@@ -1,7 +1,7 @@
 import type { IdeaDraft } from "./workspace-model";
-export function ideaPublicationState(draft?: IdeaDraft): "private" | "draft" | "published" | "changes" {
-  return !draft ? "private" : !draft.published ? "draft" : draft.revision !== draft.publishedRevision ? "changes" : "published";
+export function ideaPublicationState(draft?: IdeaDraft): "draft" | "published" | "changes" {
+  return !draft || !draft.published ? "draft" : draft.revision !== draft.publishedRevision ? "changes" : "published";
 }
 export const ideaPublicationLabel = {
-  private: "Private working idea", draft: "Draft · not public", published: "Published", changes: "Published · draft changes",
+  draft: "Draft", published: "Published", changes: "Published · unpublished edits",
 };

@@ -12,8 +12,9 @@ import { BREAKOUT_COLLECTIONS, type ImportEvidence } from "./breakout-store";
 import type { StoredLegacyCycle } from "./journal";
 import type { PerformanceTrade } from "./types";
 import { METADATA_COLLECTION, type PublicMetadataDocument } from "./public-metadata";
-import { editSchema, initialEdit, publicFacts, publicIdeaSchema, type TradeEdit, type WorkspaceSource, type WorkspaceRow, type WorkspaceSnapshot, type IdeaDraft, type PublicIdea } from "./workspace-model";
+import { editSchema, initialEdit, publicFacts, publicIdeaSchema, ideaDraftSchema, type TradeEdit, type WorkspaceSource, type WorkspaceRow, type WorkspaceSnapshot, type IdeaDraft, type PublicIdea } from "./workspace-model";
 import { asrSchema, type AsrDocument } from "./asr-model";
+import { IdeaConflictError } from "./ideas-repository";
 import { selectIdeaTrades } from "./ideas-selection";
 import { PUBLIC_EDITS, PUBLIC_IDEAS, PUBLIC_ASSIGNMENTS, type PublicAssignment, type PublicEditDocument } from "./workspace-public";
 
@@ -108,7 +109,7 @@ const commandSchema = z.discriminatedUnion("action", [
   z.object({ ...common, action:z.literal("publish") }).strict(),
   z.object({ ...common, action:z.literal("save-asr"), fields:asrSchema }).strict(),
   z.object({ ...common, action:z.literal("restore"), historyId:z.string().uuid() }).strict(),
-  z.object({ action:z.enum(["save-idea", "publish-idea", "unpublish-idea"]), id:z.string().regex(/^idea-[a-f0-9-]{36}$/), requestId:common.requestId, revision:common.revision, fields:publicIdeaSchema.optional() }).strict(),
+  z.object({ action:z.enum(["save-idea", "publish-idea", "unpublish-idea"]), id:z.string().regex(/^idea-[a-f0-9-]{36}$/), requestId:common.requestId, revision:common.revision, fields:ideaDraftSchema.optional() }).strict(),
 ]);
 export async function mutateWorkspace(value: unknown, actor: string) {
   const parsed = commandSchema.safeParse(value);
@@ -126,13 +127,21 @@ export async function mutateWorkspace(value: unknown, actor: string) {
         if ((before?.revision ?? 0) !== cmd.revision) throw new WorkspaceConflict("Idea changed. Reload the latest version.");
         const revision = cmd.revision + 1;
         const fields = cmd.action === "save-idea" ? cmd.fields : before?.fields;
-        if (!fields) throw new WorkspaceInput("Save a complete public idea draft first");
+        if (!fields) throw new WorkspaceInput("Save your idea draft first");
+        if (cmd.action === "save-idea") {
+          const original=ideas.ideas.find(i=>i.id===cmd.id)!;
+          try {
+            await context!.repository.mutateInSession({action:"update",revision:ideas.revision,ideaId:cmd.id,fields:{name:fields.title,thesis:fields.thesis,target:fields.target,invalidation:fields.invalidation,notes:original.notes}},new Set(),actor,session);
+          } catch(error) { if(error instanceof IdeaConflictError) throw new WorkspaceConflict(error.message); throw error; }
+        }
         const tradeIds = cmd.action === "save-idea" ? Object.entries(ideas.assignments).filter(([,id])=>id===cmd.id).map(([id])=>id) : before?.tradeIds ?? [];
         const doc = { _id:cmd.id, id:cmd.id, revision, fields, tradeIds, published: cmd.action === "save-idea" ? before?.published ?? false : cmd.action === "publish-idea", publishedRevision: cmd.action === "publish-idea" ? revision : before?.publishedRevision ?? null, firstPublishedAt:before?.firstPublishedAt ?? (cmd.action === "publish-idea"?now:undefined) };
         await drafts.replaceOne({ _id:cmd.id }, doc, { session, upsert:true });
         const published = db.collection<PublicIdea & { _id:string }>(PUBLIC_IDEAS);
         if (cmd.action === "publish-idea") {
           const old = await published.findOne({ _id:cmd.id }, { session });
+          const valid=publicIdeaSchema.safeParse(fields);
+          if (!valid.success) throw new WorkspaceInput(valid.error.issues[0]?.message??"Complete the idea before publishing");
           if (!fields.target.trim() || !fields.invalidation.trim()) throw new WorkspaceInput("Add a target/scenario and invalidation before publishing an idea");
           const publication = { _id:cmd.id, id:cmd.id, ...fields, updates:(fields.updates ?? []).map(update => ({...update,publishedAt:old?.updates?.find(u=>u.id===update.id)?.publishedAt ?? now})), tradeIds, firstPublishedAt:old?.firstPublishedAt ?? doc.firstPublishedAt ?? now, updatedAt:now };
           await published.replaceOne({ _id:cmd.id }, publication, { session, upsert:true });

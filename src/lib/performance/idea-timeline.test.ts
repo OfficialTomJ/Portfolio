@@ -39,7 +39,7 @@ test("rough drafts accept written invalidation and optional charts; public updat
 });
 test("publication state distinguishes unpublished drafts and changes to a still-public version",()=>{
   const draft={id:"idea",revision:2,fields:{} as never,published:false,publishedRevision:null};
-  assert.equal(ideaPublicationState(),"private");assert.equal(ideaPublicationState(draft),"draft");
+  assert.equal(ideaPublicationState(),"draft");assert.equal(ideaPublicationState(draft),"draft");
   assert.equal(ideaPublicationState({...draft,published:true,publishedRevision:2}),"published");
   assert.equal(ideaPublicationState({...draft,published:true,publishedRevision:1}),"changes");
 });

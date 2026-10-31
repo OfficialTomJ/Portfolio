@@ -56,6 +56,9 @@ test("historical corrections, publication, source evidence, private ideas and tr
     const ideaId=groups.ideas[0].id,fields={title:"Public idea",thesis:"Approved public thesis",target:"Next resistance",invalidation:"Daily close below the range",status:"completed",ideaAt:"2025-01-01T00:00:00Z",articleUrl:""};
     assert.equal((await getPublicIdeaViews(await published())).length,0);
     await cmd({action:"save-idea",id:ideaId,revision:0,fields});assert.equal((await getPublicIdeaViews(await published())).length,0);
+    const unified=(await getWorkspace()).ideas.ideas.find(i=>i.id===ideaId)!;
+    assert.equal(unified.name,fields.title);assert.equal(unified.thesis,fields.thesis);assert.equal(unified.notes,"SECRET NOTES","legacy private notes were changed");
+
     await cmd({action:"publish-idea",id:ideaId,revision:1});let views=await getPublicIdeaViews(await published());assert.equal(views[0].title,"Public idea");assert.ok(!JSON.stringify(views).includes("SECRET NOTES"));
     const firstPublished=views[0].firstPublishedAt;
     assert.ok(!JSON.stringify(views).includes("ASR PRIVATE SENTINEL"));
@@ -81,6 +84,13 @@ test("historical corrections, publication, source evidence, private ideas and tr
     assert.equal((await getPublicIdeaViews(await published()))[0].updates![0].publishedAt,updatePublication);
     await cmd({action:"save-idea",id:ideaId,revision:10,fields:{...datedFields,updates:[{...datedFields.updates[0],chart:null}]}});
     await cmd({action:"publish-idea",id:ideaId,revision:11});
+    const roughGroups=await context.repository.load();
+    const rough=await context.repository.mutate({action:"create",revision:roughGroups.revision,fields:{name:"Rough draft",thesis:"",target:"",invalidation:"",notes:""},tradeIds:[]},new Set(),"test-owner");
+    const roughId=rough.ideas.at(-1)!.id;
+    await cmd({action:"save-idea",id:roughId,revision:0,fields:{...fields,title:"Rough title only",thesis:"",target:"",invalidation:""}});
+    await assert.rejects(cmd({action:"publish-idea",id:roughId,revision:1}),/thesis/);
+    assert.ok(!(await getPublicIdeaViews(await published())).some(i=>i.id===roughId));
+
     assert.equal((await getPublicIdeaViews(await published()))[0].updates![0].chart,null,"cleared numeric levels did not survive public projection");
 
 

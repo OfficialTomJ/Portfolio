@@ -7,13 +7,16 @@ reconciliation are implemented for owner testing. Production is unchanged.
 
 - [Public journal](https://mentor.stage.thomas-johnston.com/performance)
 - [Private admin](https://mentor.stage.thomas-johnston.com/admin)
+- [Complete example — public](https://mentor.stage.thomas-johnston.com/performance/ideas/idea-094c9f36-ed74-4317-9ed7-398e12828500)
+- [Same example — admin](https://mentor.stage.thomas-johnston.com/admin?view=ideas&idea=idea-094c9f36-ed74-4317-9ed7-398e12828500)
 - [Private ASR](https://mentor.stage.thomas-johnston.com/admin/asr)
 - [Sign in](https://mentor.stage.thomas-johnston.com/sign-in), if required; use
   the existing verified admin account.
 
 This deployment uses `blueprint_dev` and real authentication. Changes you make
-here persist in development data. Public idea drafts are deliberately empty until
-you prepare them; existing private ideas and notes were not automatically published.
+here persist in development data. Existing rough ideas remain private drafts; none were automatically published.
+A clearly labelled staging demonstration is the only new published idea. It has
+no attached trades and does not contribute invented performance.
 The earlier combined/Spot mock has been replaced on the staging alias only.
 
 ## Suggested test
@@ -34,23 +37,25 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
    before/after values and affected idea totals, then confirm if desired. Open
    the public journal/trade page to inspect the published version. Newly generated
    social images use the corrected fact fingerprint; existing image URLs remain.
-4. Use **Ideas** to select an existing idea or create one. Expand **Private working
-   idea** to maintain private content. Prepare a separate public title/thesis,
-   scenario, invalidation, date, status and optional article link. Save the public
-   draft, review it and confirm publication. Assign a trade from its trade editor
-   and publish that assignment to link it publicly. Public idea results count
-   only its published closed trades; private/held positions remain undisclosed.
-   Use the publication filter and public/draft revision labels to see what is live.
-   Rough private notes need no numeric chart or timeline. Public readiness asks for
-   thesis, target/scenario and invalidation text. Optional market levels and dated
-   updates appear on the idea chart, one market at a time with layer controls and
-   trade focus. Updates retain actual first-publication dates. Only fictional
-   local data was published to test this; existing real ideas remain private.
+4. The admin tabs are **Ideas**, **Trades**, **Publication & history**. Ideas opens
+   by default. Select an existing rough idea or create a title-only draft. There
+   is one title and one editor for thesis, target/scenario, invalidation, date and
+   outcome. Chart/timeline, linked trades and additional context are expandable.
+   Drafts remain private. Save, review and confirm publication when ready. A
+   published idea can have saved unpublished edits; the public snapshot remains
+   unchanged until republished. **Move to draft** withdraws the public narrative
+   without changing closed trade results. Legacy private notes are preserved in
+   storage and never copied into the public version. Public readiness requires
+   thesis, target/scenario and invalidation; numeric levels and updates are optional.
+   Assign trades from their trade editor, then publish those assignments separately.
+   The complete staging demonstration includes a thesis, confirmation conditions,
+   targets, daily-close invalidation, reference market/levels and two dated updates.
+   It is explicitly illustrative, with no actual trade attempts attached.
 5. Open **Private ASR** at `/admin/asr`. Review a closed trade, save Expected R,
    validity and comments, and inspect the private paired comparison. This must not
    change actual R, the public record or unpublished-trade-change counts. If trade
    facts/risk are later corrected, the old assessment is flagged for reconfirmation.
-6. Use **Imports** for the existing Breakout CSV preview and selective import.
+6. Open **Trades → Import trades** for the Breakout CSV preview and selective import.
    Confirming an import remains separate from source activation and publication.
    Held rows can now be opened in the same reconciliation editor.
 7. Use **Publication & history** to inspect saved revisions. **Restore draft**
@@ -68,7 +73,7 @@ an explicit update. Stale edits fail without silently overwriting another tab.
 
 ## Verified
 
-- 115 performance tests passed; four optional integration suites were skipped in
+- 117 performance tests passed; four optional integration suites were skipped in
   the ordinary test run. The new reconciliation transaction suite ran separately
   and passed against a disposable localhost replica set.
 - Transaction scenarios cover historical published corrections, incomplete legacy
@@ -77,6 +82,8 @@ an explicit update. Stale edits fail without silently overwriting another tab.
   privacy, stable publication dates and preserved public assignments. Refinement
   checks cover dated update publication, separate ASR revisions, retry/stale-save
   protection, public invariance, and stale assessments after fact corrections.
+  New checks cover title-only private drafts, publication readiness, and saving
+  the same canonical title/content to idea selectors while retaining legacy notes.
 - TypeScript and targeted ESLint passed. The hosted Next.js production build
   reached READY for this preview deployment.
 - Local HTTP checks used real signed-in authentication with development bypass
@@ -91,6 +98,11 @@ an explicit update. Stale edits fail without silently overwriting another tab.
   history, historical Bybit editor and existing private idea catalogue without
   modifying their trade or idea data. Successful mutation QA used disposable,
   fictional local data.
+- Latest staging verification confirmed tab order, imports inside Trades, one
+  title/editor, and the complete example in public and admin. Reference candles
+  and dated thesis selection loaded. Public and admin pages had no horizontal
+  overflow at 375px. Authenticated/anonymous API checks passed. The example
+  creation verified unchanged existing ideas, private rows and published trades.
 - The Chronicles invitation was verified to resolve to the intended server.
 
 No new production trades were imported or published. No real source history was
@@ -99,10 +111,10 @@ F&G scheduling remain parked/deferred as agreed.
 
 ## Deployment and recovery
 
-- Staging deployment: `dpl_513KNtSEPH5919XComMthxqXC3ie`
-- Immutable URL: `https://thomasjohnston-9ie22u3yt-thomas-johnstons-projects-d78bf4d9.vercel.app`
-- Previous staging deployment: `dpl_FS7C8CCSrfAzzh2N6yGzKMY4s2bh`, at
-  `https://thomasjohnston-g40etdkqz-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_4h8NN5yTexsQUWptx4BR1YJm1QfF`
+- Immutable URL: `https://thomasjohnston-lq5t1vztk-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Previous staging deployment: `dpl_513KNtSEPH5919XComMthxqXC3ie`, at
+  `https://thomasjohnston-9ie22u3yt-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the
   staging alias change.
 

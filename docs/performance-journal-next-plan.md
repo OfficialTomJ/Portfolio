@@ -95,12 +95,15 @@ Preserve the existing private idea IDs and assignments. An idea is the analytica
 thesis; its linked trades are execution attempts. Several trades may share an
 idea, and an idea may span more than one asset.
 
-Add an explicit public draft containing title, summary/thesis, optional target,
-optional invalidation, status and optional external analysis link. Keep private
-working notes separate. Existing private fields are not automatically published;
-the editor can deliberately copy chosen content into the public draft.
+Use one title and one editable idea: thesis, target/scenario, invalidation, outcome,
+date and optional chart, timeline and analysis link. Rough ideas stay private drafts.
+Existing private idea content opens in that editor without automatic publication.
+Legacy private notes remain preserved in storage and are never copied into published
+content. Published ideas retain a public snapshot while further saved edits stay
+private until the owner explicitly republishes them.
 
-Use draft, active, completed and invalidated states. Public status is owner
+Keep visibility (draft or published) separate from outcome (active, completed or
+invalidated). Outcome is owner
 supplied; imported price activity must not invent an invalidation or completion.
 Distinguish idea date from first publication and last update. Backfilled analysis
 must not appear to have been publicly available before it was first published.
@@ -124,8 +127,8 @@ reader; numeric levels and dated updates remain optional. Support conditions suc
 as moving-average failures or candle closes in text rather than forcing a fixed
 price. A reference line is not an automatic outcome detector.
 
-Show private, draft, published, and published-with-draft-changes states explicitly,
-with filters and current public/draft revision numbers. Saving a draft leaves the
+Show Draft, Published, and Published · unpublished edits states explicitly,
+with filters for drafts and published ideas. Saving a draft leaves the
 published version visible. Publishing and withdrawing an idea remain deliberate
 separate actions; neither changes its published trade economics.
 
@@ -150,7 +153,8 @@ for reconfirmation and exclude it from completed-ASR comparison until reviewed.
 ## One private workspace
 
 Use `/admin` for import, consolidation/reconciliation and publication. Keep `/performance/review` as a compatibility redirect. Creator analytics remain available at `/admin/overview`. Use in-page views
-for **Trades**, **Ideas**, **Imports** and **Publication & history**. Preserve
+in this order: **Ideas**, **Trades**, **Publication & history**. Import is a
+collapsible section inside Trades only. Default to Ideas. Preserve
 existing deep links and full trade review for optional detailed charts; all routine
 editing must be possible without leaving this workspace.
 

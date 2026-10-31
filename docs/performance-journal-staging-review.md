@@ -53,7 +53,10 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
    targets, daily-close invalidation and reference market/levels.
    It is explicitly illustrative, with three separately labelled display-only sample trades on its public detail page.
    Use **1h**, **4h** and **Daily**, then **Locate on chart** on each sample trade
-   to isolate entry/exit arrows. **Show all trades** restores grouped markers.
+   to isolate entry/exit arrows. **Show all trades** restores every execution arrow. Green up arrows are buys;
+   red down arrows are sells. Hover to view the trade and its shaded holding
+   period. Click the trade content to open its full detail page; sample detail
+   pages remain clearly labelled and excluded from journal results.
 5. Open **Private ASR** at `/admin/asr`. Review a closed trade, save Expected R,
    validity and comments, and inspect the private paired comparison. This must not
    change actual R, the public record or unpublished-trade-change counts. If trade
@@ -76,7 +79,7 @@ an explicit update. Stale edits fail without silently overwriting another tab.
 
 ## Verified
 
-- 124 performance tests passed; four optional integration suites were skipped in
+- 127 performance tests passed; four optional integration suites were skipped in
   the ordinary test run. The new reconciliation transaction suite ran separately
   and passed against a disposable localhost replica set.
 - Transaction scenarios cover historical published corrections, incomplete legacy
@@ -126,9 +129,18 @@ an explicit update. Stale edits fail without silently overwriting another tab.
   page and no sample IDs in the main journal. Production deployment was unchanged.
 - The Chronicles invitation was verified to resolve to the intended server.
 
+Latest arrow/detail QA verified individual green buy and red sell arrows. Hovering
+either endpoint of sample trade 3 displayed its prices, GMT timestamps and R,
+with the correct 28–29 October period shaded; moving away cleared the card.
+The trade list link opened the full sample detail page and its return link reopened
+the idea. Phone testing retained readable trade information and period shading
+without horizontal overflow. All three sample detail URLs and an existing real
+trade detail returned successfully; samples remain labelled, noindex and absent
+from the journal dataset. Hosted privacy checks and browser logs were clean.
+
 The current example has three display-only executions in
-`blueprint_dev.performance_staging_idea_examples`. Only the idea detail loader
-reads this collection. It requires the exact staging hostname, explicit
+`blueprint_dev.performance_staging_idea_examples`. Only the staging idea detail and sample trade detail loaders
+read this collection. It requires the exact staging hostname, explicit
 `blueprint_dev` database and a deployment that is not production. Sample fields
 are validated and allowlisted. Existing trade records, assignments and journal
 results are unchanged; the staging seed verified their before/after hashes. The
@@ -140,10 +152,10 @@ F&G scheduling remain parked/deferred as agreed.
 
 ## Deployment and recovery
 
-- Staging deployment: `dpl_HuHb3QV8jn2QfjPZka6LMD55AipU`
-- Immutable URL: `https://thomasjohnston-7uc0ppvj1-thomas-johnstons-projects-d78bf4d9.vercel.app`
-- Previous staging deployment: `dpl_BnUpPcpAUACWfdRUjtpkygjmYntm`, at
-  `https://thomasjohnston-owgch0aw4-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_FyMBzP2QCSedAKJLXJpNv3vtzCTX`
+- Immutable URL: `https://thomasjohnston-8zi9tnd3l-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Previous staging deployment: `dpl_HuHb3QV8jn2QfjPZka6LMD55AipU`, at
+  `https://thomasjohnston-7uc0ppvj1-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the
   staging alias change.
 

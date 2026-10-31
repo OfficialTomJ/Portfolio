@@ -146,8 +146,16 @@ and page every requested candle window rather than stopping after 500 bars.
 Keep one reference source across pages. Selecting a trade refocuses the range
 while retaining the chosen timeframe. Never reuse another
 market's numeric levels. Optional target/invalidation lines describe the current
-idea, not historical rules. Group dense execution markers by candle; selecting
-one trade isolates its entry and exit. Toggle markers/levels in place without
+idea, not historical rules. Each execution has a stable marker identity: a green
+up arrow for a buy and a red down arrow for a sell. Longs enter with a buy and
+exit with a sell; shorts reverse those sides, independently of profit or loss.
+Keep same-candle executions distinct. Hovering an arrow shows the trade number,
+side, fill prices, GMT timestamps and R, and shades its entry-to-exit period.
+Clip shading to the visible plot and never invent an endpoint in missing candles.
+Selecting a trade also reveals this information for touch and keyboard users.
+Trade list content links to the trade detail page; Locate on chart remains a
+separate action. The staging samples have labelled detail pages with a return
+link to the idea, outside the journal dataset. Toggle markers/levels in place without
 recreating the chart, refetching candles, or resetting the reader's chart position.
 Keep the requested date window stable across overlay and text interactions.
 

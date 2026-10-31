@@ -138,7 +138,13 @@ is no timeline editor, timeline selector or thesis marker. Existing timeline
 records remain compatible with saved history but do not drive the public view.
 Saved changes still require explicit publication.
 
-Show one market chart at a time, selected by the reader. Never reuse another
+Show one market chart at a time, selected by the reader, with **1h**, **4h** and
+**Daily** timeframes (4h initially). Load 7 days of prior context on 1h, 14 days
+on 4h and 90 days on Daily, plus the idea/trade period and up to three days after
+the last event. Bound long ranges to 1,498 bars or 470 days, whichever is smaller,
+and page every requested candle window rather than stopping after 500 bars.
+Keep one reference source across pages. Selecting a trade refocuses the range
+while retaining the chosen timeframe. Never reuse another
 market's numeric levels. Optional target/invalidation lines describe the current
 idea, not historical rules. Group dense execution markers by candle; selecting
 one trade isolates its entry and exit. Toggle markers/levels in place without

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, ColorType, LineSeries, LineStyle, createChart, createSeriesMarkers, type IChartApi, type ISeriesApi, type ISeriesMarkersPluginApi, type Time } from "lightweight-charts";
+import { loadIdeaChartMarket } from "@/lib/performance/idea-chart-market";
 import { tradeChartMarkers } from "@/lib/performance/idea-chart-markers";
 import type { IdeaChart } from "@/lib/performance/idea-timeline-model";
 import type { MarketCandles, PerformanceTrade, TradeCandleInterval } from "@/lib/performance/types";
@@ -14,8 +15,8 @@ export default function IdeaPriceChart(props:Props) {
   const [market,setMarket]=useState<MarketCandles|null>(null),[error,setError]=useState("");
   const {symbol,start,end,interval}=props;
   useEffect(()=>{
-    const controller=new AbortController(),query=new URLSearchParams({symbol,start:String(start),end:String(end),interval,direction:"window"});
-    fetch(`/api/performance/market?${query}`,{signal:controller.signal}).then(async r=>{if(!r.ok)throw Error("Reference chart is temporarily unavailable. The idea and trades remain available below.");const data=await r.json() as MarketCandles;if(!data.candles?.length)throw Error("No reference candles are available for this market and window.");setMarket(data);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});
+    const controller=new AbortController();
+    loadIdeaChartMarket({symbol,start,end,interval,signal:controller.signal}).then(setMarket).catch(e=>{if(!controller.signal.aborted)setError(e.message);});
     return()=>controller.abort();
   },[symbol,start,end,interval]);
   return market?<RenderedChart {...props} market={market}/>:<div role="status" className="grid h-80 place-items-center px-6 text-center text-xs leading-5 text-zinc-500">{error||"Loading reference chart…"}</div>;
@@ -49,5 +50,5 @@ function RenderedChart({symbol,interval,market,levels,trades,selectedTrade,showT
       series.setData(visible&&candles.length?[{time:candles[0].time as Time,value:price},{time:candles.at(-1)!.time as Time,value:price}]:[]);
     }
   },[candles,symbol,levels,showLevels]);
-  return <><div ref={ref} data-idea-chart role="img" aria-label={`${symbol} ${interval} reference chart with target, invalidation and closed trade markers. Recorded fills are listed below.`} className="h-80 w-full min-w-0 sm:h-[380px]"/><p className="border-t border-white/[.06] px-4 py-2 text-[10px] leading-5 text-zinc-500">{market.source==="binance"?"Binance":"Bybit"} {symbol} · {interval.toUpperCase()} reference candles. Blue markers show trade entries/exits; select a trade for its fills. Reference prices can differ from actual fills.</p></>;
+  return <><div ref={ref} data-idea-chart role="img" aria-label={`${symbol} ${interval} reference chart with target, invalidation and closed trade markers. Recorded fills are listed below.`} className="h-80 w-full min-w-0 sm:h-[380px]"/><p className="border-t border-white/[.06] px-4 py-2 text-[10px] leading-5 text-zinc-500">{market.source==="binance"?"Binance":"Bybit"} {symbol} · {interval==="1d"?"Daily":interval.toUpperCase()} reference candles. Blue markers show trade entries/exits; select a trade for its fills. Reference prices can differ from actual fills.</p></>;
 }

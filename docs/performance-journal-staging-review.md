@@ -15,8 +15,9 @@ reconciliation are implemented for owner testing. Production is unchanged.
 
 This deployment uses `blueprint_dev` and real authentication. Changes you make
 here persist in development data. Existing rough ideas remain private drafts; none were automatically published.
-A clearly labelled staging demonstration is the only new published idea. It has
-no attached trades and does not contribute invented performance.
+A clearly labelled staging demonstration is the only new published idea. It shows
+three labelled fictional sample trades on its detail page only. These never enter
+the journal dataset, trade editor or performance totals.
 The earlier combined/Spot mock has been replaced on the staging alias only.
 
 ## Suggested test
@@ -50,7 +51,9 @@ The earlier combined/Spot mock has been replaced on the staging alias only.
    Assign trades from their trade editor, then publish those assignments separately.
    The complete staging demonstration includes a thesis, confirmation conditions,
    targets, daily-close invalidation and reference market/levels.
-   It is explicitly illustrative, with no actual trade attempts attached.
+   It is explicitly illustrative, with three separately labelled display-only sample trades on its public detail page.
+   Use **1h**, **4h** and **Daily**, then **Locate on chart** on each sample trade
+   to isolate entry/exit arrows. **Show all trades** restores grouped markers.
 5. Open **Private ASR** at `/admin/asr`. Review a closed trade, save Expected R,
    validity and comments, and inspect the private paired comparison. This must not
    change actual R, the public record or unpublished-trade-change counts. If trade
@@ -73,7 +76,7 @@ an explicit update. Stale edits fail without silently overwriting another tab.
 
 ## Verified
 
-- 119 performance tests passed; four optional integration suites were skipped in
+- 124 performance tests passed; four optional integration suites were skipped in
   the ordinary test run. The new reconciliation transaction suite ran separately
   and passed against a disposable localhost replica set.
 - Transaction scenarios cover historical published corrections, incomplete legacy
@@ -115,7 +118,21 @@ an explicit update. Stale edits fail without silently overwriting another tab.
   At 375px the page had no horizontal overflow (20px title, 13px thesis). Admin
   showed only current chart-level inputs, with no timeline editor. Hosted privacy
   checks passed again. No idea or trade records were changed for this refinement.
+- Timeframe QA loaded 1h, 4h and Daily, confirmed the extra history and grouped
+  daily markers, and isolated the later sample execution with entry/exit arrows.
+  An hourly chart retained its panned date range after toggling levels off/on.
+  At 375px all timeframe controls remained present with no horizontal overflow.
+  Browser logs were clean. HTTP checks found all three samples on the example
+  page and no sample IDs in the main journal. Production deployment was unchanged.
 - The Chronicles invitation was verified to resolve to the intended server.
+
+The current example has three display-only executions in
+`blueprint_dev.performance_staging_idea_examples`. Only the idea detail loader
+reads this collection. It requires the exact staging hostname, explicit
+`blueprint_dev` database and a deployment that is not production. Sample fields
+are validated and allowlisted. Existing trade records, assignments and journal
+results are unchanged; the staging seed verified their before/after hashes. The
+admin continues to show actual linked journal trades only.
 
 No new production trades were imported or published. No real source history was
 repaired as a browser test. Spot, scanner, the Discord/product signup redesign and
@@ -123,10 +140,10 @@ F&G scheduling remain parked/deferred as agreed.
 
 ## Deployment and recovery
 
-- Staging deployment: `dpl_BnUpPcpAUACWfdRUjtpkygjmYntm`
-- Immutable URL: `https://thomasjohnston-owgch0aw4-thomas-johnstons-projects-d78bf4d9.vercel.app`
-- Previous staging deployment: `dpl_4h8NN5yTexsQUWptx4BR1YJm1QfF`, at
-  `https://thomasjohnston-lq5t1vztk-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Staging deployment: `dpl_HuHb3QV8jn2QfjPZka6LMD55AipU`
+- Immutable URL: `https://thomasjohnston-7uc0ppvj1-thomas-johnstons-projects-d78bf4d9.vercel.app`
+- Previous staging deployment: `dpl_BnUpPcpAUACWfdRUjtpkygjmYntm`, at
+  `https://thomasjohnston-owgch0aw4-thomas-johnstons-projects-d78bf4d9.vercel.app`
 - Production remained on `dpl_EZk7DjRs36L5Ls4Ktt1huTMkHdAe` before and after the
   staging alias change.
 

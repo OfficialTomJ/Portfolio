@@ -15,19 +15,23 @@ export function ideaMilestones(idea:PublicIdea):IdeaMilestone[] {
 export function ideaMarkets(idea:PublicIdea,trades:PerformanceTrade[]):string[] {
   return [...new Set([idea.chart?.symbol,...trades.map(t=>t.symbol)].filter((v):v is string=>!!v))];
 }
-export function ideaChartWindow(milestones:IdeaMilestone[],trades:PerformanceTrade[],focusAt:string,selectedTrade?:PerformanceTrade,now=Date.now()) {
+export function ideaChartWindow(milestones:IdeaMilestone[],trades:PerformanceTrade[],focusAt:string,selectedTrade?:PerformanceTrade,now=Date.now(),requestedInterval?:TradeCandleInterval) {
+  const day=86400000;
   const times=[...milestones.map(m=>Date.parse(m.at)),...trades.flatMap(t=>[Date.parse(t.openedAt),Date.parse(t.closedAt)])];
-  const padding=3*86400000;
-  let start=(selectedTrade?Date.parse(selectedTrade.openedAt):Math.min(...times))-padding;
-  let end=Math.min(now,(selectedTrade?Date.parse(selectedTrade.closedAt):Math.max(...times))+padding);
-  let clipped=false;
-  if(end-start>470*86400000) {
+  const first=selectedTrade?Date.parse(selectedTrade.openedAt):Math.min(...times);
+  const last=selectedTrade?Date.parse(selectedTrade.closedAt):Math.max(...times);
+  const interval:TradeCandleInterval=requestedInterval??(last-first>77*day?"1d":"4h");
+  const step=interval==="1h"?3600000:interval==="4h"?14400000:day;
+  const history=interval==="1h"?7*day:interval==="4h"?14*day:90*day;
+  let start=first-history,end=Math.min(now,last+3*day),clipped=false;
+  // A bounded request can be paged in full at every chosen timeframe.
+  const maximum=Math.min(470*day,1498*step);
+  if(end-start>maximum) {
     clipped=true;
     const focus=selectedTrade?Date.parse(selectedTrade.closedAt):Date.parse(focusAt);
-    start=Math.max(start,Math.min(focus-200*86400000,end-470*86400000));
-    end=Math.min(end,start+470*86400000);
+    start=Math.max(start,Math.min(focus-maximum/2,end-maximum));
+    end=Math.min(end,start+maximum);
   }
-  const interval:TradeCandleInterval=end-start<=77*86400000?"4h":"1d";
   return {start:Math.floor(Math.max(1,start)/1000),end:Math.ceil(end/1000),interval,clipped};
 }
 

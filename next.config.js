@@ -20,8 +20,6 @@ const nextConfig = {
         { source: "/mentor/performance/review/:path*", headers: privateReviewHeaders },
         { source: "/admin/portfolio/:path*", headers: privateReviewHeaders },
         { source: "/mentor/admin/portfolio/:path*", headers: privateReviewHeaders },
-        { source: "/api/spot/admin/:path*", headers: privateReviewHeaders },
-        { source: "/api/performance/admin/journal/:path*", headers: privateReviewHeaders },
       ];
     },
     async redirects() {

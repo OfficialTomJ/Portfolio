@@ -21,7 +21,7 @@ export const draftFingerprint = (draft: PortfolioDraft) => createHash("sha256").
 export function calculatePortfolioDraft(input: PortfolioDraft) {
   const draft = portfolioDraftSchema.parse(input);
   if (new Set(draft.notes.map(row => row.note.id)).size !== draft.notes.length) throw new Error("Idea IDs must be unique.");
-  if (draft.ledger.mode !== "reconstructed" || draft.ledger.currency !== "USD") throw new Error("The review ledger must remain a USD reconstruction.");
+  if (draft.ledger.mode !== "reconstructed" || draft.ledger.currency !== "USD") throw new Error("The portfolio requires a USD ledger.");
   if (new Set(draft.ledger.events.map(row => row.id)).size !== draft.ledger.events.length) throw new Error("Transaction IDs must be unique.");
   const replay = replayPortfolio(draft.ledger);
   let current = replay.publicData;

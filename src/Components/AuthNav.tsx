@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import { isDashboardNew } from "../lib/whats-new";
 
-export default function AuthNav({ unifiedJournal = false, btcPortfolio = false }: { unifiedJournal?: boolean; btcPortfolio?: boolean }) {
+export default function AuthNav({ btcPortfolio = false }: { btcPortfolio?: boolean }) {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
 
@@ -17,13 +17,13 @@ export default function AuthNav({ unifiedJournal = false, btcPortfolio = false }
   if (!session?.user) {
     return (
       <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-4 sm:text-sm">
-        {(!unifiedJournal || btcPortfolio) && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
+        {btcPortfolio && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
         {!btcPortfolio && <Link
           href="/performance"
           className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
         >
           <span className="sm:hidden">Journal</span>
-          <span className="hidden sm:inline">Journal</span>
+          <span className="hidden sm:inline">Performance Journal</span>
         </Link>}
         <Link
           href="/sign-in"
@@ -47,7 +47,7 @@ export default function AuthNav({ unifiedJournal = false, btcPortfolio = false }
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-      {(!unifiedJournal || btcPortfolio) && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
+      {btcPortfolio && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
       <Link
         href="/blueprint"
         className="hidden whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white sm:block"
@@ -74,7 +74,7 @@ export default function AuthNav({ unifiedJournal = false, btcPortfolio = false }
         className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
       >
         <span className="sm:hidden">Journal</span>
-        <span className="hidden sm:inline">Journal</span>
+        <span className="hidden sm:inline">Performance Journal</span>
       </Link>}
       <Link
         href="/account"

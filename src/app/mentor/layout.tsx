@@ -5,8 +5,7 @@ import AuthNav from "../../Components/AuthNav";
 import TopProgress from "../../Components/TopProgress";
 import DisclosureModal from "../../Components/DisclosureModal";
 import MentorAnalytics from "../../Components/MentorAnalytics";
-import { unifiedMockEnabled } from "@/lib/journal/mode";
-import { btcMockEnabled } from "@/lib/btc-portfolio/mode";
+import { portfolioDatabaseEnabled } from "@/lib/btc-portfolio/mode";
 
 const jost = Jost({ subsets: ["latin"] });
 
@@ -42,7 +41,7 @@ export default function MentorLayout({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/chronicles-c.png" alt="Chronicles" width="32" height="32" className="h-8 w-8 object-contain" />
           </Link>
-          <AuthNav unifiedJournal={unifiedMockEnabled()} btcPortfolio={btcMockEnabled()} />
+          <AuthNav btcPortfolio={portfolioDatabaseEnabled()} />
         </nav>
       </header>
       {children}

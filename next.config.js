@@ -18,6 +18,8 @@ const nextConfig = {
       return [
         { source: "/performance/review/:path*", headers: privateReviewHeaders },
         { source: "/mentor/performance/review/:path*", headers: privateReviewHeaders },
+        { source: "/admin/portfolio/:path*", headers: privateReviewHeaders },
+        { source: "/mentor/admin/portfolio/:path*", headers: privateReviewHeaders },
       ];
     },
     async redirects() {

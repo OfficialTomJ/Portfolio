@@ -5,6 +5,8 @@ import AuthNav from "../../Components/AuthNav";
 import TopProgress from "../../Components/TopProgress";
 import DisclosureModal from "../../Components/DisclosureModal";
 import MentorAnalytics from "../../Components/MentorAnalytics";
+import { unifiedMockEnabled } from "@/lib/journal/mode";
+import { btcMockEnabled } from "@/lib/btc-portfolio/mode";
 
 const jost = Jost({ subsets: ["latin"] });
 
@@ -35,13 +37,12 @@ export default function MentorLayout({
       <TopProgress />
       <header className="sticky top-0 z-50 backdrop-blur-md bg-black/60 border-b border-[var(--bp-border)]">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap sm:gap-2">
-            <span className="text-base font-semibold tracking-tight sm:text-lg">
-              The Blueprint
-            </span>
-            <span className="text-base leading-none text-[var(--bp-accent)] sm:text-lg">.</span>
+          <Link href="/" aria-label="Website home" className="flex shrink-0 items-center">
+            {/* The approved compact C is the shared banner mark; product titles stay in page content. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/chronicles-c.png" alt="Chronicles" width="32" height="32" className="h-8 w-8 object-contain" />
           </Link>
-          <AuthNav />
+          <AuthNav unifiedJournal={unifiedMockEnabled()} btcPortfolio={btcMockEnabled()} />
         </nav>
       </header>
       {children}

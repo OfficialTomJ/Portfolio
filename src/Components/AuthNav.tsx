@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import { isDashboardNew } from "../lib/whats-new";
 
-export default function AuthNav() {
+export default function AuthNav({ unifiedJournal = false, btcPortfolio = false }: { unifiedJournal?: boolean; btcPortfolio?: boolean }) {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
 
@@ -17,13 +17,14 @@ export default function AuthNav() {
   if (!session?.user) {
     return (
       <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-4 sm:text-sm">
-        <Link
+        {(!unifiedJournal || btcPortfolio) && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
+        {!btcPortfolio && <Link
           href="/performance"
           className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
         >
           <span className="sm:hidden">Journal</span>
-          <span className="hidden sm:inline">Performance Journal</span>
-        </Link>
+          <span className="hidden sm:inline">Journal</span>
+        </Link>}
         <Link
           href="/sign-in"
           className="whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
@@ -46,6 +47,7 @@ export default function AuthNav() {
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-3 sm:text-sm">
+      {(!unifiedJournal || btcPortfolio) && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
       <Link
         href="/blueprint"
         className="hidden whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white sm:block"
@@ -67,13 +69,13 @@ export default function AuthNav() {
           />
         )}
       </Link>
-      <Link
+      {!btcPortfolio && <Link
         href="/performance"
         className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
       >
         <span className="sm:hidden">Journal</span>
-        <span className="hidden sm:inline">Performance Journal</span>
-      </Link>
+        <span className="hidden sm:inline">Journal</span>
+      </Link>}
       <Link
         href="/account"
         className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"

@@ -2,7 +2,9 @@
   "name": "next-portfolio",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,7 +21,8 @@
     "performance:images:backfill": "NODE_PATH=node_modules/next/dist/compiled NODE_OPTIONS=--conditions=react-server tsx src/lib/performance/cli-backfill-social-images.ts",
     "performance:test": "tsx --test src/lib/performance/*.test.ts",
     "tjss:check": "tsx scripts/tjss-check.ts",
-    "tjss:seed": "tsx scripts/seed-tjss.ts"
+    "tjss:seed": "tsx scripts/seed-tjss.ts",
+    "btc-portfolio:test": "tsx --test src/lib/btc-portfolio/*.test.ts"
   },
   "dependencies": {
     "@types/node": "^25.9.3",

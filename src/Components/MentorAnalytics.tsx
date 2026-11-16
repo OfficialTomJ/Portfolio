@@ -12,7 +12,7 @@ import { GA_ID, FB_PIXEL_ID, pageview } from "../lib/track";
 export default function MentorAnalytics() {
   const pathname = usePathname();
   const enabled = Boolean(GA_ID || FB_PIXEL_ID);
-  const privateReview = pathname === "/performance/review" ||
+  const privateReview = pathname === "/admin" || pathname?.startsWith("/admin/") || pathname === "/mentor/admin" || pathname?.startsWith("/mentor/admin/") || pathname === "/performance/review" ||
     pathname?.startsWith("/performance/review/") ||
     pathname === "/mentor/performance/review" ||
     pathname?.startsWith("/mentor/performance/review/");

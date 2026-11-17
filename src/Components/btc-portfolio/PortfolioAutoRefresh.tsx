@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import type { PublicPortfolio } from "@/lib/btc-portfolio/schema";
 import { watchPortfolio, type PortfolioFreshness } from "@/lib/btc-portfolio/refresh";
+import { portfolioHeadCopyForData } from "@/lib/btc-portfolio/head-copy";
 import PortfolioDashboard from "./PortfolioDashboard";
 
 /** Public releases only. Admin draft previews deliberately do not subscribe to this feed. */
 export default function PortfolioAutoRefresh({ data }: { data: PublicPortfolio }) {
   const [snapshot, setSnapshot] = useState<{ data: PublicPortfolio; freshness: PortfolioFreshness }>({ data, freshness: { status: "checking", checkedAt: null } });
+  const title = portfolioHeadCopyForData(snapshot.data).title;
+  useEffect(() => { document.title = title; }, [title]);
   useEffect(() => {
     const watcher = watchPortfolio({
       isActive: () => document.visibilityState === "visible" && navigator.onLine,

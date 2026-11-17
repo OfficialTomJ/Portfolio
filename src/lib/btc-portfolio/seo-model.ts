@@ -2,8 +2,6 @@ import { createHash } from "node:crypto";
 import type { PublicPortfolio } from "./schema";
 import { periodPoints, pct } from "./view";
 
-export const PORTFOLIO_TITLE = "Public Portfolio | Thomas Johnston";
-export const PORTFOLIO_DESCRIPTION = "Track Thomas Johnston's public portfolio performance in USD and against Bitcoin, current asset allocation, and investment ideas linked to Substack research.";
 export const PORTFOLIO_CANONICAL = "https://mentor.thomas-johnston.com/portfolio";
 export const PORTFOLIO_IMAGE_VERSION = 1;
 export interface PortfolioSeoModel { key: string; imageDay: string; year: number; asOf: string; usdReturn: number; btcGap: number; points: { at: string; value: number }[]; alt: string }

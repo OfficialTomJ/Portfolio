@@ -3,20 +3,14 @@ import { randomUUID } from "node:crypto";
 import { getMongoClient } from "@/lib/mongodb";
 import { portfolioDatabaseEnabled } from "./mode";
 import { publicSchema } from "./schema";
+import { loadDatabasePortfolio } from "./public-repository";
+export { loadDatabasePortfolio } from "./public-repository";
 import { calculatePortfolioDraft, prepareWorkspaceChange, WorkspaceConflict, type PortfolioWorkspace, type PortfolioWorkspaceSnapshot, type WorkspaceCommand } from "./workspace-model";
 
 const KEY = "staging-portfolio-v1";
 const database = () => { if (!portfolioDatabaseEnabled() || (process.env.MONGODB_DB ?? "blueprint_dev") !== "blueprint_dev") throw new Error("Portfolio review is unavailable."); return getMongoClient().db("blueprint_dev", { ignoreUndefined: true }); };
 const workspace = () => database().collection<PortfolioWorkspace>("portfolio_review_workspaces");
 interface Release { _id: string; workspaceId: string; sequence: number; at: string; data: unknown }
-/** Visitor requests read only the minimal release and pointer collections. */
-export async function loadDatabasePortfolio() {
-  const db = database(), pointer = await db.collection<{ _id: string; releaseId: string }>("portfolio_review_public_pointers").findOne({ _id: KEY });
-  if (!pointer) throw new Error("No reviewed portfolio release is available.");
-  const release = await db.collection<Release>("portfolio_review_public_releases").findOne({ _id: pointer.releaseId, workspaceId: KEY }, { projection: { data: 1 } });
-  if (!release) throw new Error("Portfolio release is unavailable.");
-  return publicSchema.parse(release.data);
-}
 export async function loadPortfolioWorkspace(): Promise<PortfolioWorkspaceSnapshot> {
   const db = database(), record = await workspace().findOne({ _id: KEY });
   if (!record) throw new Error("The portfolio workspace has not been prepared.");

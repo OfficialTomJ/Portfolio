@@ -1,0 +1,20 @@
+{
+  "repository": "https://github.com/ErikThiart/cryptocurrency-icons",
+  "revision": "502292b0b45d758287e8e9a4478b89f09b2dfda5",
+  "license": "MIT",
+  "icons": {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "SOL": "solana",
+    "HYPE": "hyperliquid",
+    "USDT": "tether"
+  },
+  "overrides": {
+    "FARTCOIN": {
+      "coinGeckoId": "fartcoin",
+      "platform": "solana",
+      "url": "https://coin-images.coingecko.com/coins/images/50891/large/fart.jpg?1729503972",
+      "attribution": "Fartcoin brand mark via CoinGecko; project trademarks remain with their owners."
+    }
+  }
+}

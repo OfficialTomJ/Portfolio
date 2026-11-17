@@ -1,3 +1,4 @@
+import { portfolioDatabaseEnabled } from "@/lib/btc-portfolio/mode";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPerformanceAdminSession } from "@/lib/performance/admin-access";
@@ -37,7 +38,7 @@ export default async function AdminDashboard() {
         <Link href="/performance/review" className="mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)] transition-colors hover:bg-[var(--bp-accent)]/10">
           Review Performance Journal
         </Link>
-        <Link href="/admin/portfolio" className="ml-3 mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)] transition-colors hover:bg-[var(--bp-accent)]/10">Manage Public Portfolio</Link>
+        {portfolioDatabaseEnabled() && <Link href="/admin/portfolio" className="ml-3 mt-4 inline-flex rounded-lg border border-[var(--bp-accent)]/30 px-4 py-2 text-sm text-[var(--bp-accent)] transition-colors hover:bg-[var(--bp-accent)]/10">Manage Public Portfolio</Link>}
       </header>
 
       {/* Overview cards */}

@@ -61,3 +61,10 @@ export function periodPoints(data: PublicPortfolio, period: string, from: string
 }
 function nextDate(value: string) { const d = new Date(`${value}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
 export function utcMidnight(value: string) { return Date.parse(`${value}T00:00:00Z`); }
+
+/** Fixed UTC components keep server and browser midnight rendering identical. */
+export function portfolioUpdateTime(at: string) {
+  const value = new Date(at);
+  if (!Number.isFinite(value.getTime())) throw new RangeError("Invalid portfolio timestamp.");
+  return [value.getUTCHours(), value.getUTCMinutes(), value.getUTCSeconds()].map(part => String(part).padStart(2, "0")).join(":") + " UTC";
+}

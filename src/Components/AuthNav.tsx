@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import { isDashboardNew } from "../lib/whats-new";
 
 export default function AuthNav({ btcPortfolio = false }: { btcPortfolio?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const showPortfolio = btcPortfolio || pathname === "/portfolio" || pathname === "/mentor/portfolio";
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
@@ -17,8 +19,8 @@ export default function AuthNav({ btcPortfolio = false }: { btcPortfolio?: boole
   if (!session?.user) {
     return (
       <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-4 sm:text-sm">
-        {btcPortfolio && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
-        {!btcPortfolio && <Link
+        {showPortfolio && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
+        {!showPortfolio && <Link
           href="/performance"
           className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
         >
@@ -47,7 +49,7 @@ export default function AuthNav({ btcPortfolio = false }: { btcPortfolio?: boole
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-      {btcPortfolio && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
+      {showPortfolio && <Link href="/portfolio" className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white">Portfolio</Link>}
       <Link
         href="/blueprint"
         className="hidden whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white sm:block"
@@ -69,7 +71,7 @@ export default function AuthNav({ btcPortfolio = false }: { btcPortfolio?: boole
           />
         )}
       </Link>
-      {!btcPortfolio && <Link
+      {!showPortfolio && <Link
         href="/performance"
         className="shrink-0 whitespace-nowrap text-[var(--bp-text-dim)] transition-colors hover:text-white"
       >

@@ -5,7 +5,7 @@ import { newEvent, replayPortfolio } from "./engine";
 import { makeMockLedger } from "./fixture";
 import { applyCommand, initialWorkspace, fingerprint } from "./model";
 import { commandSchema, eventSchema, publicSchema, type Ledger, type PortfolioEvent, type PublicPortfolio } from "./schema";
-import { activityAllocationChanges, date, metrics, periodPoints, utcMidnight, portfolioActivityView } from "./view";
+import { activityAllocationChanges, date, portfolioUpdateTime, metrics, periodPoints, utcMidnight, portfolioActivityView } from "./view";
 import { importExample, parseImport } from "./bulk";
 
 const dates = ["2026-01-01T00:00:00.000Z", "2026-01-02T00:00:00.000Z", "2026-01-03T00:00:00.000Z"];
@@ -176,4 +176,10 @@ test("compact activity groups fills newest first without merging unrelated event
   const before = structuredClone(activity), view = portfolioActivityView(activity, dates[0], dates[2]);
   assert.equal(view.groups.length, 2); assert.equal(view.groups[0][0].asset, "HYPE"); assert.deepEqual(view.groups[1].map(e => e.id), ["fill-2", "fill-1"]);
   assert.deepEqual(activity, before);
+});
+
+test("UTC update labels are deterministic at midnight and across input offsets", () => {
+  assert.equal(portfolioUpdateTime("2026-01-01T00:00:00.000Z"), "00:00:00 UTC");
+  assert.equal(portfolioUpdateTime("2026-01-01T11:00:00+11:00"), "00:00:00 UTC");
+  assert.equal(portfolioUpdateTime("2026-01-01T14:04:09Z"), "14:04:09 UTC");
 });

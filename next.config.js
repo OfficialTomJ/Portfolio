@@ -3,6 +3,11 @@ const nextConfig = {
     turbopack: {
         root: __dirname,
     },
+    outputFileTracingIncludes: {
+      "/mentor/portfolio": ["./public/chronicles-c.png"],
+      "/api/btc-portfolio/og": ["./public/chronicles-c.png"],
+      "/api/btc-portfolio/images/*": ["./public/chronicles-c.png"],
+    },
     images: {
         qualities: [75, 100],
         remotePatterns: [

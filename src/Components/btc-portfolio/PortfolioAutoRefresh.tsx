@@ -3,19 +3,23 @@
 import { useEffect, useState } from "react";
 import type { PublicPortfolio } from "@/lib/btc-portfolio/schema";
 import { watchPortfolio, type PortfolioFreshness } from "@/lib/btc-portfolio/refresh";
+import { portfolioHeadCopyForData } from "@/lib/btc-portfolio/head-copy";
 import PortfolioDashboard from "./PortfolioDashboard";
 
 /** Public releases only. Admin draft previews deliberately do not subscribe to this feed. */
 export default function PortfolioAutoRefresh({ data }: { data: PublicPortfolio }) {
   const [snapshot, setSnapshot] = useState<{ data: PublicPortfolio; freshness: PortfolioFreshness }>({ data, freshness: { status: "checking", checkedAt: null } });
+  const title = portfolioHeadCopyForData(snapshot.data).title;
+  useEffect(() => { document.title = title; }, [title]);
   useEffect(() => {
     const watcher = watchPortfolio({
-      isActive: () => document.visibilityState === "visible" && navigator.onLine,
+      // Keep the tab-bar return current in background tabs too.
+      isActive: () => navigator.onLine,
       onData: result => setSnapshot({ data: result.data, freshness: { status: "ready", checkedAt: result.checkedAt } }),
       onError: () => setSnapshot(previous => ({ ...previous, freshness: { ...previous.freshness, status: navigator.onLine ? "error" : "offline" } })),
     });
     const resume = () => { void watcher.refresh(); };
-    const visibility = () => { if (document.visibilityState === "visible") resume(); else watcher.cancel(); };
+    const visibility = () => { if (document.visibilityState === "visible") resume(); };
     const offline = () => { watcher.cancel(); setSnapshot(previous => ({ ...previous, freshness: { ...previous.freshness, status: "offline" } })); };
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("focus", resume);

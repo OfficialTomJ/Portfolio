@@ -1,7 +1,7 @@
 import type { PortfolioFreshness } from "@/lib/btc-portfolio/refresh";
-import { PORTFOLIO_TIME_ZONE } from "@/lib/btc-portfolio/view";
+import { portfolioUpdateTime } from "@/lib/btc-portfolio/view";
+export { portfolioUpdateTime } from "@/lib/btc-portfolio/view";
 
-export const portfolioUpdateTime = (at: string) => new Intl.DateTimeFormat("en-AU", { timeZone: PORTFOLIO_TIME_ZONE, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZoneName: "short" }).format(new Date(at));
 
 export default function PortfolioRefreshIndicator({ freshness }: { freshness: PortfolioFreshness }) {
   const delayed = freshness.status === "error" || freshness.status === "offline";

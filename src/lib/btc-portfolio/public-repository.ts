@@ -3,7 +3,7 @@ import { MongoClient } from "mongodb";
 import { getMongoClient } from "@/lib/mongodb";
 import { portfolioPublicEnabled } from "./mode";
 import { portfolioPublicDatabaseName } from "./mode-policy";
-import { publicSchema } from "./schema";
+import { visitorPortfolio } from "./visitor-projection";
 
 declare global {
   var _portfolioProductionClient: MongoClient | undefined;
@@ -30,5 +30,5 @@ export async function loadDatabasePortfolio() {
   if (!pointer) throw new Error("No reviewed public portfolio release is available.");
   const release = await db.collection<{ _id: string; workspaceId: string; data: unknown }>(releases).findOne({ _id: pointer.releaseId, workspaceId: key }, { projection: { data: 1 } });
   if (!release) throw new Error("Public portfolio release is unavailable.");
-  return publicSchema.parse(release.data);
+  return visitorPortfolio(release.data);
 }

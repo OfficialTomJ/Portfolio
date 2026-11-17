@@ -51,10 +51,10 @@ test("SEO title, description and social image share one current public snapshot"
   assert.equal((portfolioMetadata(null, "https://mentor.thomas-johnston.com", true).robots as { index: boolean }).index, false);
 });
 test("browser and SEO titles follow the refreshed public YTD return with no personal name", () => {
-  assert.equal(portfolioHeadCopy({ year: 2026, usdReturn: 10.524751 }).title, "Public Portfolio | +10.52% YTD (2026)");
-  assert.equal(portfolioHeadCopy({ year: 2026, usdReturn: -4.35 }).title, "Public Portfolio | -4.35% YTD (2026)");
-  assert.equal(portfolioHeadCopy({ year: 2027, usdReturn: 0 }).title, "Public Portfolio | 0.00% YTD (2027)");
-  assert.equal(portfolioHeadCopy(null).title, "Public Portfolio");
+  assert.equal(portfolioHeadCopy({ year: 2026, usdReturn: 10.524751 }).title, "Chronicles Public Portfolio | +10.52% YTD (2026)");
+  assert.equal(portfolioHeadCopy({ year: 2026, usdReturn: -4.35 }).title, "Chronicles Public Portfolio | -4.35% YTD (2026)");
+  assert.equal(portfolioHeadCopy({ year: 2027, usdReturn: 0 }).title, "Chronicles Public Portfolio | 0.00% YTD (2027)");
+  assert.equal(portfolioHeadCopy(null).title, "Chronicles Public Portfolio");
   const data = sample(), initial = portfolioHeadCopyForData(data);
   const changed = structuredClone(data); changed.points.at(-1)!.portfolioIndex *= 1.1;
   const refreshed = portfolioHeadCopyForData(changed);

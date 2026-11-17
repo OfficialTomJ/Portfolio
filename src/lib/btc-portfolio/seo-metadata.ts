@@ -9,7 +9,7 @@ export function portfolioMetadata(model: PortfolioSeoModel | null, origin: strin
     title: { absolute: title }, description,
     alternates: { canonical: PORTFOLIO_CANONICAL },
     robots: { index: indexable && !!model, follow: indexable && !!model, ...(indexable && model ? { googleBot: { index: true, follow: true, "max-image-preview": "large" as const } } : {}) },
-    openGraph: { type: "website", url: PORTFOLIO_CANONICAL, siteName: "Thomas Johnston", title, description, images },
+    openGraph: { type: "website", url: PORTFOLIO_CANONICAL, siteName: "Chronicles", title, description, images },
     twitter: { card: "summary_large_image", title, description, images },
   };
 }

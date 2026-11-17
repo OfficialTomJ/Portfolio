@@ -7,7 +7,7 @@ import { date } from "@/lib/btc-portfolio/view";
 import AssetLogo from "@/Components/spot/AssetLogo";
 import { portfolioUpdateTime } from "./PortfolioRefreshIndicator";
 
-const assetNames: Record<string, string> = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", HYPE: "Hyperliquid" };
+const assetNames: Record<string, string> = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", HYPE: "Hyperliquid", FARTCOIN: "Fartcoin" };
 const formatPrice = (price: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
 
 export default function PortfolioAllocation({ data, livePrices }: { data: PublicPortfolio; livePrices: boolean }) {
@@ -33,16 +33,16 @@ export default function PortfolioAllocation({ data, livePrices }: { data: Public
       <p className="text-xs text-zinc-500"><span className="tabular-nums text-zinc-200">{data.investedPct.toFixed(1)}%</span> invested</p>
     </div>
     <div className="space-y-5 p-5 sm:px-7 sm:py-5">
-      <div className="grid grid-cols-[minmax(0,1fr)_100px_64px] items-center gap-x-3 text-[10px] text-zinc-500 sm:grid-cols-[minmax(0,1fr)_140px_90px]"><span>Asset</span><span className="text-right">Market price · USD</span><span className="text-right">Allocation</span></div>
+      <div className="grid grid-cols-[minmax(0,1fr)_88px_58px] items-center gap-x-2 text-[10px] text-zinc-500 sm:grid-cols-[minmax(0,1fr)_140px_90px]"><span>Asset</span><span className="text-right">Price · USD</span><span className="text-right">Allocation</span></div>
       {allocation.map(([ticker, weight]) => {
         const quote = livePrices ? market.quotes[ticker as MarketAsset] : undefined;
-        return <div key={ticker}><div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_100px_64px] items-center gap-x-3 sm:grid-cols-[minmax(0,1fr)_140px_90px]">
-          <span className="flex min-w-0 items-center gap-2 text-xs text-zinc-200 sm:gap-2.5 sm:text-sm"><AssetLogo asset={ticker}/>{ticker}<span className="hidden text-xs text-zinc-600 sm:inline lg:hidden xl:inline">{assetNames[ticker] ?? ticker}</span></span>
+        return <div key={ticker}><div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_88px_58px] items-center gap-x-2 sm:grid-cols-[minmax(0,1fr)_140px_90px]">
+          <span className="flex min-w-0 items-center gap-2 text-xs text-zinc-200 sm:gap-2.5 sm:text-sm"><AssetLogo asset={ticker}/><span className="truncate">{ticker}</span><span className="hidden text-xs text-zinc-600 sm:inline lg:hidden xl:inline">{assetNames[ticker] ?? ticker}</span></span>
           <span aria-label={`Current ${ticker} market price in USD`} title={quote ? `Public Kraken unit price · ${date(quote.at)} at ${portfolioUpdateTime(quote.at)}` : "Current market price unavailable"} className="text-right text-xs tabular-nums text-zinc-300 sm:text-sm">{quote ? formatPrice(quote.price) : "—"}</span>
           <span className={`text-right text-xs tabular-nums sm:text-sm ${weight < 0 ? "text-rose-300" : "text-zinc-200"}`}>{weight.toFixed(2)}%</span>
         </div><div className="h-1.5 rounded-full bg-white/5"><div className={`h-full rounded-full ${weight < 0 ? "bg-rose-400/70" : ticker === "BTC" ? "bg-[#d4a75b]" : "bg-[#ff8b52]/75"}`} style={{ width: `${Math.abs(weight) / scale * 100}%` }}/></div></div>;
       })}
-      <div><div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_100px_64px] items-center gap-x-3 text-xs sm:grid-cols-[minmax(0,1fr)_140px_90px] sm:text-sm"><span className="flex items-center gap-2 text-zinc-200"><AssetLogo asset="USDT"/>Cash</span><span className="text-right text-zinc-600">—</span><span className="text-right tabular-nums text-zinc-200">{data.cashPct.toFixed(2)}%</span></div><div className="h-1.5 rounded-full bg-white/5"><div className="h-full rounded-full bg-slate-500" style={{ width: `${Math.abs(data.cashPct) / scale * 100}%` }}/></div></div>
+      <div><div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_88px_58px] items-center gap-x-2 text-xs sm:grid-cols-[minmax(0,1fr)_140px_90px] sm:text-sm"><span className="flex items-center gap-2 text-zinc-200"><AssetLogo asset="CASH"/>Cash</span><span className="text-right text-zinc-600">—</span><span className="text-right tabular-nums text-zinc-200">{data.cashPct.toFixed(2)}%</span></div><div className="h-1.5 rounded-full bg-white/5"><div className="h-full rounded-full bg-slate-500" style={{ width: `${Math.abs(data.cashPct) / scale * 100}%` }}/></div></div>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/[.06] px-5 py-3 text-[10px] text-zinc-500 sm:px-7">
       {livePrices && symbols && <div aria-label="Market price status" className="flex flex-wrap items-center gap-x-2 gap-y-1"><span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${market.status === "live" ? "bg-[#7ad9b6]" : market.status === "delayed" || market.status === "paused" ? "bg-amber-300" : "bg-zinc-500"}`}/><span>{market.status === "live" ? "Live prices" : market.status === "connecting" ? "Connecting…" : market.status === "paused" ? "Prices paused" : "Prices delayed"} · Kraken</span>{latestQuote && <time dateTime={latestQuote}>{portfolioUpdateTime(latestQuote)}</time>}</div>}

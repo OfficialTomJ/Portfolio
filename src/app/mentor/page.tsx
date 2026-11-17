@@ -2,7 +2,9 @@ import Link from "next/link";
 import { FaPlay, FaLock, FaCheck, FaChartLine } from "react-icons/fa";
 import { getSession } from "../../lib/session";
 import { isDashboardNew } from "../../lib/whats-new";
-import PerformanceJournalCard from "../../Components/PerformanceJournalCard";
+import PortfolioCard from "../../Components/PortfolioCard";
+import PortfolioLink from "../../Components/PortfolioLink";
+import AuthLink from "../../Components/AuthLink";
 
 // Marketing-only curriculum teaser (module names, not gated video content).
 const CURRICULUM = [
@@ -58,29 +60,14 @@ export default async function MentorLanding() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            {signedIn ? (
-              <Link
-                href="/blueprint"
-                className="inline-flex items-center gap-2 rounded-md bg-white text-black font-medium px-6 py-3 hover:bg-zinc-200 transition-colors"
-              >
-                <FaPlay className="text-sm" /> Go to your course
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/sign-up"
-                  className="inline-flex items-center gap-2 rounded-md bg-[var(--bp-accent)] text-black font-semibold px-7 py-3 hover:brightness-110 transition-all"
-                >
-                  <FaPlay className="text-sm" /> Sign up free to watch
-                </Link>
-                <Link
-                  href="/sign-in"
-                  className="inline-flex items-center gap-2 rounded-md border border-[var(--bp-border-strong)] px-6 py-3 hover:bg-white/5 transition-colors"
-                >
-                  Log in
-                </Link>
-              </>
-            )}
+            <PortfolioLink placement="home_hero" className="inline-flex min-h-12 items-center justify-center rounded-md bg-[var(--bp-accent)] px-6 py-3 font-semibold text-black transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--bp-accent)]">
+              View public portfolio
+            </PortfolioLink>
+            {signedIn ? <Link href="/blueprint" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[var(--bp-border-strong)] px-6 py-3 transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--bp-accent)]">
+              <FaPlay aria-hidden="true" className="text-sm" /> Continue your course
+            </Link> : <AuthLink to="/sign-up" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[var(--bp-border-strong)] px-6 py-3 transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--bp-accent)]">
+              <FaPlay aria-hidden="true" className="text-sm" /> Start the free course
+            </AuthLink>}
           </div>
 
           {!signedIn && (
@@ -99,6 +86,10 @@ export default async function MentorLanding() {
             </div>
           )}
         </div>
+      </section>
+
+      <section aria-label="Explore the public portfolio" className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-12">
+        <PortfolioCard variant="landing" placement="home_card" />
       </section>
 
       {/* What's inside */}
@@ -126,13 +117,6 @@ export default async function MentorLanding() {
             </div>
           ))}
         </div>
-      </section>
-
-      {/* Public journal. This is intentionally separate from the TJSS dashboard
-          below: the recorded prop-trading results do not represent the course
-          method and should not read as proof of it. */}
-      <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6">
-        <PerformanceJournalCard variant="landing" />
       </section>
 
       {/* Members' dashboard.
@@ -163,12 +147,7 @@ export default async function MentorLanding() {
               data, not signals, and not advice.
             </p>
           </div>
-          <Link
-            href={signedIn ? "/dashboard" : "/sign-up"}
-            className="shrink-0 rounded-md bg-white px-5 py-2.5 text-center font-medium text-black transition-colors hover:bg-zinc-200 sm:ml-auto"
-          >
-            {signedIn ? "Open dashboard" : "Sign up free"}
-          </Link>
+          {signedIn ? <Link href="/dashboard" className="shrink-0 rounded-md bg-white px-5 py-2.5 text-center font-medium text-black transition-colors hover:bg-zinc-200 sm:ml-auto">Open dashboard</Link> : <AuthLink to="/sign-up" className="shrink-0 rounded-md bg-white px-5 py-2.5 text-center font-medium text-black transition-colors hover:bg-zinc-200 sm:ml-auto">Sign up free</AuthLink>}
         </div>
       </section>
 

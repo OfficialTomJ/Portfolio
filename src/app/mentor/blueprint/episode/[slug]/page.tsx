@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaArrowRight, FaFilePdf } from "react-icons/fa";
 import { PiArrowLeftThin } from "react-icons/pi";
-import { getEpisode, getNextEpisode } from "../../../../../lib/blueprint";
+import { getEpisode, getNextEpisode, getFinalVideoEpisode } from "../../../../../lib/blueprint";
 import { getMemberSession } from "../../../../../lib/session";
 import { getUserProgress } from "../../../../../lib/progress";
 import { getEpisodeLikeState } from "../../../../../lib/engagement";
@@ -12,6 +12,7 @@ import LikeButton from "../../../../../Components/LikeButton";
 import Comments from "../../../../../Components/Comments";
 import AccessGate from "../../../../../Components/AccessGate";
 import DashboardCard from "../../../../../Components/DashboardCard";
+import PortfolioCard from "../../../../../Components/PortfolioCard";
 
 /** Episode 10, "The TJSS Method", the lesson the dashboard belongs to. */
 const DASHBOARD_LESSON_SLUG = "lesson-10";
@@ -29,10 +30,11 @@ export default async function EpisodePage({
   const episode = await getEpisode(slug);
   if (!episode || episode.type !== "video") notFound();
 
-  const [next, progress, likeState] = await Promise.all([
+  const [next, progress, likeState, finalVideo] = await Promise.all([
     getNextEpisode(slug),
     getUserProgress(session.user.id),
     getEpisodeLikeState(slug, session.user.id),
+    getFinalVideoEpisode(episode.seasonNumber),
   ]);
   const completed = !!progress[slug]?.completed;
   const resumeSeconds = progress[slug]?.seconds ?? 0;
@@ -111,6 +113,12 @@ export default async function EpisodePage({
           </span>
           <FaArrowRight className="text-[var(--bp-text-dim)]" />
         </Link>
+      )}
+
+      {episode.slug === finalVideo?.slug && (
+        <section aria-label="Explore the public portfolio" className="mt-10">
+          <PortfolioCard variant="compact" placement="final_episode" />
+        </section>
       )}
 
       {/* Comments */}

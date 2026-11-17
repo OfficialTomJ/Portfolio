@@ -5,7 +5,7 @@ import EpisodeCard from "../../../Components/EpisodeCard";
 import AccessGate from "../../../Components/AccessGate";
 import ProgressOverview from "../../../Components/ProgressOverview";
 import DashboardCard from "../../../Components/DashboardCard";
-import PerformanceJournalCard from "../../../Components/PerformanceJournalCard";
+import PortfolioCard from "../../../Components/PortfolioCard";
 
 /** Section name the dashboard card is appended to. Matches the seeded course
  *  structure in scripts/seed-blueprint.ts. */
@@ -109,10 +109,8 @@ export default async function BlueprintShow() {
                   section data: it is a tool, not an episode. Placed here
                   because this is the moment the method has just been taught. */}
               {section.name === TJSS_SECTION && <DashboardCard variant="row" />}
-              {/* The journal belongs with the course's onward paths, not the
-                  TJSS module. Its results come from separate private prop and
-                  leverage strategies. */}
-              {section.name === FINAL_SECTION && <PerformanceJournalCard variant="row" />}
+              {/* Ongoing portfolio work is an onward path after the course. */}
+              {section.name === FINAL_SECTION && <PortfolioCard variant="row" placement="course_final" />}
             </div>
           </section>
         ))}

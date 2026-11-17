@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FaGoogle } from "react-icons/fa";
 import { authClient } from "../../../lib/auth-client";
 import { AuthShell, Field, Divider } from "../../../Components/AuthUI";
+import { authHref, safeAuthReturn } from "../../../lib/auth-return";
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const returnTo = safeAuthReturn(params?.get("returnTo"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading">("idle");
@@ -18,32 +21,45 @@ export default function SignInPage() {
     e.preventDefault();
     setStatus("loading");
     setError("");
-    const { error } = await authClient.signIn.email({
-      email,
-      password,
-      callbackURL: "/blueprint",
-    });
-    if (error) {
-      // Surface the unverified-email case clearly.
-      if (error.status === 403) {
-        router.push("/verify-email");
-        return;
+    try {
+      const { error } = await authClient.signIn.email({ email, password, callbackURL: returnTo });
+      if (error) {
+        if (error.status === 403) {
+          router.push(authHref("/verify-email", returnTo));
+          return;
+        }
+        setError(error.message ?? "Invalid email or password");
+        setStatus("idle");
+      } else {
+        router.replace(returnTo);
+        router.refresh();
       }
-      setError(error.message ?? "Invalid email or password");
+    } catch {
+      setError("Could not sign in. Please try again.");
       setStatus("idle");
-    } else {
-      router.push("/blueprint");
     }
   }
 
   async function google() {
-    await authClient.signIn.social({ provider: "google", callbackURL: "/blueprint" });
+    setStatus("loading");
+    setError("");
+    try {
+      const { error } = await authClient.signIn.social({ provider: "google", callbackURL: returnTo, newUserCallbackURL: returnTo, errorCallbackURL: authHref("/sign-in", returnTo) });
+      if (error) {
+        setError(error.message ?? "Could not continue with Google");
+        setStatus("idle");
+      }
+    } catch {
+      setError("Could not continue with Google. Please try again.");
+      setStatus("idle");
+    }
   }
 
   return (
     <AuthShell title="Sign in">
       <button
         onClick={google}
+        disabled={status === "loading"}
         className="w-full flex items-center justify-center gap-2 rounded-md border border-[var(--bp-border-strong)] py-2.5 hover:bg-white/5 transition-colors"
       >
         <FaGoogle /> Continue with Google
@@ -69,10 +85,14 @@ export default function SignInPage() {
       </form>
       <p className="mt-5 text-sm text-[var(--bp-text-dim)]">
         New here?{" "}
-        <Link href="/sign-up" className="text-[var(--bp-accent)] hover:underline">
+        <Link href={authHref("/sign-up", returnTo)} className="text-[var(--bp-accent)] hover:underline">
           Create an account
         </Link>
       </p>
     </AuthShell>
   );
+}
+
+export default function SignInPage() {
+  return <Suspense fallback={<AuthShell title="Sign in"> </AuthShell>}><SignInForm /></Suspense>;
 }

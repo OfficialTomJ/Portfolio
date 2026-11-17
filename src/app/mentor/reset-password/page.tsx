@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
 import { AuthShell, Field } from "../../../Components/AuthUI";
+import { authHref, safeAuthReturn } from "../../../lib/auth-return";
 
 function ResetForm() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params?.get("token") ?? "";
   const error = params?.get("error");
+  const returnTo = safeAuthReturn(params?.get("returnTo"));
 
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
@@ -23,7 +25,7 @@ function ResetForm() {
           This password reset link is invalid or has expired. Request a new one
           from your account page.
         </p>
-        <Link href="/sign-in" className="mt-6 inline-block text-[var(--bp-accent)] hover:underline">
+        <Link href={authHref("/sign-in", returnTo)} className="mt-6 inline-block text-[var(--bp-accent)] hover:underline">
           Back to sign in
         </Link>
       </AuthShell>
@@ -40,7 +42,7 @@ function ResetForm() {
       setStatus("idle");
     } else {
       setStatus("done");
-      setTimeout(() => router.push("/sign-in"), 1500);
+      setTimeout(() => router.replace(authHref("/sign-in", returnTo)), 1500);
     }
   }
 

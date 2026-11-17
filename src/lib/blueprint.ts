@@ -66,3 +66,13 @@ export async function getNextEpisode(slug: string): Promise<Episode | null> {
   if (idx === -1 || idx === episodes.length - 1) return null;
   return episodes[idx + 1];
 }
+
+/** The final published video in a season, even if resources follow it. */
+export async function getFinalVideoEpisode(seasonNumber: number): Promise<Episode | null> {
+  return getDb()
+    .collection<Episode>("episodes")
+    .find({ published: true, type: "video", seasonNumber }, EPISODE_PROJECTION)
+    .sort({ order: -1 })
+    .limit(1)
+    .next();
+}

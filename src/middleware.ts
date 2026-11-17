@@ -25,12 +25,6 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
   const url = req.nextUrl.clone();
   const { pathname } = url;
-  const portfolioReview = (VERCEL_PREVIEW || process.env.NODE_ENV === "development") && process.env.BTC_PORTFOLIO_MODE === "database";
-  if (portfolioReview && (pathname === "/performance" || pathname.startsWith("/performance/") || pathname === "/mentor/performance" || pathname.startsWith("/mentor/performance/"))) {
-    const destination = req.nextUrl.clone(); destination.pathname = "/portfolio"; destination.search = "";
-    return NextResponse.redirect(destination);
-  }
-  if (portfolioReview && (pathname === "/api/performance" || pathname.startsWith("/api/performance/") || pathname === "/api/spot" || pathname.startsWith("/api/spot/"))) return new NextResponse(null, { status: 404, headers: { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" } });
   const privateReview = pathname.startsWith("/api/btc-portfolio/workspace") || pathname.startsWith("/api/btc-portfolio/admin") || pathname.startsWith("/api/performance/admin/") || pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/mentor/admin" || pathname.startsWith("/mentor/admin/") || pathname.startsWith("/api/spot/admin") || pathname === "/api/spot/instruments" || pathname === "/performance/review" ||
     pathname.startsWith("/performance/review/") ||
     pathname === "/mentor/performance/review" ||

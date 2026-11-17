@@ -1,6 +1,7 @@
 import { getMemberSession } from "../../../lib/session";
 import AccessGate from "../../../Components/AccessGate";
 import TjssDashboard from "../../../Components/tjss/TjssDashboard";
+import PortfolioCard from "../../../Components/PortfolioCard";
 
 // GATED TJSS dashboard, the same member gate as the Blueprint course this
 // ships inside. Signals and backtests are computed server-side and fetched from
@@ -48,6 +49,10 @@ export default async function DashboardPage() {
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <TjssDashboard />
+      </section>
+
+      <section aria-label="Explore the public portfolio" className="mx-auto mt-10 max-w-7xl px-4 sm:px-6">
+        <PortfolioCard variant="compact" placement="dashboard_related" />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-10">

@@ -7,6 +7,7 @@ import {
 } from "../../../../lib/certificate";
 import AccessGate from "../../../../Components/AccessGate";
 import Certificate from "../../../../Components/Certificate";
+import PortfolioLink from "../../../../Components/PortfolioLink";
 
 // GATED. Issues/displays the Season 1 completion certificate.
 export default async function CertificatePage() {
@@ -66,6 +67,11 @@ export default async function CertificatePage() {
         issuedAt={cert.issuedAt}
         season={cert.season}
       />
+      <div className="mx-auto max-w-3xl px-4 pb-12 text-center sm:px-6">
+        <PortfolioLink placement="course_completion" className="inline-flex min-h-11 items-center rounded-md text-sm text-[var(--bp-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--bp-accent)]">
+          Keep exploring: view the public portfolio →
+        </PortfolioLink>
+      </div>
     </main>
   );
 }

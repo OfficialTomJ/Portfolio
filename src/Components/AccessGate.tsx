@@ -1,4 +1,4 @@
-import Link from "next/link";
+import AuthLink from "./AuthLink";
 import { FaPlay } from "react-icons/fa";
 
 // Centered "sign up to access" prompt shown to signed-out visitors on gated
@@ -21,18 +21,18 @@ export default function AccessGate() {
           progress.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/sign-up"
+          <AuthLink
+            to="/sign-up"
             className="inline-flex items-center gap-2 rounded-md bg-white text-black font-medium px-6 py-3 hover:bg-zinc-200 transition-colors"
           >
             <FaPlay className="text-sm" /> Sign up for free
-          </Link>
-          <Link
-            href="/sign-in"
+          </AuthLink>
+          <AuthLink
+            to="/sign-in"
             className="rounded-md border border-[var(--bp-border-strong)] px-6 py-3 hover:bg-white/5 transition-colors"
           >
             Log in
-          </Link>
+          </AuthLink>
         </div>
       </div>
     </main>

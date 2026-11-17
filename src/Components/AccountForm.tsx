@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import { Field } from "./AuthUI";
+import { authHref } from "../lib/auth-return";
 
 function Note({ kind, children }: { kind: "ok" | "err"; children: React.ReactNode }) {
   return (
@@ -73,7 +74,7 @@ export default function AccountForm({
     setPwMsg(null);
     const { error } = await authClient.requestPasswordReset({
       email,
-      redirectTo: "/reset-password",
+      redirectTo: authHref("/reset-password", "/account"),
     });
     setSendingReset(false);
     if (error) setPwMsg({ k: "err", t: error.message ?? "Could not send reset email" });

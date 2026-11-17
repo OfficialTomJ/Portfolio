@@ -5,7 +5,6 @@ import AuthNav from "../../Components/AuthNav";
 import TopProgress from "../../Components/TopProgress";
 import DisclosureModal from "../../Components/DisclosureModal";
 import MentorAnalytics from "../../Components/MentorAnalytics";
-import { portfolioDatabaseEnabled } from "@/lib/btc-portfolio/mode";
 
 const jost = Jost({ subsets: ["latin"] });
 
@@ -41,7 +40,7 @@ export default function MentorLayout({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/chronicles-c.png" alt="Chronicles" width="32" height="32" className="h-8 w-8 object-contain" />
           </Link>
-          <AuthNav btcPortfolio={portfolioDatabaseEnabled()} />
+          <AuthNav />
         </nav>
       </header>
       {children}

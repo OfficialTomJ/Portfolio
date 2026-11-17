@@ -48,7 +48,7 @@ export const publicSchema = z.object({
   cashPct: finite, investedPct: finite.nonnegative(), netPct: finite,
   stories: portfolioStoriesSchema.optional(),
   editorialNotes: z.array(portfolioEditorialNoteSchema).max(200).optional(),
-  privacy: z.object({ publication: z.enum(["held-for-review", "localhost-preview", "staging-preview"]), walletHistory: z.enum(["withheld", "curve-only"]), tradeRecords: z.literal("private-only"), tradeLinkedIdeas: z.literal("private-only") }).strict().optional(),
+  privacy: z.object({ publication: z.enum(["held-for-review", "localhost-preview", "staging-preview", "published"]), walletHistory: z.enum(["withheld", "curve-only"]), tradeRecords: z.literal("private-only"), tradeLinkedIdeas: z.literal("private-only") }).strict().optional(),
   performanceCoverage: z.object({ method: z.literal("spot-and-closed-prop-results"), propThrough: at, propTradeCount: z.number().int().positive(), openPropPnlIncluded: z.literal(false) }).strict().optional(),
   history: z.object({ method: z.literal("linked-performance"), priorAsOf: at, currentInceptionAt: at, cashBridgeAssumed: z.literal(true) }).strict().optional(),
   activity: z.array(z.object({ id, at, kind: z.enum(kinds), account: z.enum(accounts), asset: z.enum(assets), reason: publicText, articleUrl: z.string(), campaignId: z.string(), weightBefore: finite, weightAfter: finite,

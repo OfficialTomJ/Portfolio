@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { PORTFOLIO_CANONICAL, portfolioImagePath, type PortfolioSeoModel } from "./seo-model";
 import { portfolioHeadCopy } from "./head-copy";
 
-export function portfolioMetadata(model: PortfolioSeoModel | null, origin: string, indexable: boolean): Metadata {
-  const images = model ? [{ url: new URL(portfolioImagePath(model.key), origin).href, width: 1200, height: 630, type: "image/png", alt: model.alt }] : [];
+export function portfolioMetadata(model: PortfolioSeoModel | null, origin: string, indexable: boolean, imageModel = model): Metadata {
+  const images = imageModel ? [{ url: new URL(portfolioImagePath(imageModel.key), origin).href, width: 1200, height: 630, type: "image/png", alt: imageModel.alt }] : [];
   const { title, description } = portfolioHeadCopy(model);
   return {
     title: { absolute: title }, description,

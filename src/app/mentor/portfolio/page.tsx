@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { portfolioPublicEnabled } from "@/lib/btc-portfolio/mode";
-import { loadDatabasePortfolio } from "@/lib/btc-portfolio/public-repository";
+import { loadDatabasePortfolio, loadLivePortfolio } from "@/lib/btc-portfolio/public-repository";
 import { portfolioSeoModel } from "@/lib/btc-portfolio/seo-model";
 import { PORTFOLIO_NAME } from "@/lib/btc-portfolio/head-copy";
 import { portfolioMetadata } from "@/lib/btc-portfolio/seo-metadata";
@@ -12,12 +12,15 @@ import PortfolioAutoRefresh from "@/Components/btc-portfolio/PortfolioAutoRefres
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-const getPortfolio = cache(async () => portfolioPublicEnabled() ? loadDatabasePortfolio().catch(() => null) : null);
+const getPortfolio = cache(async () => portfolioPublicEnabled() ? loadLivePortfolio().catch(() => null) : null);
+const getPublishedPortfolio = cache(async () => portfolioPublicEnabled() ? loadDatabasePortfolio().catch(() => null) : null);
 export async function generateMetadata(): Promise<Metadata> {
-  const data = await getPortfolio();
+  const [data, published] = await Promise.all([getPortfolio(), getPublishedPortfolio()]);
   const model = data ? portfolioSeoModel(data) : null;
-  if (model) { try { await ensurePortfolioSocialImage(model); } catch { /* The versioned image route can retry without taking down the visitor page. */ } }
-  return portfolioMetadata(model, siteOrigin(), process.env.VERCEL_ENV === "production" && portfolioPublicEnabled());
+  const imageModel = published ? portfolioSeoModel(published) : null;
+  // Titles follow live returns; immutable image storage stays bounded to the accepted release/day.
+  if (imageModel) { try { await ensurePortfolioSocialImage(imageModel); } catch { /* The versioned image route can retry without taking down the visitor page. */ } }
+  return portfolioMetadata(model, siteOrigin(), process.env.VERCEL_ENV === "production" && portfolioPublicEnabled(), imageModel);
 }
 export default async function PortfolioPage() {
   if (!portfolioPublicEnabled()) notFound();

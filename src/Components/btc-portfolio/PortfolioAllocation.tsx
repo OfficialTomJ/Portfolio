@@ -10,20 +10,22 @@ import { portfolioUpdateTime } from "./PortfolioRefreshIndicator";
 const assetNames: Record<string, string> = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", HYPE: "Hyperliquid", FARTCOIN: "Fartcoin" };
 const formatPrice = (price: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
 
-export default function PortfolioAllocation({ data, livePrices }: { data: PublicPortfolio; livePrices: boolean }) {
+export default function PortfolioAllocation({ data, livePrices, marketPrices }: { data: PublicPortfolio; livePrices: boolean; marketPrices?: MarketPrices }) {
   const totals = new Map<string, number>();
   for (const row of data.allocation) if (row.type !== "cash") totals.set(row.asset, (totals.get(row.asset) ?? 0) + row.weight);
   const allocation = [...totals].filter(([, weight]) => Math.abs(weight) > .000001).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   const symbols = marketAssets.filter(asset => totals.has(asset)).join(",");
-  const [market, setMarket] = useState<MarketPrices>({ quotes: {}, status: "connecting" });
+  const [localMarket, setMarket] = useState<MarketPrices>({ quotes: {}, status: "connecting" });
+  const market = marketPrices ?? localMarket;
+  const sharedMarket = marketPrices !== undefined;
   useEffect(() => {
-    if (!livePrices || !symbols) return;
+    if (!livePrices || !symbols || sharedMarket) return;
     const watcher = watchMarketPrices(symbols.split(","), setMarket);
     const visibility = () => { if (document.visibilityState === "visible" && navigator.onLine) watcher.resume(); else watcher.pause(); };
     document.addEventListener("visibilitychange", visibility); window.addEventListener("online", visibility); window.addEventListener("offline", visibility);
     visibility();
     return () => { watcher.stop(); document.removeEventListener("visibilitychange", visibility); window.removeEventListener("online", visibility); window.removeEventListener("offline", visibility); };
-  }, [livePrices, symbols]);
+  }, [livePrices, symbols, sharedMarket]);
   const scale = Math.max(100, Math.ceil(Math.max(...allocation.map(([, weight]) => Math.abs(weight)), Math.abs(data.cashPct)) / 25) * 25);
   const quoteTimes = allocation.flatMap(([asset]) => market.quotes[asset as MarketAsset]?.at ? [market.quotes[asset as MarketAsset]!.at] : []).sort();
   const latestQuote = quoteTimes.at(-1);

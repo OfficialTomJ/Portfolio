@@ -64,3 +64,13 @@ test("browser and SEO titles follow the refreshed public YTD return with no pers
   assert.equal(metadata.description, refreshed.description);
   assert(!/Thomas|Johnston/.test(initial.title + initial.description));
 });
+
+test("live metadata titles can advance without creating a permanent social image for each tick", () => {
+  const published = sample(), current = structuredClone(published);
+  current.points.at(-1)!.portfolioIndex *= 1.1;
+  const image = portfolioSeoModel(published), model = portfolioSeoModel(current);
+  const metadata = portfolioMetadata(model, "https://mentor.thomas-johnston.com", true, image);
+  assert.deepEqual(metadata.title, { absolute: portfolioHeadCopyForData(current).title });
+  const images = (metadata.openGraph as { images: { url: string }[] }).images;
+  assert.ok(images[0].url.includes(image.key)); assert.ok(!images[0].url.includes(model.key));
+});

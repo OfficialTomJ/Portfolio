@@ -6,6 +6,7 @@ import { SiSubstack } from "react-icons/si";
 import type { PublicPortfolio } from "@/lib/btc-portfolio/schema";
 import { date, metrics, pct, periodPoints, portfolioYears, PORTFOLIO_TIME_ZONE } from "@/lib/btc-portfolio/view";
 import type { PortfolioFreshness } from "@/lib/btc-portfolio/refresh";
+import type { MarketPrices } from "@/lib/btc-portfolio/market-prices";
 import { SpotPerformanceChart } from "@/Components/spot/SpotCharts";
 import PortfolioIdeas from "./PortfolioIdeas";
 import PortfolioAllocation from "./PortfolioAllocation";
@@ -18,7 +19,7 @@ function SubstackLink() {
   </a>;
 }
 
-export default function PortfolioDashboard({ data, preview = false, freshness }: { data: PublicPortfolio; preview?: boolean; freshness?: PortfolioFreshness }) {
+export default function PortfolioDashboard({ data, preview = false, freshness, marketPrices }: { data: PublicPortfolio; preview?: boolean; freshness?: PortfolioFreshness; marketPrices?: MarketPrices }) {
   const [basis, setBasis] = useState<"USD" | "COMPARE">("USD");
   const [period, setPeriod] = useState("YTD");
   const [from, setFrom] = useState(data.inceptionAt.slice(0, 10)), [to, setTo] = useState(data.asOf.slice(0, 10));
@@ -56,9 +57,9 @@ export default function PortfolioDashboard({ data, preview = false, freshness }:
       {comparing && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[.07] px-4 py-4 sm:px-7"><p className="text-xs text-zinc-400" title="Change in how much Bitcoin the portfolio can buy.">BTC purchasing power</p><p className="text-lg tabular-nums text-zinc-200">{m ? pct(m.relative) : "—"}</p></div>}
       {points.length > 0 && <p className="border-t border-white/[.07] px-4 py-3 text-[10px] leading-5 text-zinc-500 sm:px-7">{coverage}</p>}
     </section>
-    <p className="!mt-3 text-center text-[10px] leading-5 text-zinc-500">{preview ? "Private preview · " : ""}Valued <time dateTime={data.asOf}>{date(data.asOf)} · {portfolioUpdateTime(data.asOf)}</time></p>
+    <p className="!mt-3 text-center text-[10px] leading-5 text-zinc-500">{preview ? "Private preview · " : ""}Valued <time dateTime={data.asOf}>{date(data.asOf)} · {portfolioUpdateTime(data.asOf)}</time>{data.valuation && <> · Holdings recorded <time dateTime={data.valuation.holdingsAsOf}>{date(data.valuation.holdingsAsOf)}</time></>}</p>
     <div className="grid min-w-0 items-start gap-7 sm:gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-6">
-      <PortfolioAllocation data={data} livePrices={!preview}/>
+      <PortfolioAllocation data={data} livePrices={!preview} marketPrices={marketPrices}/>
       <PortfolioIdeas ideas={data.stories?.ideas ?? []} notes={data.editorialNotes ?? []}/>
     </div>
     <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/[.08] p-5 sm:flex-row sm:items-center sm:p-6"><p className="text-base font-medium text-zinc-200">Get new ideas on Substack.</p><SubstackLink/></div>
